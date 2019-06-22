@@ -37,6 +37,13 @@ class Sphere:
                     return True
         return False
 
+    def cube_it(self, boundaries):
+        """
+        Put the sphere inside the boundaries of the simulation, usefull for cyclic boundary conditions
+        :param boundaries: CubeBoundaries instance
+        """
+        self.center = [x % e for x, e in zip(self.center, boundaries.edges)]
+
 
 class Cell:
 

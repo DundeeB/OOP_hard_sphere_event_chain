@@ -82,10 +82,25 @@ class Event:
         self.event_type = event_type
 
 
+class Step:
 
+    def __init__(self, sphere, total_step, current_step, v_hat):
+        self.sphere = sphere
+        self.total_step = total_step
+        self.current_step = current_step
+        self.v_hat = v_hat
+
+    def perform_step(self):
+        self.sphere.center = self.sphere.center + np.array(self.v_hat)*self.current_step
+        self.total_step = self.total_step - self.current_step
+
+
+class EventChainActions:
+    def __init__(self, boundaries):
+        self.boundaries = boundaries
 """
-    def step_size(self, positions, sphere_ind, v_hat, l):
-        closest_wall, wall_type = self.wall_dist(positions[sphere_ind], v_hat, l)
+    def advance_sphere(self, sphere, other_spheres, v_hat, l):
+        closest_wall, wall_type = Metric.dist_to_boundary(sphere, v_hat, l, self.boundaries)
         spheres_dists = [float('inf') for _ in range(len(positions))]
         for i in range(len(positions)):
             if i != sphere_ind:

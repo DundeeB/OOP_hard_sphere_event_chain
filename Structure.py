@@ -1,5 +1,8 @@
 import numpy as np
 import random
+from enum import Enum
+epsilon = 1e-4
+
 
 class Sphere:
 
@@ -105,21 +108,93 @@ class Cell:
         self.spheres = spheres
 
 
+class BoundaryType(Enum):
+    WALL = 0  # Rigid wall
+    CYCLIC = 1  # Cyclic boundary conditions
+
+
+class CubeBoundaries:
+
+    def __init__(self, edges, boundary_type):
+        """
+        Create new boundaries for the simulation
+        :param edges: list of edge per dimension for the simulation
+        :param boundary_type: "Wall","Cyclic",ext...
+        """
+        self.edges = edges
+        self.boundary_type = boundary_type
+        self.dim = len(edges)
+
+    def get_vertices(self):
+        if self.dim == 1:
+            return [(0,), (self.edges[0],)]
+        if self.dim == 2:
+            return [(0, 0), (0, self.edges[1]), (self.edges[0], 0),
+                    (self.edges[0], self.edges[1])]
+        else:  # dim==3
+            e0 = self.edges[0]
+            e1 = self.edges[1]
+            e2 = self.edges[2]
+            return [(0, 0, 0), (e0, 0, 0), (0, e1, 0), (0, 0, e2),
+                    (0, e1, e2), (e0, 0, e2), (e0, e1, 0), (e0, e1, e2)]
+
+    def get_walls(self):
+        vs = self.get_vertices()
+        if self.dim == 1:
+            return [(vs[0],), (vs[1],)]
+        if self.dim == 2:
+            return [(vs[0], vs[1]), (vs[0], vs[2]),
+                    (vs[1], vs[3]), (vs[2], vs[3])]
+        else:  # dim==3
+            return [(vs[0], vs[2], vs[1], vs[6]),
+                    (vs[0], vs[2], vs[3], vs[4]),
+                    (vs[0], vs[3], vs[1], vs[5]),
+                    (vs[4], vs[7], vs[3], vs[5]),
+                    (vs[1], vs[5], vs[6], vs[7]),
+                    (vs[2], vs[4], vs[6], vs[7])]
+
+    @staticmethod
+    def vertical_step_to_wall(wall, point):
+        """
+        For a wall=[v0,v1,...], which is a plain going through all the vertices [v0,v1...],
+        Return the vertical to the plain vector toward the point
+        :param wall: list of vertices, which the define the wall which is the plain going through them
+        :param point: the specified point to get the vertical step to plain from
+        :return: the smallest vector v s.t. v+point is on the plain of the wall
+        """
+        assert(len(wall) == len(point))
+        d = len(wall)
+        p = np.array(point)
+        v = [np.array(w) for w in wall]
+        if d == 1:
+            return v[0] - p
+        if d == 2:
+            t = -np.dot(v[0]-p, v[1]-v[0])/np.dot(v[1]-v[0], v[1]-v[0])
+            return v[0] - p + t*(v[1]-v[0])
+        if d == 3:
+            # assume for now that edges are vertical so calculation is easier
+            assert(np.dot(v[2]-v[0],v[1]-v[0]) < epsilon)
+            t = -np.dot(v[0]-p, v[1]-v[0])/np.dot(v[1]-v[0], v[1]-v[0])
+            s = -np.dot(v[0] - p, v[2] - v[0]) / np.dot(v[2] - v[0], v[2] - v[0])
+            return v[0] - p + t*(v[1]-v[0]) + s*(v[2]-v[0])
+
+
 class ArrayOfCells:
 
     def __init__(self, cells=[]):
         self.cells = cells
 
     @staticmethod
-    def construct_default_2d_cells(n_rows, n_columns, l_x, l_y):
+    def construct_default_2d_cells(n_rows, n_columns, boundaries):
         """
         Construct a 2 dimension defualt choice list of empty cells (without spheres)
         :param n_rows: number of rows in the array of cells
         :param n_columns: number of colums in the array of cells
-        :param l_x: physical length of the System in the x dimension
-        :param l_y: physical length of the System in the y dimension
+        :param boundaries: physical length of the System in the [x,y,...] dimensions
         :return: list of cells. cells[i][j] are in row i and column j
         """
+        l_x = boundaries.edges[0]
+        l_y = boundaries.edges[1]
         cells = [[[] for _ in range(n_columns)] for _ in range(n_rows)]
         edges = [l_x/n_columns, l_y/n_rows]
         for i in range(n_rows):

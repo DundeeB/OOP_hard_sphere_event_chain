@@ -1,4 +1,4 @@
-import Structure
+from Structure import *
 import numpy as np
 from enum import Enum
 
@@ -24,7 +24,7 @@ class Metric:
         min_dist_to_wall = float('inf')
         closest_wall = []
         for wall in boundaries.get_walls():
-            u = Structure.CubeBoundaries.vertical_step_to_wall(wall, pos)
+            u = CubeBoundaries.vertical_step_to_wall(wall, pos)
             u = u - r*u/np.linalg.norm(u) #shift the wall closer by r
             if np.dot(u, v_hat) < 0:
                 continue
@@ -62,54 +62,82 @@ class Metric:
 
 
 class EventType(Enum):
-    FREE = 0  # Free path
-    COLLISION = 1  # Path leads to collision with another sphere
-    BC = 2  # Path reaches Boundary and needs to be handle using Boundary Condition
+    FREE = "FreeStep"  # Free path
+    COLLISION = "SphereSphereCollision"  # Path leads to collision with another sphere
+    BC = "BoundaryCondition"  # Path reaches Boundary and needs to be handle using Boundary Condition
 
 
 class Event:
 
-    def __init__(self, sphere, dr, event_type):
+    def __init__(self, step, event_type, other_sphere, wall):
         """
         A single event that will happen to sphere, such as collision with another sphere
         or arriving at the boundary of the simulation
-        :param sphere: sphere which about to take a move
-        :param dr: distance of the next move
+        :param step: step to be perform before event
         :param event_type: EventType enum: "Free path", "Collision", "Boundary Condition"
+        :param other_sphere: if event is collision, this is the sphere it will collide
+        :param wall: if event is boundary condition, this is the wall it is going to reach
         """
-        self.sphere = sphere
-        self.dr = dr
+        self.step = step
         self.event_type = event_type
+        self.other_sphere = other_sphere
+        self.wall = wall
 
 
 class Step:
 
     def __init__(self, sphere, total_step, current_step, v_hat):
+        """
+        The characteristic of the step to be perform
+        :param sphere: sphere which about to move
+        :param total_step: total step left for the current move of spheres
+        :param current_step: step sphere is about to perform
+        :param v_hat: direction of the step
+        """
         self.sphere = sphere
         self.total_step = total_step
         self.current_step = current_step
         self.v_hat = v_hat
 
     def perform_step(self):
-        self.sphere.center = self.sphere.center + np.array(self.v_hat)*self.current_step
+        self.sphere.perform_step(self)
         self.total_step = self.total_step - self.current_step
 
 
 class EventChainActions:
+
     def __init__(self, boundaries):
         self.boundaries = boundaries
-"""
-    def advance_sphere(self, sphere, other_spheres, v_hat, l):
-        closest_wall, wall_type = Metric.dist_to_boundary(sphere, v_hat, l, self.boundaries)
-        spheres_dists = [float('inf') for _ in range(len(positions))]
-        for i in range(len(positions)):
-            if i != sphere_ind:
-                spheres_dists[i] = self.pair_dist(positions[sphere_ind], positions[i], l, v_hat)
-        other_sphere = np.argmin(spheres_dists)
-        dist_sphere = spheres_dists[other_sphere]
-        if closest_wall < dist_sphere:  # it hits a wall
-            return closest_wall, "wall", wall_type
-        if closest_wall > dist_sphere:  # it hits another sphere
-            return dist_sphere, "pair_collision", other_sphere
-        return l, "Hits_nothing", np.nan
-"""
+
+    def next_event(self, sphere, other_spheres, total_step, v_hat):
+        """
+        Returns the next Event object to be handle, such as from the even get the step, perform the step and decide the
+        next event
+        :param sphere: sphere wishing to perform the step
+        :param other_spheres: other spheres which sphere might collide
+        :param total_step: total step to be perform at current iteration by spheres
+        :param v_hat: direction of step
+        :return: Step object containing the needed information such as step size or step type (wall free or boundary)
+        """
+        min_dist_to_wall, closest_wall = Metric.dist_to_boundary(sphere, v_hat, total_step, self.boundaries)
+        closest_sphere = []
+        closest_sphere_dist = float('inf')
+        for other_sphere in other_spheres:
+            sphere_dist = Metric.dist_to_collision(sphere, other_sphere, total_step, v_hat)
+            if sphere_dist < closest_sphere_dist:
+                closest_sphere_dist = sphere_dist
+                closest_sphere = other_sphere
+
+        # it hits a wall
+        if min_dist_to_wall < closest_sphere_dist:
+            step = Step(sphere, total_step, min_dist_to_wall, v_hat)
+            return Event(step, EventType.BC, [], closest_wall)
+
+        # it hits another sphere
+        if min_dist_to_wall > closest_sphere_dist:
+            step = Step(sphere, total_step, closest_sphere_dist, v_hat)
+            return Event(step, EventType.COLLISION, closest_sphere, [])
+
+        # it hits nothing, both min_dist_to_wall and closest_sphere_dist are inf
+        step = Step(sphere, total_step, total_step, v_hat)
+        return Event(step, EventType.FREE, [], [])

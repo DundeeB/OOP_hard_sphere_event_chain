@@ -44,6 +44,9 @@ class Sphere:
         """
         self.center = [x % e for x, e in zip(self.center, boundaries.edges)]
 
+    def perform_step(self, step):
+        self.center = self.center + np.array(step.v_hat)*step.current_step
+
 
 class Cell:
 

@@ -23,7 +23,8 @@ class Metric:
         r = sphere.rad
         min_dist_to_wall = float('inf')
         closest_wall = []
-        for wall in boundaries.get_walls():
+        for wall, BC_type in zip(boundaries.get_walls(), boundaries.boundaries_type):
+            if BC_type != BoundaryType.WALL: continue
             u = CubeBoundaries.vertical_step_to_wall(wall, pos)
             u = u - r*u/np.linalg.norm(u) #shift the wall closer by r
             if np.dot(u, v_hat) < 0:
@@ -35,13 +36,17 @@ class Metric:
         return min_dist_to_wall, closest_wall
 
     @staticmethod
-    def dist_to_collision(sphere1, sphere2, l, v_hat):
+    def dist_to_collision(sphere1, sphere2, l, v_hat, boundaries):
         """
         Distance sphere1 would need to go in v_hat direction in order to collide with sphere2
         :param sphere1: sphere about to move
+        :type sphere1: Sphere
         :param sphere2: potential for collision
+        :type sphere2: Sphere
         :param l: maximal step size. If dist for collision > l then dist_to_collision-->infty
         :param v_hat: direction in which sphere1 is to move
+        :param boundaries: boundaries for the case some of them are cyclic boundary conditinos
+        :type boundaries: CubeBoundaries
         :return: distance for collision if the move is allowed, infty if move can not lead to collision
         """
         pos_a = sphere1.center
@@ -51,7 +56,12 @@ class Metric:
         dx = np.array(pos_b) - np.array(pos_a)
         dx_dot_v = np.dot(dx, v_hat)
         if dx_dot_v <= 0:
-            return float('inf')
+            # cyclic boundary condition are relevant
+            l = sphere1.systems_length_in_v_direction(v_hat, boundaries)
+            pos_a = sphere1.center-l*v_hat
+            dx = np.array(pos_b) - np.array(pos_a)
+            dx_dot_v = np.dot(dx, v_hat)
+
         if np.linalg.norm(dx) - d <= epsilon:
             return 0
         discriminant = dx_dot_v ** 2 + d ** 2 - np.linalg.norm(dx) ** 2
@@ -64,7 +74,7 @@ class Metric:
 class EventType(Enum):
     FREE = "FreeStep"  # Free path
     COLLISION = "SphereSphereCollision"  # Path leads to collision with another sphere
-    BC = "BoundaryCondition"  # Path reaches Boundary and needs to be handle using Boundary Condition
+    WALL = "RigidWallBoundaryCondition"  # Path reaches rigid wall and needs to be handle
 
 
 class Event:
@@ -86,7 +96,7 @@ class Event:
 
 class Step:
 
-    def __init__(self, sphere, total_step, current_step, v_hat):
+    def __init__(self, sphere, total_step, v_hat, current_step):
         """
         The characteristic of the step to be perform
         :param sphere: sphere which about to move
@@ -99,8 +109,8 @@ class Step:
         self.current_step = current_step
         self.v_hat = v_hat
 
-    def perform_step(self):
-        self.sphere.perform_step(self)
+    def perform_step(self, boundaries):
+        self.sphere.perform_step(self, boundaries)
         self.total_step = self.total_step - self.current_step
 
 
@@ -119,7 +129,7 @@ class EventChainActions:
         :param v_hat: direction of step
         :return: Step object containing the needed information such as step size or step type (wall free or boundary)
         """
-        min_dist_to_wall, closest_wall = Metric.dist_to_boundary(sphere, v_hat, total_step, self.boundaries)
+        min_dist_to_wall, closest_wall = Metric.dist_to_boundary(sphere, total_step, v_hat, self.boundaries)
         closest_sphere = []
         closest_sphere_dist = float('inf')
         for other_sphere in other_spheres:
@@ -130,14 +140,14 @@ class EventChainActions:
 
         # it hits a wall
         if min_dist_to_wall < closest_sphere_dist:
-            step = Step(sphere, total_step, min_dist_to_wall, v_hat)
-            return Event(step, EventType.BC, [], closest_wall)
+            step = Step(sphere, total_step, v_hat, min_dist_to_wall)
+            return Event(step, EventType.WALL, [], closest_wall)
 
         # it hits another sphere
         if min_dist_to_wall > closest_sphere_dist:
-            step = Step(sphere, total_step, closest_sphere_dist, v_hat)
+            step = Step(sphere, total_step, v_hat, closest_sphere_dist)
             return Event(step, EventType.COLLISION, closest_sphere, [])
 
         # it hits nothing, both min_dist_to_wall and closest_sphere_dist are inf
-        step = Step(sphere, total_step, total_step, v_hat)
+        step = Step(sphere, total_step, v_hat, current_step=total_step)
         return Event(step, EventType.FREE, [], [])

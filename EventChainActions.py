@@ -8,13 +8,13 @@ epsilon = 1e-4
 class Metric:
 
     @staticmethod
-    def dist_to_boundary(sphere, v_hat, l, boundaries):
+    def dist_to_boundary(sphere, total_step, v_hat, boundaries):
         """
         Figures out the distance for the next boundary
-        :param sphere: sphere to be moved
+        :type sphere: Sphere
         :param v_hat: direction of step
-        :param l: magnitude of the step to be carried out
-        :param boundaries: of the simulation
+        :param total_step: magnitude of the step to be carried out
+        :type boundaries: CubeBoundaries
         :return: the minimal distance to the wall, and the wall.
         If there is no wall in a distance l, dist is inf and wall=[]
         """
@@ -26,24 +26,47 @@ class Metric:
         for wall, BC_type in zip(boundaries.get_walls(), boundaries.boundaries_type):
             if BC_type != BoundaryType.WALL: continue
             u = CubeBoundaries.vertical_step_to_wall(wall, pos)
-            u = u - r*u/np.linalg.norm(u) #shift the wall closer by r
+            u = u - r*u/np.linalg.norm(u)  # shift the wall closer by r
             if np.dot(u, v_hat) < 0:
                 continue
             v = np.dot(u, u)/np.dot(u, v_hat)
-            if v < min_dist_to_wall and v <= l:
+            if v < min_dist_to_wall and v <= total_step:
                 min_dist_to_wall = v
                 closest_wall = wall
         return min_dist_to_wall, closest_wall
 
     @staticmethod
-    def dist_to_collision(sphere1, sphere2, l, v_hat, boundaries):
+    def dist_to_boundary_without_r(sphere, total_step, v_hat, boundaries):
+        """
+        returns the distance to the boundary without taking into account the sphere radius, +epsilon so after box_it it
+        will give the bottom or the left boundary point. Also ignore whether its a wall or a cyclic boundary
+        :type sphere: Sphere
+        :param total_step:
+        :param v_hat:
+        :type boundaries: CubeBoundaries
+        :return:
+        """
+        v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
+        pos = np.array(sphere.center)
+        min_dist_to_wall = float('inf')
+        for wall in boundaries.get_walls():
+            u = CubeBoundaries.vertical_step_to_wall(wall, pos)
+            if np.dot(u, v_hat) < 0:
+                continue
+            v = np.dot(u, u) / np.dot(u, v_hat)
+            if v < min_dist_to_wall and v <= total_step:
+                min_dist_to_wall = v
+        return min_dist_to_wall + epsilon
+
+    @staticmethod
+    def dist_to_collision(sphere1, sphere2, total_step, v_hat, boundaries):
         """
         Distance sphere1 would need to go in v_hat direction in order to collide with sphere2
         :param sphere1: sphere about to move
         :type sphere1: Sphere
         :param sphere2: potential for collision
         :type sphere2: Sphere
-        :param l: maximal step size. If dist for collision > l then dist_to_collision-->infty
+        :param total_step: maximal step size. If dist for collision > total_step then dist_to_collision-->infty
         :param v_hat: direction in which sphere1 is to move
         :param boundaries: boundaries for the case some of them are cyclic boundary conditinos
         :type boundaries: CubeBoundaries
@@ -57,8 +80,8 @@ class Metric:
         dx_dot_v = np.dot(dx, v_hat)
         if dx_dot_v <= 0:
             # cyclic boundary condition are relevant
-            l = sphere1.systems_length_in_v_direction(v_hat, boundaries)
-            pos_a = sphere1.center-l*v_hat
+            total_step = sphere1.systems_length_in_v_direction(v_hat, boundaries)
+            pos_a = sphere1.center-total_step*v_hat
             dx = np.array(pos_b) - np.array(pos_a)
             dx_dot_v = np.dot(dx, v_hat)
 
@@ -67,7 +90,7 @@ class Metric:
         discriminant = dx_dot_v ** 2 + d ** 2 - np.linalg.norm(dx) ** 2
         if discriminant > 0:
             dist: float = dx_dot_v - np.sqrt(discriminant)
-            if dist <= l and dist >= 0: return dist
+            if dist <= total_step and dist >= 0: return dist
         return float('inf')
 
 
@@ -84,8 +107,10 @@ class Event:
         A single event that will happen to sphere, such as collision with another sphere
         or arriving at the boundary of the simulation
         :param step: step to be perform before event
-        :param event_type: EventType enum: "Free path", "Collision", "Boundary Condition"
+        :type step: Step
+        :type event_type: EventType
         :param other_sphere: if event is collision, this is the sphere it will collide
+        :type other_sphere: Sphere
         :param wall: if event is boundary condition, this is the wall it is going to reach
         """
         self.step = step
@@ -99,7 +124,7 @@ class Step:
     def __init__(self, sphere, total_step, v_hat, current_step):
         """
         The characteristic of the step to be perform
-        :param sphere: sphere which about to move
+        :type sphere: Sphere
         :param total_step: total step left for the current move of spheres
         :param current_step: step sphere is about to perform
         :param v_hat: direction of the step
@@ -110,6 +135,10 @@ class Step:
         self.v_hat = v_hat
 
     def perform_step(self, boundaries):
+        """
+        Perform the current step (calls Sphere's perform step), and subtrack step from total step
+        :type boundaries: CubeBoundaries
+        """
         self.sphere.perform_step(self, boundaries)
         self.total_step = self.total_step - self.current_step
 
@@ -117,6 +146,9 @@ class Step:
 class EventChainActions:
 
     def __init__(self, boundaries):
+        """
+        :type boundaries: CubeBoundaries
+        """
         self.boundaries = boundaries
 
     def next_event(self, sphere, other_spheres, total_step, v_hat):
@@ -124,7 +156,9 @@ class EventChainActions:
         Returns the next Event object to be handle, such as from the even get the step, perform the step and decide the
         next event
         :param sphere: sphere wishing to perform the step
+        :type sphere: Sphere
         :param other_spheres: other spheres which sphere might collide
+        :type other_spheres: Sphere
         :param total_step: total step to be perform at current iteration by spheres
         :param v_hat: direction of step
         :return: Step object containing the needed information such as step size or step type (wall free or boundary)

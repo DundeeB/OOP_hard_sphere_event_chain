@@ -26,12 +26,19 @@ class Sphere:
     def overlap(sphere1, sphere2):
         """
         Test of two d-dimensional Sphere objects over lap
+        :type sphere1: Sphere
+        :type sphere2: Sphere
         :return: True if they overlap
         """
         return np.linalg.norm(sphere1.center-sphere2.center) < sphere1.rad + sphere2.rad
 
     @staticmethod
     def spheres_overlap(spheres):
+        """
+        :type spheres: list
+        :param spheres: list of spheres to check overlap between all couples
+        :return:
+        """
         for i in range(len(spheres)):
             for j in range(i):
                 if Sphere.overlap(spheres[i],spheres[j]):
@@ -41,11 +48,18 @@ class Sphere:
     def box_it(self, boundaries):
         """
         Put the sphere inside the boundaries of the simulation, usefull for cyclic boundary conditions
-        :param boundaries: CubeBoundaries instance
+        :type boundaries: CubeBoundaries
         """
         self.center = [x % e for x, e in zip(self.center, boundaries.edges)]
 
     def perform_step(self, step, boundaries):
+        """
+        :type step: Step
+        :param step: step to be perform
+        :type boundaries: CubeBoundaries
+        :param boundaries: boundaries of the simulation, needed to know for the case of cyclic boundary condition
+        :return:
+        """
         self.center = self.center + np.array(step.v_hat)*step.current_step
         self.box_it(boundaries)
 
@@ -72,9 +86,41 @@ class Sphere:
         return dist_bottom_boundary + dist_upper_boundary
 
     def trajectory(self, t, v_hat, boundaries):
+        """
+        Solve for the trajectory from the starting point self.center, assuming cyclic boundary conditions
+        :param t: length of step
+        :param v_hat: direction of step
+        :type boundaries: CubeBoundaries
+        :return:
+        """
         r = self.center+np.array(v_hat)*t
         r = [x % e for x, e in zip(r, boundaries.edges)]
         return r
+
+    def trajectories_braked_to_lines(self, total_step, v_hat, boundaries):
+        """
+        return list [p1, p2, ..., pn] of points for which p1 and direction v_hat defines the trajectories. p1 is the
+        starting point and last pn is the last point. All the points in between are at the bottom or to the left of the
+        simulation
+        :param total_step: total step left to be carried out
+        :param v_hat: direction of step
+        :type boundaries: CubeBoundaries
+        :return: list [p1, p2, ..., pn] of points for which p1 and direction v_hat defines the trajectories
+        """
+        ps = [self.center]
+        t = 0
+        sphere_to_move_around = Sphere(self.center, self.rad)
+        while t < total_step:
+            dist_to_wall = Metric.dist_to_boundary_without_r(sphere_to_move_around, v_hat, boundaries)
+            if dist_to_wall < total_step - t:
+                new_location = sphere_to_move_around.trajectory(dist_to_wall, v_hat, boundaries)
+                ps.append(new_location)
+                sphere_to_move_around.center = new_location
+                t = t + dist_to_wall
+            else:
+                ps.append(self.trajectory(total_step, v_hat, boundaries))
+                t = total_step
+        return ps
 
 
 class Cell:
@@ -112,6 +158,7 @@ class Cell:
         cube of the cell. Notice in the case dim(cell)!=dim(sphere), a sphere is considered
         inside a cell if its dim(cell) first components are inside the cell.
         :param sphere: the sphere to check whether should be considered in the new cell
+        :type sphere: Sphere
         :return: True if the sphere should be considered inside the cell, false otherwise
         """
         for i in range(len(self.site)):
@@ -124,7 +171,7 @@ class Cell:
     def dim(self):
         return len(self.site)
 
-    def random_generate_spheres(self,n_spheres, rads,extra_edges=[]):
+    def random_generate_spheres(self, n_spheres, rads, extra_edges=[]):
         """
         Generate n spheres inside the cell. If there are spheres in the cell already,
          it deletes the exisiting spheres. The algorithm is to randomaly
@@ -171,7 +218,6 @@ class CubeBoundaries:
         """
         Create new boundaries for the simulation
         :param edges: list of edge per dimension for the simulation
-        :param boundaries_type: "Wall","Cyclic",ext...
         """
         self.edges = edges
         self.boundaries_type = boundaries_type
@@ -232,6 +278,13 @@ class CubeBoundaries:
 
     @staticmethod
     def flip_v_hat_wall_part(wall, sphere, v_hat):
+        """
+        Next to rigid wall boundary condition, we would want v_hat to flip direction
+        :param wall: list of points, definig the wall's plane
+        :type sphere: Sphere
+        :param v_hat: current direction of step
+        :return: flipped direction of  step, opposite to wall
+        """
         n_hat = CubeBoundaries.vertical_step_to_wall(wall, sphere.center)
         n_hat = np.array(n_hat)/np.linalg.norm(n_hat)
         return v_hat-2*np.dot(v_hat,n_hat)*n_hat
@@ -240,6 +293,11 @@ class CubeBoundaries:
 class ArrayOfCells:
 
     def __init__(self, dim, boundaries, cells=[]):
+        """
+        :type boundaries: CubeBoundaries
+        :param dim: dimension of the array of cells. Doesn't have to be dimension of a single sphere.
+        :param cells: list of cells defining the array, optional.
+        """
         self.dim = dim
         self.cells = cells
         self.boundaries = boundaries
@@ -268,8 +326,8 @@ class ArrayOfCells:
     def overlap_2_cells(cell1, cell2):
         """
         Checks if the spheres in cell1 and cell2 are overlapping with each other. Does not check inside cell
-        :param cell1: Cell object
-        :param cell2: Cell object
+        :type cell1: Cell
+        :type cell2: Cell
         :return: True if one of the spheres in cell1 overlap with one of the spheres in cell2
         """
         spheres1 = cell1.spheres
@@ -326,7 +384,7 @@ class ArrayOfCells:
         Construct a 2 dimension defualt choice list of empty cells (without spheres)
         :param n_rows: number of rows in the array of cells
         :param n_columns: number of colums in the array of cells
-        :param boundaries: physical length of the System in the [x,y,...] dimensions
+        :type boundaries: CubeBoundaries
         :return: list of cells. cells[i][j] are in row i and column j
         """
         l_x = boundaries.edges[0]
@@ -394,7 +452,7 @@ class ArrayOfCells:
     def get_all_crossed_points_2d(self, sphere, total_step, v_hat, edge):
         """
 
-        :param sphere:
+        :type sphere: Sphere
         :param total_step:
         :param v_hat:
         :param edge: assumes constant edge length of all cells
@@ -421,8 +479,8 @@ class ArrayOfCells:
     def perform_step(self, cell_ind, sphere, total_step, v_hat, edge):
         """
         Figures out the proper step for sphere inside cell which is at cells[cell_ind]
-        :param cell_ind: touple of (i,j,...)
-        :param sphere: sphere to perform step
+        :param cell_ind: (i,j,...)
+        :type sphere: Sphere
         :param total_step: total step left to perform
         :param v_hat: direction of step
         :param edge: assumes constant edge length of all cells

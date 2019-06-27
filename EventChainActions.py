@@ -41,10 +41,9 @@ class Metric:
         returns the distance to the boundary without taking into account the sphere radius, +epsilon so after box_it it
         will give the bottom or the left boundary point. Also ignore whether its a wall or a cyclic boundary
         :type sphere: Sphere
-        :param total_step:
-        :param v_hat:
+        :param total_step: total step left to be performed
+        :param v_hat: direction of step
         :type boundaries: CubeBoundaries
-        :return:
         """
         v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
         pos = np.array(sphere.center)
@@ -136,7 +135,7 @@ class Step:
 
     def perform_step(self, boundaries):
         """
-        Perform the current step (calls Sphere's perform step), and subtrack step from total step
+        Perform the current step (calls Sphere's perform step), and subtract step from total step
         :type boundaries: CubeBoundaries
         """
         self.sphere.perform_step(self, boundaries)

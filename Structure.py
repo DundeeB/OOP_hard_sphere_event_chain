@@ -93,7 +93,7 @@ class Sphere:
         :type boundaries: CubeBoundaries
         :return:
         """
-        r = self.center+np.array(v_hat)*t
+        r = self.center+np.array(v_hat)*t/np.linalg.norm(v_hat)
         r = [x % e for x, e in zip(r, boundaries.edges)]
         return r
 
@@ -107,19 +107,12 @@ class Sphere:
         :type boundaries: CubeBoundaries
         :return: list [p1, p2, ..., pn] of points for which p1 and direction v_hat defines the trajectories
         """
-        ps = [self.center]
-        t = 0
-        sphere_to_move_around = Sphere(self.center, self.rad)
-        while t < total_step:
-            dist_to_wall = Metric.dist_to_boundary_without_r(sphere_to_move_around, v_hat, boundaries)
-            if dist_to_wall < total_step - t:
-                new_location = sphere_to_move_around.trajectory(dist_to_wall, v_hat, boundaries)
-                ps.append(new_location)
-                sphere_to_move_around.center = new_location
-                t = t + dist_to_wall
-            else:
-                ps.append(self.trajectory(total_step, v_hat, boundaries))
-                t = total_step
+        len_v = self.systems_length_in_v_direction(v_hat, boundaries)
+        first_step = Metric.dist_to_boundary_without_r(self, total_step, v_hat, boundaries)
+        ts = [first_step + len_v * k for k in
+              range(int(np.floor(((total_step - first_step) / len_v))))]
+        if ts[-1] != total_step: ts.append(total_step)
+        ps = [self.center] + [self.trajectory(t, v_hat, boundaries) for t in ts]
         return ps
 
 
@@ -449,32 +442,33 @@ class ArrayOfCells:
         else:  # abs(dx) <= rad and abs(dy) <= rad:  # x=y=0  # 9
             return [a, b, c, d]
 
-    def get_all_crossed_points_2d(self, sphere, total_step, v_hat, edge):
+    def get_all_crossed_points_2d(self, sphere, total_step, v_hat, edge, boundaries):
         """
-
         :type sphere: Sphere
-        :param total_step:
-        :param v_hat:
+        :param sphere: sphere about to perform step
+        :param total_step: total length of step that might be performed
+        :param v_hat: direction of step
         :param edge: assumes constant edge length of all cells
-        :return:
+        :type boundaries: CubeBoundaries
         """
         vx = np.dot(v_hat, [1, 0])
         vy = np.dot(v_hat, [0, 1])
         ts = [0]
-        l = sphere.systems_length_in_v_direction(v_hat, self.boundaries)
-        if vy != 0:
-            for i in range(len(self.cells)):
-                y = i*edge
-                t = (y - np.dot(sphere.center, [0, 1])) / vy
-                if t < 0: t = t + l
-                ts.append(t)
-        if vx != 0:
-            for j in range(len(self.cells[0])):
-                x = j*edge
-                t = (x - np.dot(sphere.center, [1, 0])) / vx
-                if t < 0: t = t + l
-                ts.append(t)
-        return np.sort([t for t in ts if t < total_step])
+        len_v = sphere.systems_length_in_v_direction(v_hat, self.boundaries)
+        for starting_point in sphere.trajectories_braked_to_lines(total_step, v_hat, boundaries)[:-1]:  # [-1]=end point
+            if vy != 0:
+                for i in range(len(self.cells)):
+                    y = i * edge
+                    t = (y - np.dot(starting_point, [0, 1])) / vy
+                    if t < 0: t = t + len_v
+                    ts.append(t)
+            if vx != 0:
+                for j in range(len(self.cells[0])):
+                    x = j*edge
+                    t = (x - np.dot(starting_point, [1, 0])) / vx
+                    if t < 0: t = t + len_v
+                    ts.append(t)
+        return np.sort([t for t in ts if t <= total_step])
 
     def perform_step(self, cell_ind, sphere, total_step, v_hat, edge):
         """

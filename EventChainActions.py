@@ -1,96 +1,9 @@
-from Structure import *
 import numpy as np
 from enum import Enum
 
+from Structure import CubeBoundaries, BoundaryType, ArrayOfCells, Cell, Metric
+
 epsilon = 1e-4
-
-
-class Metric:
-
-    @staticmethod
-    def dist_to_boundary(sphere, total_step, v_hat, boundaries):
-        """
-        Figures out the distance for the next boundary
-        :type sphere: Sphere
-        :param v_hat: direction of step
-        :param total_step: magnitude of the step to be carried out
-        :type boundaries: CubeBoundaries
-        :return: the minimal distance to the wall, and the wall.
-        If there is no wall in a distance l, dist is inf and wall=[]
-        """
-        v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
-        pos = np.array(sphere.center)
-        r = sphere.rad
-        min_dist_to_wall = float('inf')
-        closest_wall = []
-        for wall, BC_type in zip(boundaries.get_walls(), boundaries.boundaries_type):
-            if BC_type != BoundaryType.WALL: continue
-            u = CubeBoundaries.vertical_step_to_wall(wall, pos)
-            u = u - r*u/np.linalg.norm(u)  # shift the wall closer by r
-            if np.dot(u, v_hat) < 0:
-                continue
-            v = np.dot(u, u)/np.dot(u, v_hat)
-            if v < min_dist_to_wall and v <= total_step:
-                min_dist_to_wall = v
-                closest_wall = wall
-        return min_dist_to_wall, closest_wall
-
-    @staticmethod
-    def dist_to_boundary_without_r(sphere, total_step, v_hat, boundaries):
-        """
-        returns the distance to the boundary without taking into account the sphere radius, +epsilon so after box_it it
-        will give the bottom or the left boundary point. Also ignore whether its a wall or a cyclic boundary
-        :type sphere: Sphere
-        :param total_step: total step left to be performed
-        :param v_hat: direction of step
-        :type boundaries: CubeBoundaries
-        """
-        v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
-        pos = np.array(sphere.center)
-        min_dist_to_wall = float('inf')
-        for wall in boundaries.get_walls():
-            u = CubeBoundaries.vertical_step_to_wall(wall, pos)
-            if np.dot(u, v_hat) < 0:
-                continue
-            v = np.dot(u, u) / np.dot(u, v_hat)
-            if v < min_dist_to_wall and v <= total_step:
-                min_dist_to_wall = v
-        return min_dist_to_wall + epsilon
-
-    @staticmethod
-    def dist_to_collision(sphere1, sphere2, total_step, v_hat, boundaries):
-        """
-        Distance sphere1 would need to go in v_hat direction in order to collide with sphere2
-        :param sphere1: sphere about to move
-        :type sphere1: Sphere
-        :param sphere2: potential for collision
-        :type sphere2: Sphere
-        :param total_step: maximal step size. If dist for collision > total_step then dist_to_collision-->infty
-        :param v_hat: direction in which sphere1 is to move
-        :param boundaries: boundaries for the case some of them are cyclic boundary conditinos
-        :type boundaries: CubeBoundaries
-        :return: distance for collision if the move is allowed, infty if move can not lead to collision
-        """
-        pos_a = sphere1.center
-        pos_b = sphere2.center
-        d = sphere1.rad + sphere2.rad
-        v_hat = np.array(v_hat)/np.linalg.norm(v_hat)
-        dx = np.array(pos_b) - np.array(pos_a)
-        dx_dot_v = np.dot(dx, v_hat)
-        if dx_dot_v <= 0:
-            # cyclic boundary condition are relevant
-            total_step = sphere1.systems_length_in_v_direction(v_hat, boundaries)
-            pos_a = sphere1.center-total_step*v_hat
-            dx = np.array(pos_b) - np.array(pos_a)
-            dx_dot_v = np.dot(dx, v_hat)
-
-        if np.linalg.norm(dx) - d <= epsilon:
-            return 0
-        discriminant = dx_dot_v ** 2 + d ** 2 - np.linalg.norm(dx) ** 2
-        if discriminant > 0:
-            dist: float = dx_dot_v - np.sqrt(discriminant)
-            if dist <= total_step and dist >= 0: return dist
-        return float('inf')
 
 
 class EventType(Enum):
@@ -184,3 +97,161 @@ class EventChainActions:
         # it hits nothing, both min_dist_to_wall and closest_sphere_dist are inf
         step = Step(sphere, total_step, v_hat, current_step=total_step)
         return Event(step, EventType.FREE, [], [])
+
+
+class EfficientEventChainCellArray2D:
+
+    def __init__(self, edge, n_rows, n_columns):
+        """
+        Construct a 2 dimension default choice list of empty cells (without spheres), with constant edge
+        :param n_rows: number of rows in the array of cells
+        :param n_columns: number of columns in the array of cells
+        :param edge: constant edge size of all cells is assumed and needs to be declared
+        """
+        self.edge = edge
+        l_x = edge*n_columns
+        l_y = edge*n_columns
+        cells = [[[] for _ in range(n_columns)] for _ in range(n_rows)]
+        for i in range(n_rows):
+            for j in range(n_columns):
+                site = [edge*i, edge*j]
+                cells[i][j] = Cell(site, [edge, edge], ind=(i, j))
+        self.boundaries = CubeBoundaries([l_x, l_y], [BoundaryType.CYCLIC, BoundaryType.CYCLIC])
+        self.array_of_cells = ArrayOfCells(2, self.boundaries, cells)
+        self.n_rows = n_rows
+        self.n_columns = n_columns
+
+    def closest_site_2d(self, point):
+        """
+        Solve for closest site to point, in 2d, assuming all cells edges have the same length edge
+        :return: tuple (i,j) of the closest cell = cells[i][j]
+        """
+        i = round(point[1] % self.edge) % self.n_rows
+        j = round(point[0] % self.edge) % self.n_columns
+        return i, j
+
+    def relevant_cells_around_point_2d(self, rad, point):
+        """
+        Finds cells which a sphere with radius rad with center at point would have overlap with
+        :param rad: radius of interest
+        :param point: point around which we find cells
+        :return: list of cells with overlap with
+        """
+        lx = self.boundaries.edges[0]
+        ly = self.boundaries.edges[1]
+        i, j = self.closest_site_2d(point)
+        cells = self.array_of_cells.cells
+        a = cells[i][j]
+        b = cells[i - 1][j]
+        c = cells[i - 1][j - 1]
+        d = cells[i][j - 1]
+        dx, dy = np.array(point)-cells[i][j].site
+
+        #Boundaries:
+        e = self.edge
+        if dx > e: dx = dx - lx
+        if dy > e: dy = dy - ly
+        if dx < -e: dx = lx + dx
+        if dy < -e: dy = ly + dy
+
+        # cases for overlap
+        if dx > rad and dy > rad:  # 0<theta<90  # 1
+            return [a]
+        if dx > rad and abs(dy) <= rad:  # 0=theta  # 2
+            return [a, b]
+        if dx > rad and dy < -rad:  # -90<theta<0  # 3
+            return [b]
+        if abs(dx) <= rad and dy < -rad:  # theta=-90  # 4
+            return [b, c]
+        if dx < -rad and dy < -rad:  # -180<theta<-90  # 5
+            return [c]
+        if dx < -rad and abs(dy) <= rad:  # theta=180  # 6
+            return [c, d]
+        if dx < -rad and dy > rad:  # 90<theta<180  # 7
+            return [d]
+        if abs(dx) <= rad and dy > rad:  # theta=90  # 8
+            return [a, d]
+        else:  # abs(dx) <= rad and abs(dy) <= rad:  # x=y=0  # 9
+            return [a, b, c, d]
+
+    def get_all_crossed_points_2d(self, sphere, total_step, v_hat):
+        """
+        :type sphere: Sphere
+        :param sphere: sphere about to perform step
+        :param total_step: total length of step that might be performed
+        :param v_hat: direction of step
+        :return: list of ts such that trajectory(t) is a point crossing cell boundary
+        """
+        vx = np.dot(v_hat, [1, 0])
+        vy = np.dot(v_hat, [0, 1])
+        ts = [0]
+        len_v = sphere.systems_length_in_v_direction(v_hat, self.boundaries)
+        for starting_point in sphere.trajectories_braked_to_lines(total_step, v_hat, self.boundaries)[:-1]:
+            # [-1]=end point
+            if vy != 0:
+                for i in range(self.n_rows):
+                    y = i * self.edge
+                    t = (y - np.dot(starting_point, [0, 1])) / vy
+                    if t < 0: t = t + len_v
+                    ts.append(t)
+            if vx != 0:
+                for j in range(self.n_columns):
+                    x = j*self.edge
+                    t = (x - np.dot(starting_point, [1, 0])) / vx
+                    if t < 0: t = t + len_v
+                    ts.append(t)
+        return np.sort([t for t in ts if t <= total_step])
+
+    def perform_total_step(self, cell_ind, sphere, total_step, v_hat):
+        """
+        Perform step for all the spheres, starting from sphere inside cell which is at cells[cell_ind]
+        :param cell_ind: (i,j,...)
+        :type sphere: Sphere
+        :param total_step: total step left to perform
+        :param v_hat: direction of step
+        """
+        cell = self.array_of_cells.cell_from_ind(cell_ind)
+        cell.remove(sphere)
+        cells = []
+        sub_cells = []
+        for t in self.get_all_crossed_points_2d(sphere, total_step, v_hat):
+            previous_sub_cells = sub_cells
+            sub_cells = []
+            for c in self.relevant_cells_around_point_2d(sphere.rad, sphere.trajectory(t, v_hat, self.boundaries)):
+                if c not in previous_sub_cells:
+                    sub_cells.append(c)
+            cells.append(sub_cells)
+        event_chain_actions = EventChainActions(self.boundaries)
+        for i, sub_cells in enumerate(cells):
+            other_spheres = []
+            for c in sub_cells:
+                for s in c.spheres: other_spheres.append(s)
+            event = event_chain_actions.next_event(sphere, other_spheres, total_step)
+            if event.event_type != EventType.FREE:
+                if i == len(cells)-1: break
+                else:
+                    next_other_spheres = []
+                    for next_cell in cells[i+1]:
+                        for s in next_cell.spheres: next_other_spheres.append(s)
+                    another_potential_event = event_chain_actions.next_event(sphere, next_other_spheres, total_step)
+                    if event.step.current_step > another_potential_event.step.current_step:
+                        event = another_potential_event
+                    break
+        event.step.perform_step(event.step, self.boundaries)
+        for new_cell in sub_cells:
+            if new_cell.should_sphere_be_in_cell(sphere):
+                new_cell.add_sphere(sphere)
+                break
+        if event.event_type == EventType.COLLISION:
+            self.perform_step(new_cell.ind, event.other_sphere, event.step.total_step)
+        if event.event_type == EventType.WALL:
+            event.step.v_hat = CubeBoundaries.flip_v_hat_wall_part(event.wall, sphere, v_hat)
+            self.perform_step(new_cell.ind, sphere, event.step.total_step)
+        if event.event_type == EventType.FREE:
+            return
+
+    def all_spheres(self):
+        spheres = []
+        for c in self.array_of_cells.cells:
+            for s in c.spheres: spheres.append(s)
+        return spheres

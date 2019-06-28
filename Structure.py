@@ -294,25 +294,28 @@ class ArrayOfCells:
         self.cells = cells
         self.boundaries = boundaries
 
-    def get_all_spheres(self):
+    def all_spheres(self):
         """
         :return: list of Sphere objects of all the spheres in the array
         """
         spheres = []
-        for cell in np.reshape(self.cells,-1):
+        for cell in np.reshape(self.cells, -1):
             for sphere in cell.spheres:
                 spheres.append(sphere)
         return spheres
 
-    def get_all_centers(self):
+    def all_centers(self):
         """
         :return: list of all the centers (d-dimension vectors) of all the Sphere objects in the simulation.
         """
         centers = []
-        for cell in np.reshape(self.cells,-1):
+        for cell in np.reshape(self.cells, -1):
             for sphere in cell.spheres:
                 centers.append(sphere.center)
         return centers
+
+    def all_cells(self):
+        return [c for c in np.reshape(self.cells, -1)]
 
     @staticmethod
     def overlap_2_cells(cell1, cell2):

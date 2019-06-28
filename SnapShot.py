@@ -19,6 +19,12 @@ class View2D:
         self.boundaries = boundaries
 
     def plt_spheres(self, title, spheres):
+        """
+
+        :param title:
+        :param spheres:
+        :return:
+        """
         pylab.gcf().set_size_inches(6, 6)
         pylab.cla()
         pylab.axis([0, self.boundaries.edges[0], 0, self.boundaries.edges[1]])
@@ -51,6 +57,8 @@ class View2D:
 
     def array_of_cells_snapshot(self, title, array_of_cells, img_name):
         """
+        :param title:
+        :param img_name:
         :type array_of_cells: ArrayOfCells
         """
         spheres = array_of_cells.all_spheres()
@@ -61,11 +69,10 @@ class View2D:
             pylab.gca().add_patch(rec)
         pylab.savefig(os.path.join(self.output_dir, img_name + ".png"))
 
-    def save_video(self, video_name):
+    def save_video(self, video_name, fps):
         images = [img for img in os.listdir(self.output_dir) if img.endswith(".png")]
         frame = cv2.imread(os.path.join(self.output_dir, images[0]))
         height, width, layers = frame.shape
-        fps = 10
         video = cv2.VideoWriter(os.path.join(self.output_dir, video_name+".avi"),
                                 0, fps, (width, height))
 

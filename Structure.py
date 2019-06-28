@@ -12,7 +12,7 @@ class Sphere:
         :param center: d dimension of sphere center
         :param rad: scalar - radius of sphere
         """
-        self.center = center
+        self.center = np.array(center)
         self.rad = rad
 
     def dim(self):
@@ -94,7 +94,7 @@ class Sphere:
         """
         r = self.center+np.array(v_hat)*t/np.linalg.norm(v_hat)
         r = [x % e for x, e in zip(r, boundaries.edges)]
-        return r
+        return np.array(r)
 
     def trajectories_braked_to_lines(self, total_step, v_hat, boundaries):
         """
@@ -109,7 +109,7 @@ class Sphere:
         len_v = self.systems_length_in_v_direction(v_hat, boundaries)
         first_step = Metric.dist_to_boundary_without_r(self, total_step, v_hat, boundaries)
         ts = [first_step + len_v * k for k in
-              range(int(np.floor(((total_step - first_step) / len_v))))]
+              range(int(np.floor(((total_step - first_step) / len_v)))+1)]
         if ts[-1] != total_step: ts.append(total_step)
         ps = [self.center] + [self.trajectory(t, v_hat, boundaries) for t in ts]
         return ps

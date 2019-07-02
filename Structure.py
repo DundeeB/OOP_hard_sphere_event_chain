@@ -464,6 +464,8 @@ class ArrayOfCells:
         :type cell2: Cell
         :return: True if one of the spheres in cell1 overlap with one of the spheres in cell2
         """
+        if cell1 == [] or cell2 == []:
+            return False
         spheres1 = cell1.spheres
         spheres2 = cell2.spheres
         for sphere1 in spheres1:
@@ -471,6 +473,40 @@ class ArrayOfCells:
                 if Sphere.overlap(sphere1, sphere2):
                     return True
         return False
+
+    def cushioning_array_for_boundary_cond(self):
+        if self.dim != 2: raise Exception("dim!=2 not implemented yet")
+        n_rows = len(self.cells)
+        n_columns = len(self.cells[0])
+        Lx = self.boundaries.edges[0]
+        Ly = self.boundaries.edges[1]
+        cells = [[[] for _ in range(n_columns + 2)] for _ in range(n_rows + 2)]
+        for i in range(n_rows):
+            for j in range(n_columns):
+                cells[i + 1][j + 1] = self.cells[i][j]
+        if self.boundaries.boundaries_type[0] == BoundaryType.CYCLIC:
+            for i in range(n_rows - 1):
+                c0 = self.cells[i][n_columns - 1]
+                c0.transform(c0.site + np.array([0, -Lx]))
+                cells[i + 1][0] = c0
+                c1 = self.cells[i][0]
+                c1.transform(c1.site + np.array([0, Lx]))
+                cells[i + 1][n_columns] = c1
+        if self.boundaries.boundaries_type[1] == BoundaryType.CYCLIC:
+            for j in range(n_columns - 1):
+                c0 = self.cells[n_rows - 1][j]
+                c0.transform(c0.site + np.array([-Ly, 0]))
+                cells[0][j + 1] = c0
+                c1 = self.cells[0][j]
+                c1.transform(c1.site + np.array([Ly, 0]))
+                cells[n_rows][j + 1] = c1
+        if self.boundaries.boundaries_type[1] == BoundaryType.CYCLIC and \
+                self.boundaries.boundaries_type[0] == BoundaryType.CYCLIC:
+            cells[0][0] = self.cells[n_rows - 1][n_columns - 1]
+            cells[n_rows][n_columns] = self.cells[0][0]
+            cells[n_rows][0] = self.cells[0][n_columns - 1]
+            cells[0][n_columns] = self.cells[n_rows - 1][0]
+        return cells
 
     def legal_configuration(self):
         """
@@ -480,26 +516,14 @@ class ArrayOfCells:
         d = self.cells[0].dim
         if d != 2 and d != 3:
             raise (Exception('Only d=2 or d=3 supported!'))
-        Nx = len(self.cells)
-        Ny = len(self.cells[0])
-        for i in range(Nx):
-            for j in range(Ny):
+        for i in range(len(self.cells) - 1):
+            for j in range(len(self.cells[i]) - 1):
                 if d == 2:
                     cell = self.cells[i][j]
                     if Sphere.spheres_overlap(cell.spheres):
                         return False
-                    if i != Nx - 1 and i != 0 and j != Ny - 1:
-                        neighbors = [self.cells[i + 1][j - 1], self.cells[i + 1][j],
-                                     self.cells[i + 1][j + 1], self.cells[i][j + 1]]
-                    Lx = self.boundaries.edges[0]
-                    Ly = self.boundaries.edges[1]
-                    if i == Nx -1 and j != Ny - 1:
-                        cell_over_bounds = [self.cells[0][j - 1], self.cells[0][j],
-                                     self.cells[0][j + 1]]
-                        for cell in cell_over_bounds:
-                            cell.transform(cell.site + np.array([0, Ly]))
-                        neighbors = [self.cells[i + 1][j], self.cells[i][j + 1],
-                                     self.cells[i + 1][j + 1]]
+                    neighbors = [self.cells[i + 1][j - 1], self.cells[i + 1][j],
+                                 self.cells[i + 1][j + 1], self.cells[i][j + 1]]
                     for neighbor in neighbors:
                         if ArrayOfCells.overlap_2_cells(cell, neighbor):
                             return False

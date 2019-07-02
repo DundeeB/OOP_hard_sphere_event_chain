@@ -61,9 +61,9 @@ class View2D:
         :param img_name:
         :type array_of_cells: ArrayOfCells
         """
-        spheres = array_of_cells.all_spheres()
+        spheres = array_of_cells.all_spheres
         self.plt_spheres(title, spheres)
-        for cell in array_of_cells.all_cells():
+        for cell in array_of_cells.all_cells:
             x, y = cell.site
             rec = pylab.Rectangle((x, y), cell.edges[0], cell.edges[1], fill=False)
             pylab.gca().add_patch(rec)

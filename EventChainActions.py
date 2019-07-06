@@ -23,7 +23,7 @@ class Step:
         self.v_hat = v_hat
         self.boundaries = boundaries
 
-    def clone(self, current_step = np.nan):
+    def clone(self, current_step=np.nan):
         if current_step != np.nan: return Step(self.sphere, self.total_step, self.v_hat, self.boundaries, current_step)
         return Step(self.sphere, self.total_step, self.v_hat, self.boundaries, self.current_step)
 
@@ -199,6 +199,7 @@ class EfficientEventChainCellArray2D(ArrayOfCells):
         """
         Perform step for all the spheres, starting from sphere inside cell which is at cells[cell_ind]
         :param cell_ind: (i,j,...)
+        :type cell_ind: tuple
         :type sphere: Sphere
         :param total_step: total step left to perform
         :param v_hat: direction of step
@@ -229,8 +230,9 @@ class EfficientEventChainCellArray2D(ArrayOfCells):
                     another_potential_event = step.next_event(next_other_spheres)
                     if event.step.current_step > another_potential_event.step.current_step:
                         event = another_potential_event
+                        sub_cells = cells[i+1]
                     break
-        event.step.perform_step(event.step, self.boundaries)
+        event.step.perform_step(event.step, self.boundaries)  # subtract total step
         for new_cell in sub_cells:
             if new_cell.should_sphere_be_in_cell(sphere):
                 new_cell.add_sphere(sphere)

@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import copy
 from enum import Enum
 epsilon = 1e-4
 
@@ -14,6 +15,9 @@ class Sphere:
         """
         self.center = np.array(center)
         self.rad = rad
+
+    def clone(self):
+        return Sphere(self.center, self.rad)
 
     @property
     def dim(self):
@@ -238,16 +242,36 @@ class CubeBoundaries:
         """
         direct = sphere1.sphere_dist(sphere2)
         dist = direct
-        cloned_sphere = Sphere(sphere1.center, sphere1.rad)
+        cloned_sphere = copy.deepcopy(sphere1)
         l_x = self.edges[0]
         l_y = self.edges[1]
         if self.dim != 2: raise Exception('d!=2 not supported')
         for bound_vec, boundary_type in zip([[l_x, 0], [0, l_y], [-l_x, 0], [0, -l_y]], 2*self.boundaries_type):
             if boundary_type != BoundaryType.CYCLIC: continue
-            cloned_sphere.center = cloned_sphere.center + np.array(bound_vec)
+            cloned_sphere.center = sphere1.center + np.array(bound_vec)
             new_dist = cloned_sphere.sphere_dist(sphere2)
             if new_dist < dist: dist = new_dist
         return dist
+
+    def overlap(self, sphere1, sphere2):
+        """
+        :type sphere1: Sphere
+        :type sphere2: Sphere
+        :return: True if sphere1 and sphere2 are overlaping, even through CYCLIC boundary condition
+        """
+        return (self.sphere_dist(sphere1, sphere2) <= sphere1.rad + sphere2.rad)
+
+    def spheres_overlap(self, spheres):
+        """
+        :type spheres: list
+        :param spheres: list of spheres to check overlap between all couples
+        :return: True if there are two overlaping spheres, even if they overlap through boundary condition
+        """
+        for i in range(len(spheres)):
+            for j in range(i):
+                if self.overlap(spheres[i],spheres[j]):
+                    return True
+        return False
 
 
 class Metric:
@@ -358,6 +382,11 @@ class Cell:
         self.ind = ind
         self.spheres = spheres
 
+    def clone(self):
+        spheres = []
+        for sphere in self.spheres: spheres.append(sphere.clone())
+        return Cell(self.site, self.edges, self.ind, self.spheres)
+
     def add_spheres(self, new_spheres):
         """
         Add spheres to the cell
@@ -413,7 +442,7 @@ class Cell:
          dimension size. For 2d cells with 3d spheres confined between two walls, extra_edges=[h]
         """
         if type(rads) != list: rads = n_spheres * [rads]
-        while True: # do-while python implementation
+        while True:  # do-while python implementation
             spheres = []
             for i in range(n_spheres):
                 r = rads[i]
@@ -456,6 +485,7 @@ class ArrayOfCells:
         """
         spheres = []
         for cell in np.reshape(self.cells, -1):
+            if cell == []: continue
             for sphere in cell.spheres:
                 spheres.append(sphere)
         return spheres
@@ -475,8 +505,7 @@ class ArrayOfCells:
     def all_cells(self):
         return [c for c in np.reshape(self.cells, -1)]
 
-    @staticmethod
-    def overlap_2_cells(cell1, cell2):
+    def overlap_2_cells(self, cell1, cell2):
         """
         Checks if the spheres in cell1 and cell2 are overlapping with each other. Does not check inside cell.
         :type cell1: Cell
@@ -489,7 +518,7 @@ class ArrayOfCells:
         spheres2 = cell2.spheres
         for sphere1 in spheres1:
             for sphere2 in spheres2:
-                if Sphere.overlap(sphere1, sphere2):
+                if self.boundaries.overlap(sphere1, sphere2):
                     return True
         return False
 
@@ -508,36 +537,36 @@ class ArrayOfCells:
         if self.boundaries.boundaries_type[0] == BoundaryType.CYCLIC:
             l_x = self.boundaries.edges[0]
             for i in range(n_rows - 1):
-                c0 = self.cells[i][n_columns - 1]
+                c0 = self.cells[i][n_columns - 1].clone()
                 c0.transform(c0.site + np.array([-l_x, 0]))
                 cells[i + 1][0] = c0
-                c1 = self.cells[i][0]
+                c1 = self.cells[i][0].clone()
                 c1.transform(c1.site + np.array([l_x, 0]))
                 cells[i + 1][n_columns] = c1
         if self.boundaries.boundaries_type[1] == BoundaryType.CYCLIC:
             l_y = self.boundaries.edges[1]
             for j in range(n_columns - 1):
-                c0 = self.cells[n_rows - 1][j]
+                c0 = self.cells[n_rows - 1][j].clone()
                 c0.transform(c0.site + np.array([0, -l_y]))
                 cells[0][j + 1] = c0
-                c1 = self.cells[0][j]
+                c1 = self.cells[0][j].clone()
                 c1.transform(c1.site + np.array([0, l_y]))
                 cells[n_rows][j + 1] = c1
         if self.boundaries.boundaries_type[1] == BoundaryType.CYCLIC and \
                 self.boundaries.boundaries_type[0] == BoundaryType.CYCLIC:
-            c = self.cells[n_rows - 1][n_columns - 1]
+            c = self.cells[n_rows - 1][n_columns - 1].clone()
             c.transform(c.site + np.array([-l_x, -l_y]))
             cells[0][0] = c
-            c = self.cells[0][0]
+            c = self.cells[0][0].clone()
             c.transform(c.site + np.array([l_x, l_y]))
             cells[n_rows][n_columns] = c
-            c = self.cells[0][n_columns - 1]
+            c = self.cells[0][n_columns - 1].clone()
             c.transform(c.site + np.array([-l_x, l_y]))
             cells[n_rows][0] = c
-            c = self.cells[n_rows - 1][0]
+            c = self.cells[n_rows - 1][0].clone()
             c.transform(c.site + np.array([l_x, -l_y]))
             cells[0][n_columns] = c
-        return cells
+        return ArrayOfCells(self.dim, self.boundaries, cells)
 
     def legal_configuration(self):
         """
@@ -547,7 +576,7 @@ class ArrayOfCells:
         d = self.dim
         if d != 2:
             raise (Exception('Only d=2 supported!'))
-        cushioned_cells = self.cushioning_array_for_boundary_cond()
+        cushioned_cells = self.cushioning_array_for_boundary_cond().cells
         for i in range(1, len(cushioned_cells) - 1):
             for j in range(1, len(cushioned_cells) - 1):
                 cell = cushioned_cells[i][j]

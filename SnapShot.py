@@ -62,8 +62,7 @@ class View2D:
         :type array_of_cells: ArrayOfCells
         """
         spheres = array_of_cells.cushioning_array_for_boundary_cond().all_spheres
-        # self.plt_spheres(title, spheres)
-        self.plt_spheres(title, array_of_cells.all_spheres)
+        self.plt_spheres(title, spheres)
         for cell in array_of_cells.all_cells:
             x, y = cell.site
             rec = pylab.Rectangle((x, y), cell.edges[0], cell.edges[1], fill=False)

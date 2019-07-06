@@ -1,4 +1,5 @@
 import numpy as np
+import copy
 from enum import Enum
 
 from Structure import CubeBoundaries, BoundaryType, ArrayOfCells, Cell, Metric
@@ -24,8 +25,10 @@ class Step:
         self.boundaries = boundaries
 
     def clone(self, current_step=np.nan):
-        if current_step != np.nan: return Step(self.sphere, self.total_step, self.v_hat, self.boundaries, current_step)
-        return Step(self.sphere, self.total_step, self.v_hat, self.boundaries, self.current_step)
+        s = copy.deepcopy(self.sphere)
+        if current_step != np.nan:
+            return Step(s, self.total_step, self.v_hat, self.boundaries, current_step)
+        return Step(s, self.total_step, self.v_hat, self.boundaries, self.current_step)
 
     def perform_step(self):
         """

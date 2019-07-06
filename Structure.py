@@ -16,9 +16,6 @@ class Sphere:
         self.center = np.array(center)
         self.rad = rad
 
-    def clone(self):
-        return Sphere(self.center, self.rad)
-
     @property
     def dim(self):
         """
@@ -382,11 +379,6 @@ class Cell:
         self.ind = ind
         self.spheres = spheres
 
-    def clone(self):
-        spheres = []
-        for sphere in self.spheres: spheres.append(sphere.clone())
-        return Cell(self.site, self.edges, self.ind, self.spheres)
-
     def add_spheres(self, new_spheres):
         """
         Add spheres to the cell
@@ -531,41 +523,41 @@ class ArrayOfCells:
         n_rows = len(self.cells)
         n_columns = len(self.cells[0])
         cells = [[[] for _ in range(n_columns + 2)] for _ in range(n_rows + 2)]
-        for i in range(n_rows):
+        for i in range(n_rows):  # 1 < (i + 1, j+1) < n
             for j in range(n_columns):
                 cells[i + 1][j + 1] = self.cells[i][j]
         if self.boundaries.boundaries_type[0] == BoundaryType.CYCLIC:
             l_x = self.boundaries.edges[0]
-            for i in range(n_rows - 1):
-                c0 = self.cells[i][n_columns - 1].clone()
+            for i in range(n_rows):  # 1 < i + 1 < n
+                c0 = copy.deepcopy(self.cells[i][n_columns - 1])
                 c0.transform(c0.site + np.array([-l_x, 0]))
                 cells[i + 1][0] = c0
-                c1 = self.cells[i][0].clone()
+                c1 = copy.deepcopy(self.cells[i][0])
                 c1.transform(c1.site + np.array([l_x, 0]))
-                cells[i + 1][n_columns] = c1
+                cells[i + 1][n_columns + 1] = c1
         if self.boundaries.boundaries_type[1] == BoundaryType.CYCLIC:
             l_y = self.boundaries.edges[1]
-            for j in range(n_columns - 1):
-                c0 = self.cells[n_rows - 1][j].clone()
+            for j in range(n_columns):  # 1 < j + 1 < n
+                c0 = copy.deepcopy(self.cells[n_rows - 1][j])
                 c0.transform(c0.site + np.array([0, -l_y]))
                 cells[0][j + 1] = c0
-                c1 = self.cells[0][j].clone()
+                c1 = copy.deepcopy(self.cells[0][j])
                 c1.transform(c1.site + np.array([0, l_y]))
-                cells[n_rows][j + 1] = c1
+                cells[n_rows + 1][j + 1] = c1
         if self.boundaries.boundaries_type[1] == BoundaryType.CYCLIC and \
                 self.boundaries.boundaries_type[0] == BoundaryType.CYCLIC:
-            c = self.cells[n_rows - 1][n_columns - 1].clone()
+            c = copy.deepcopy(self.cells[n_rows - 1][n_columns - 1])
             c.transform(c.site + np.array([-l_x, -l_y]))
             cells[0][0] = c
-            c = self.cells[0][0].clone()
+            c = copy.deepcopy(self.cells[0][0])
             c.transform(c.site + np.array([l_x, l_y]))
-            cells[n_rows][n_columns] = c
-            c = self.cells[0][n_columns - 1].clone()
+            cells[n_rows + 1][n_columns + 1] = c
+            c = copy.deepcopy(self.cells[0][n_columns - 1])
             c.transform(c.site + np.array([-l_x, l_y]))
-            cells[n_rows][0] = c
-            c = self.cells[n_rows - 1][0].clone()
+            cells[n_rows + 1][0] = c
+            c = copy.deepcopy(self.cells[n_rows - 1][0])
             c.transform(c.site + np.array([l_x, -l_y]))
-            cells[0][n_columns] = c
+            cells[0][n_columns + 1] = c
         return ArrayOfCells(self.dim, self.boundaries, cells)
 
     def legal_configuration(self):

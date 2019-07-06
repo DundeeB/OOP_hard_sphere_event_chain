@@ -25,7 +25,7 @@ class Sphere:
     def sphere_dist(self, other_sphere):
         """
         :type other_sphere: Sphere
-        :return: distance between two spheres
+        :return: distance between two spheres, without boundary conditions
         """
         return np.linalg.norm(np.array(self.center) - other_sphere.center)
 
@@ -229,6 +229,25 @@ class CubeBoundaries:
         n_hat = CubeBoundaries.vertical_step_to_wall(wall, sphere.center)
         n_hat = np.array(n_hat)/np.linalg.norm(n_hat)
         return v_hat-2*np.dot(v_hat, n_hat)*n_hat
+
+    def sphere_dist(self, sphere1, sphere2):
+        """
+        :type sphere1: Sphere
+        :type sphere2: Sphere
+        :return: distance between the two sphere, but including CYCLIC boundary conditions
+        """
+        direct = sphere1.sphere_dist(sphere2)
+        dist = direct
+        cloned_sphere = Sphere(sphere1.center, sphere1.rad)
+        l_x = self.edges[0]
+        l_y = self.edges[1]
+        if self.dim != 2: raise Exception('d!=2 not supported')
+        for bound_vec, boundary_type in zip([[l_x, 0], [0, l_y], [-l_x, 0], [0, -l_y]], 2*self.boundaries_type):
+            if boundary_type != BoundaryType.CYCLIC: continue
+            cloned_sphere.center = cloned_sphere.center + np.array(bound_vec)
+            new_dist = cloned_sphere.sphere_dist(sphere2)
+            if new_dist < dist: dist = new_dist
+        return dist
 
 
 class Metric:
@@ -475,37 +494,49 @@ class ArrayOfCells:
         return False
 
     def cushioning_array_for_boundary_cond(self):
+        """
+        :return: array of cells of length n_row+2 n_column+2, for any CYCLIC boundary condition it is surrounded by the
+        cells in the other end
+        """
         if self.dim != 2: raise Exception("dim!=2 not implemented yet")
         n_rows = len(self.cells)
         n_columns = len(self.cells[0])
-        Lx = self.boundaries.edges[0]
-        Ly = self.boundaries.edges[1]
         cells = [[[] for _ in range(n_columns + 2)] for _ in range(n_rows + 2)]
         for i in range(n_rows):
             for j in range(n_columns):
                 cells[i + 1][j + 1] = self.cells[i][j]
         if self.boundaries.boundaries_type[0] == BoundaryType.CYCLIC:
+            l_x = self.boundaries.edges[0]
             for i in range(n_rows - 1):
                 c0 = self.cells[i][n_columns - 1]
-                c0.transform(c0.site + np.array([0, -Lx]))
+                c0.transform(c0.site + np.array([-l_x, 0]))
                 cells[i + 1][0] = c0
                 c1 = self.cells[i][0]
-                c1.transform(c1.site + np.array([0, Lx]))
+                c1.transform(c1.site + np.array([l_x, 0]))
                 cells[i + 1][n_columns] = c1
         if self.boundaries.boundaries_type[1] == BoundaryType.CYCLIC:
+            l_y = self.boundaries.edges[1]
             for j in range(n_columns - 1):
                 c0 = self.cells[n_rows - 1][j]
-                c0.transform(c0.site + np.array([-Ly, 0]))
+                c0.transform(c0.site + np.array([0, -l_y]))
                 cells[0][j + 1] = c0
                 c1 = self.cells[0][j]
-                c1.transform(c1.site + np.array([Ly, 0]))
+                c1.transform(c1.site + np.array([0, l_y]))
                 cells[n_rows][j + 1] = c1
         if self.boundaries.boundaries_type[1] == BoundaryType.CYCLIC and \
                 self.boundaries.boundaries_type[0] == BoundaryType.CYCLIC:
-            cells[0][0] = self.cells[n_rows - 1][n_columns - 1]
-            cells[n_rows][n_columns] = self.cells[0][0]
-            cells[n_rows][0] = self.cells[0][n_columns - 1]
-            cells[0][n_columns] = self.cells[n_rows - 1][0]
+            c = self.cells[n_rows - 1][n_columns - 1]
+            c.transform(c.site + np.array([-l_x, -l_y]))
+            cells[0][0] = c
+            c = self.cells[0][0]
+            c.transform(c.site + np.array([l_x, l_y]))
+            cells[n_rows][n_columns] = c
+            c = self.cells[0][n_columns - 1]
+            c.transform(c.site + np.array([-l_x, l_y]))
+            cells[n_rows][0] = c
+            c = self.cells[n_rows - 1][0]
+            c.transform(c.site + np.array([l_x, -l_y]))
+            cells[0][n_columns] = c
         return cells
 
     def legal_configuration(self):
@@ -513,33 +544,20 @@ class ArrayOfCells:
         :return: True if there are no overlapping spheres in the configuration
         """
         if self.cells == []: return True
-        d = self.cells[0].dim
-        if d != 2 and d != 3:
-            raise (Exception('Only d=2 or d=3 supported!'))
-        for i in range(len(self.cells) - 1):
-            for j in range(len(self.cells[i]) - 1):
-                if d == 2:
-                    cell = self.cells[i][j]
-                    if Sphere.spheres_overlap(cell.spheres):
+        d = self.dim
+        if d != 2:
+            raise (Exception('Only d=2 supported!'))
+        cushioned_cells = self.cushioning_array_for_boundary_cond()
+        for i in range(1, len(cushioned_cells) - 1):
+            for j in range(1, len(cushioned_cells) - 1):
+                cell = cushioned_cells[i][j]
+                if Sphere.spheres_overlap(cell.spheres):
+                    return False
+                neighbors = [cushioned_cells[i + 1][j - 1], cushioned_cells[i + 1][j],
+                             cushioned_cells[i + 1][j + 1], cushioned_cells[i][j + 1]]
+                for neighbor in neighbors:
+                    if ArrayOfCells.overlap_2_cells(cell, neighbor):
                         return False
-                    neighbors = [self.cells[i + 1][j - 1], self.cells[i + 1][j],
-                                 self.cells[i + 1][j + 1], self.cells[i][j + 1]]
-                    for neighbor in neighbors:
-                        if ArrayOfCells.overlap_2_cells(cell, neighbor):
-                            return False
-
-                if d == 3:
-                    for k in range(len(self.cells[i][j]) - 1):
-                        cell = self.cells[i][j][k]
-                        neighbors = [self.cells[i + 1][j][k], self.cells[i][j + 1][k],
-                                     self.cells[i][j][k + 1], self.cells[i + 1][j + 1][k],
-                                     self.cells[i + 1][j][k + 1], self.cells[i][j + 1][k + 1],
-                                     self.cells[i + 1][j + 1][k + 1]]
-                        if Sphere.spheres_overlap(cell.spheres):
-                            return False
-                        for neighbor in neighbors:
-                            if ArrayOfCells.overlap_2_cells(cell, neighbor):
-                                return False
         return True
 
     def cell_from_ind(self, ind):

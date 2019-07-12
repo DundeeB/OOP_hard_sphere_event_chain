@@ -46,12 +46,6 @@ class Step:
         self.v_hat = v_hat
         self.boundaries = boundaries
 
-    def clone(self, current_step=np.nan):
-        s = copy.deepcopy(self.sphere)
-        if current_step != np.nan:
-            return Step(s, self.total_step, self.v_hat, self.boundaries, current_step)
-        return Step(s, self.total_step, self.v_hat, self.boundaries, self.current_step)
-
     def perform_step(self):
         """
         Perform the current step (calls Sphere's perform step), and subtract step from total step
@@ -64,7 +58,8 @@ class Step:
         Returns the next Event object to be handle, such as from the even get the step, perform the step and decide the
         next event
         :param other_spheres: other spheres which sphere might collide
-        :return: Step object containing the needed information such as step size or step type (wall free or boundary)
+        :return: Event object containing the information about the event about to happen after the step, such as step
+        size or step type (wall free or boundary), and the current step
         """
         sphere = self.sphere
         total_step = self.total_step
@@ -79,12 +74,12 @@ class Step:
                 closest_sphere = other_sphere
         # it hits a wall
         if min_dist_to_wall < closest_sphere_dist:
-            return Event(EventType.WALL, [], closest_wall)
+            return Event(EventType.WALL, [], closest_wall), min_dist_to_wall
         # it hits another sphere
         if min_dist_to_wall > closest_sphere_dist:
-            return Event(EventType.COLLISION, closest_sphere, [])
+            return Event(EventType.COLLISION, closest_sphere, []), closest_sphere
         # it hits nothing, both min_dist_to_wall and closest_sphere_dist are inf
-        return Event(EventType.FREE, [], [])
+        return Event(EventType.FREE, [], []), total_step
 
 
 class EfficientEventChainCellArray2D(ArrayOfCells):
@@ -213,27 +208,30 @@ class EfficientEventChainCellArray2D(ArrayOfCells):
             other_spheres = []
             for c in sub_cells:
                 for s in c.spheres: other_spheres.append(s)
-            event = step.next_event(sphere, other_spheres)  # calculate current step and update step
+            event, current_step = step.next_event(sphere, other_spheres)
             if event.event_type != EventType.FREE:
                 if i == len(cells)-1: break
                 else:
                     next_other_spheres = []
                     for next_cell in cells[i+1]:
                         for s in next_cell.spheres: next_other_spheres.append(s)
-                    another_potential_event = step.next_event(next_other_spheres)
-                    if event.step.current_step > another_potential_event.step.current_step:
+                    another_potential_event, another_current_step = step.next_event(next_other_spheres)
+                    if current_step > another_current_step:
                         event = another_potential_event
+                        step.current_step = another_current_step
                         sub_cells = cells[i+1]
+                    else:
+                        step.current_step = current_step
                     break
-        event.step.perform_step(event.step, self.boundaries)  # subtract total step
+        step.perform_step()  # subtract current step from total step
         for new_cell in sub_cells:
             if new_cell.should_sphere_be_in_cell(sphere):
                 new_cell.add_sphere(sphere)
                 break
         if event.event_type == EventType.COLLISION:
-            self.perform_step(new_cell.ind, event.other_sphere, event.step.total_step)
+            self.perform_step(new_cell.ind, event.other_sphere, step.total_step)
         if event.event_type == EventType.WALL:
-            event.step.v_hat = CubeBoundaries.flip_v_hat_wall_part(event.wall, sphere, v_hat)
-            self.perform_step(new_cell.ind, sphere, event.step.total_step)
+            step.v_hat = CubeBoundaries.flip_v_hat_wall_part(event.wall, sphere, v_hat)
+            self.perform_step(new_cell.ind, sphere, step.total_step)
         if event.event_type == EventType.FREE:
             return

@@ -68,7 +68,7 @@ class Step:
         closest_sphere = []
         closest_sphere_dist = float('inf')
         for other_sphere in other_spheres:
-            sphere_dist = Metric.dist_to_collision(sphere, other_sphere, total_step, v_hat)
+            sphere_dist = Metric.dist_to_collision(sphere, other_sphere, total_step, v_hat, self.boundaries)
             if sphere_dist < closest_sphere_dist:
                 closest_sphere_dist = sphere_dist
                 closest_sphere = other_sphere
@@ -77,12 +77,12 @@ class Step:
             return Event(EventType.WALL, [], closest_wall), min_dist_to_wall
         # it hits another sphere
         if min_dist_to_wall > closest_sphere_dist:
-            return Event(EventType.COLLISION, closest_sphere, []), closest_sphere
+            return Event(EventType.COLLISION, closest_sphere, []), closest_sphere_dist
         # it hits nothing, both min_dist_to_wall and closest_sphere_dist are inf
         return Event(EventType.FREE, [], []), total_step
 
 
-class EfficientEventChainCellArray2D(ArrayOfCells):
+class Event2DCells(ArrayOfCells):
 
     def __init__(self, edge, n_rows, n_columns):
         """
@@ -91,18 +91,33 @@ class EfficientEventChainCellArray2D(ArrayOfCells):
         :param n_columns: number of columns in the array of cells
         :param edge: constant edge size of all cells is assumed and needs to be declared
         """
-        l_x = edge*n_columns
-        l_y = edge*n_columns
+        l_x = edge * n_columns
+        l_y = edge * n_rows
         cells = [[[] for _ in range(n_columns)] for _ in range(n_rows)]
         for i in range(n_rows):
             for j in range(n_columns):
-                site = [edge*i, edge*j]
+                site = [edge*j, edge*i]
                 cells[i][j] = Cell(site, [edge, edge], ind=(i, j))
         boundaries = CubeBoundaries([l_x, l_y], [BoundaryType.CYCLIC, BoundaryType.CYCLIC])
         super().__init__(2, boundaries, cells=cells)
         self.edge = edge
         self.n_rows = n_rows
         self.n_columns = n_columns
+        self.l_x = l_x
+        self.l_y = l_y
+        self.l_z = np.nan
+
+    def add_third_dimension_for_sphere(self, l_z):
+        self.l_z = l_z
+        self.boundaries = CubeBoundaries([self.l_x, self.l_y, self.l_z], \
+                                         [BoundaryType.CYCLIC, BoundaryType.CYCLIC, BoundaryType.WALL])
+        return
+
+    def random_generate_spheres(self, n_spheres_per_cell, rad, extra_edges=[]):
+        if extra_edges == [] and self.l_z != np.nan:
+            super().random_generate_spheres(n_spheres_per_cell, rad, extra_edges=[self.l_z])
+        else:
+            super().random_generate_spheres(n_spheres_per_cell, rad, extra_edges)
 
     def closest_site_2d(self, point):
         """

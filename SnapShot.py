@@ -30,8 +30,8 @@ class View2D:
         pylab.axis([0, self.boundaries.edges[0], 0, self.boundaries.edges[1]])
         for sphere in spheres:
             assert isinstance(sphere, Sphere)
-            x, y = sphere.center
-            circle = pylab.Circle((x, y), radius=sphere.rad)
+            c = sphere.center
+            circle = pylab.Circle((c[0], c[1]), radius=sphere.rad)
             pylab.gca().add_patch(circle)
         pylab.title(title)
 

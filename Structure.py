@@ -242,9 +242,10 @@ class CubeBoundaries:
         cloned_sphere = copy.deepcopy(sphere1)
         l_x = self.edges[0]
         l_y = self.edges[1]
-        if self.dim != 2: raise Exception('d!=2 not supported')
-        for bound_vec, boundary_type in zip([[l_x, 0], [0, l_y], [-l_x, 0], [0, -l_y]], 2*self.boundaries_type):
+        if self.dim == 3 and self.boundaries_type[2] == BoundaryType.CYCLIC: raise Exception('z wall CYCLIC not supported')
+        for bound_vec, boundary_type in zip([[l_x, 0], [0, l_y], [-l_x, 0], [0, -l_y]], 2*self.boundaries_type[0:2]):
             if boundary_type != BoundaryType.CYCLIC: continue
+            if self.dim == 3: bound_vec = [b for b in bound_vec] + [0]
             cloned_sphere.center = sphere1.center + np.array(bound_vec)
             new_dist = cloned_sphere.sphere_dist(sphere2)
             if new_dist < dist: dist = new_dist
@@ -438,9 +439,10 @@ class Cell:
             spheres = []
             for i in range(n_spheres):
                 r = rads[i]
-                center = np.array(self.site) + [r + random.random()*(e-r) for e in self.edges]
+                center = np.array(self.site) + [random.random()*e for e in self.edges]
                 if len(extra_edges) > 0:
-                    center = [c for c in center] + [r + random.random()*(e-r) for e in extra_edges]
+                    center = [c for c in center] + [r + random.random()*(e - 2*r) for e in extra_edges]
+                    #assumes for now extra edge is rigid wall and so generate in the allowed locations
                 spheres.append(Sphere(center, rads[i]))
             if not Sphere.spheres_overlap(spheres):
                 break
@@ -455,6 +457,9 @@ class Cell:
         dx = np.array(new_site) - self.site
         self.site = new_site
         for sphere in self.spheres:
+            if len(dx) < sphere.dim:
+                dx = [dx_ for dx_ in dx] + [0 for _ in range(sphere.dim-len(dx))]
+                dx = np.array(dx)
             sphere.center = sphere.center + dx
 
 
@@ -597,6 +602,13 @@ class ArrayOfCells:
                 cell = cushioned_cells[i][j]
                 if Sphere.spheres_overlap(cell.spheres):
                     return False
+                if self.boundaries.dim == 3:
+                    for sphere in cell.spheres:
+                        c_z = sphere.center[2]
+                        r = sphere.rad
+                        if self.boundaries.boundaries_type[2] == BoundaryType.WALL and \
+                            (c_z - r < 0 or c_z + r > self.boundaries.edges[2]):
+                            return False
                 if (j == n_columns or j == 1) and self.boundaries.boundaries_type[0] == BoundaryType.WALL:
                     for sphere in cell.spheres:
                         c_x = sphere.center[0]

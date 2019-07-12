@@ -2,14 +2,36 @@ import numpy as np
 import copy
 from enum import Enum
 
-from Structure import CubeBoundaries, BoundaryType, ArrayOfCells, Cell, Metric
+from Structure import *
 
 epsilon = 1e-4
 
 
+class EventType(Enum):
+    FREE = "FreeStep"  # Free path
+    COLLISION = "SphereSphereCollision"  # Path leads to collision with another sphere
+    WALL = "RigidWallBoundaryCondition"  # Path reaches rigid wall and needs to be handle
+
+
+class Event:
+
+    def __init__(self, event_type: EventType, other_sphere: Sphere, wall):
+        """
+        A single event that will happen to sphere, such as collision with another sphere
+        or arriving at the boundary of the simulation
+        :type event_type: EventType
+        :param other_sphere: if event is collision, this is the sphere it will collide
+        :type other_sphere: Sphere
+        :param wall: if event is boundary condition, this is the wall it is going to reach
+        """
+        self.event_type = event_type
+        self.other_sphere = other_sphere
+        self.wall = wall
+
+
 class Step:
 
-    def __init__(self, sphere, total_step, v_hat, boundaries, current_step=np.nan):
+    def __init__(self, sphere: Sphere, total_step, v_hat, boundaries: CubeBoundaries, current_step=np.nan):
         """
         The characteristic of the step to be perform
         :type sphere: Sphere
@@ -37,18 +59,16 @@ class Step:
         self.sphere.perform_step(self)
         self.total_step = self.total_step - self.current_step
 
-    @staticmethod
-    def next_event(step, other_spheres):
+    def next_event(self, other_spheres):
         """
         Returns the next Event object to be handle, such as from the even get the step, perform the step and decide the
         next event
-        :type step: Step
         :param other_spheres: other spheres which sphere might collide
         :return: Step object containing the needed information such as step size or step type (wall free or boundary)
         """
-        sphere = step.sphere
-        total_step = step.total_step
-        v_hat = step.v_hat
+        sphere = self.sphere
+        total_step = self.total_step
+        v_hat = self.v_hat
         min_dist_to_wall, closest_wall = Metric.dist_to_boundary(sphere, total_step, v_hat, self.boundaries)
         closest_sphere = []
         closest_sphere_dist = float('inf')
@@ -57,42 +77,14 @@ class Step:
             if sphere_dist < closest_sphere_dist:
                 closest_sphere_dist = sphere_dist
                 closest_sphere = other_sphere
-
         # it hits a wall
         if min_dist_to_wall < closest_sphere_dist:
-            return Event(step.clone(min_dist_to_wall), EventType.WALL, [], closest_wall)
-
+            return Event(EventType.WALL, [], closest_wall)
         # it hits another sphere
         if min_dist_to_wall > closest_sphere_dist:
-            return Event(step.clone(closest_sphere_dist), EventType.COLLISION, closest_sphere, [])
-
+            return Event(EventType.COLLISION, closest_sphere, [])
         # it hits nothing, both min_dist_to_wall and closest_sphere_dist are inf
-        return Event(step.clone(total_step), EventType.FREE, [], [])
-
-
-class EventType(Enum):
-    FREE = "FreeStep"  # Free path
-    COLLISION = "SphereSphereCollision"  # Path leads to collision with another sphere
-    WALL = "RigidWallBoundaryCondition"  # Path reaches rigid wall and needs to be handle
-
-
-class Event:
-
-    def __init__(self, step, event_type, other_sphere, wall):
-        """
-        A single event that will happen to sphere, such as collision with another sphere
-        or arriving at the boundary of the simulation
-        :param step: step to be perform before event
-        :type step: Step
-        :type event_type: EventType
-        :param other_sphere: if event is collision, this is the sphere it will collide
-        :type other_sphere: Sphere
-        :param wall: if event is boundary condition, this is the wall it is going to reach
-        """
-        self.step = step
-        self.event_type = event_type
-        self.other_sphere = other_sphere
-        self.wall = wall
+        return Event(EventType.FREE, [], [])
 
 
 class EfficientEventChainCellArray2D(ArrayOfCells):
@@ -170,7 +162,7 @@ class EfficientEventChainCellArray2D(ArrayOfCells):
         else:  # abs(dx) <= rad and abs(dy) <= rad:  # x=y=0  # 9
             return [a, b, c, d]
 
-    def get_all_crossed_points_2d(self, sphere, total_step, v_hat):
+    def get_all_crossed_points_2d(self, sphere: Sphere, total_step, v_hat):
         """
         :type sphere: Sphere
         :param sphere: sphere about to perform step
@@ -198,18 +190,16 @@ class EfficientEventChainCellArray2D(ArrayOfCells):
                     ts.append(t)
         return np.sort([t for t in ts if t <= total_step])
 
-    def perform_total_step(self, cell_ind, sphere, total_step, v_hat):
+    def perform_total_step(self, cell: Cell, sphere: Sphere, total_step, v_hat):
         """
-        Perform step for all the spheres, starting from sphere inside cell which is at cells[cell_ind]
-        :param cell_ind: (i,j,...)
-        :type cell_ind: tuple
+        Perform step for all the spheres, starting from sphere inside cell
+        :type cell: Cell
         :type sphere: Sphere
         :param total_step: total step left to perform
         :param v_hat: direction of step
         """
-        cell = self.cell_from_ind(cell_ind)
         cell.remove(sphere)
-        cells = []
+        cells = []  # list of sub_cells, sub_cells is a list of cells
         sub_cells = []
         for t in self.get_all_crossed_points_2d(sphere, total_step, v_hat):
             previous_sub_cells = sub_cells

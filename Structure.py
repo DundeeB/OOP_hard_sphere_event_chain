@@ -522,30 +522,38 @@ class ArrayOfCells:
         if self.dim != 2: raise Exception("dim!=2 not implemented yet")
         n_rows = len(self.cells)
         n_columns = len(self.cells[0])
-        cells = [[[] for _ in range(n_columns + 2)] for _ in range(n_rows + 2)]
+        x_cyclic = self.boundaries.boundaries_type[0] == BoundaryType.CYCLIC
+        y_cyclic = self.boundaries.boundaries_type[1] == BoundaryType.CYCLIC
+        both_cyclic = x_cyclic and y_cyclic
+        cells = [[Cell((), []) for _ in range(n_columns + 2)] for _ in range(n_rows + 2)]
         for i in range(n_rows):  # 1 < (i + 1, j+1) < n
             for j in range(n_columns):
                 cells[i + 1][j + 1] = self.cells[i][j]
-        if self.boundaries.boundaries_type[0] == BoundaryType.CYCLIC:
-            l_x = self.boundaries.edges[0]
-            for i in range(n_rows):  # 1 < i + 1 < n
-                c0 = copy.deepcopy(self.cells[i][n_columns - 1])
-                c0.transform(c0.site + np.array([-l_x, 0]))
+        l_x = self.boundaries.edges[0]
+        for i in range(n_rows):  # 1 < i + 1 < n
+            c0 = copy.deepcopy(self.cells[i][n_columns - 1])
+            c0.transform(c0.site + np.array([-l_x, 0]))
+            c1 = copy.deepcopy(self.cells[i][0])
+            c1.transform(c1.site + np.array([l_x, 0]))
+            if x_cyclic:
                 cells[i + 1][0] = c0
-                c1 = copy.deepcopy(self.cells[i][0])
-                c1.transform(c1.site + np.array([l_x, 0]))
                 cells[i + 1][n_columns + 1] = c1
-        if self.boundaries.boundaries_type[1] == BoundaryType.CYCLIC:
-            l_y = self.boundaries.edges[1]
-            for j in range(n_columns):  # 1 < j + 1 < n
-                c0 = copy.deepcopy(self.cells[n_rows - 1][j])
-                c0.transform(c0.site + np.array([0, -l_y]))
+            else:
+                cells[i + 1][0] = Cell(c0.site, c0.edges)
+                cells[i + 1][n_columns + 1] = Cell(c1.site, c1.edges)
+        l_y = self.boundaries.edges[1]
+        for j in range(n_columns):  # 1 < j + 1 < n
+            c0 = copy.deepcopy(self.cells[n_rows - 1][j])
+            c0.transform(c0.site + np.array([0, -l_y]))
+            c1 = copy.deepcopy(self.cells[0][j])
+            c1.transform(c1.site + np.array([0, l_y]))
+            if y_cyclic:
                 cells[0][j + 1] = c0
-                c1 = copy.deepcopy(self.cells[0][j])
-                c1.transform(c1.site + np.array([0, l_y]))
                 cells[n_rows + 1][j + 1] = c1
-        if self.boundaries.boundaries_type[1] == BoundaryType.CYCLIC and \
-                self.boundaries.boundaries_type[0] == BoundaryType.CYCLIC:
+            else:
+                cells[0][j + 1] = Cell(c0.site, c0.edges)
+                cells[n_rows + 1][j + 1] = Cell(c1.site, c1.edges)
+        if both_cyclic:
             c = copy.deepcopy(self.cells[n_rows - 1][n_columns - 1])
             c.transform(c.site + np.array([-l_x, -l_y]))
             cells[0][0] = c
@@ -558,6 +566,19 @@ class ArrayOfCells:
             c = copy.deepcopy(self.cells[n_rows - 1][0])
             c.transform(c.site + np.array([l_x, -l_y]))
             cells[0][n_columns + 1] = c
+        else:
+            c = copy.deepcopy(self.cells[n_rows - 1][n_columns - 1])
+            c.transform(c.site + np.array([-l_x, -l_y]))
+            cells[0][0] = Cell(c.site, c.edges)
+            c = copy.deepcopy(self.cells[0][0])
+            c.transform(c.site + np.array([l_x, l_y]))
+            cells[n_rows + 1][n_columns + 1] = Cell(c.site, c.edges)
+            c = copy.deepcopy(self.cells[0][n_columns - 1])
+            c.transform(c.site + np.array([-l_x, l_y]))
+            cells[n_rows + 1][0] = Cell(c.site, c.edges)
+            c = copy.deepcopy(self.cells[n_rows - 1][0])
+            c.transform(c.site + np.array([l_x, -l_y]))
+            cells[0][n_columns + 1] = Cell(c.site, c.edges)
         return ArrayOfCells(self.dim, self.boundaries, cells)
 
     def legal_configuration(self):
@@ -569,15 +590,29 @@ class ArrayOfCells:
         if d != 2:
             raise (Exception('Only d=2 supported!'))
         cushioned_cells = self.cushioning_array_for_boundary_cond().cells
-        for i in range(1, len(cushioned_cells) - 1):
-            for j in range(1, len(cushioned_cells) - 1):
+        n_rows = len(cushioned_cells) - 2
+        for i in range(1, n_rows + 1):
+            n_columns = len(cushioned_cells[i]) - 2
+            for j in range(1, n_columns + 1):
                 cell = cushioned_cells[i][j]
                 if Sphere.spheres_overlap(cell.spheres):
                     return False
+                if (j == n_columns or j == 1) and self.boundaries.boundaries_type[0] == BoundaryType.WALL:
+                    for sphere in cell.spheres:
+                        c_x = sphere.center[0]
+                        r = sphere.rad
+                        if c_x - r < 0 or c_x + r > self.boundaries.edges[0]:
+                            return False
+                if (i == n_rows or i == 1) and self.boundaries.boundaries_type[1] == BoundaryType.WALL:
+                    for sphere in cell.spheres:
+                        c_y = sphere.center[1]
+                        r = sphere.rad
+                        if c_y - r < 0 or c_y + r > self.boundaries.edges[1]:
+                            return False
                 neighbors = [cushioned_cells[i + 1][j - 1], cushioned_cells[i + 1][j],
                              cushioned_cells[i + 1][j + 1], cushioned_cells[i][j + 1]]
                 for neighbor in neighbors:
-                    if ArrayOfCells.overlap_2_cells(cell, neighbor):
+                    if self.overlap_2_cells(cell, neighbor):
                         return False
         return True
 

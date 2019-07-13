@@ -43,13 +43,15 @@ class Step:
         self.sphere = sphere
         self.total_step = total_step
         self.current_step = current_step
-        self.v_hat = v_hat
+        self.v_hat = np.array(v_hat)/np.linalg.norm(v_hat)
         self.boundaries = boundaries
 
     def perform_step(self):
         """
         Perform the current step (calls Sphere's perform step), and subtract step from total step
         """
+        if np.isnan(self.current_step):
+            raise ValueError("Current step is nan and step is about to occur")
         self.sphere.perform_step(self)
         self.total_step = self.total_step - self.current_step
 
@@ -74,11 +76,17 @@ class Step:
                 closest_sphere = other_sphere
         # it hits a wall
         if min_dist_to_wall < closest_sphere_dist:
+            if np.isnan(self.current_step) or min_dist_to_wall < self.current_step:
+                self.current_step = min_dist_to_wall
             return Event(EventType.WALL, [], closest_wall), min_dist_to_wall
         # it hits another sphere
         if min_dist_to_wall > closest_sphere_dist:
+            if np.isnan(self.current_step) or closest_sphere_dist < self.current_step:
+                self.current_step = closest_sphere_dist
             return Event(EventType.COLLISION, closest_sphere, []), closest_sphere_dist
         # it hits nothing, both min_dist_to_wall and closest_sphere_dist are inf
+        if np.isnan(self.current_step) or total_step < self.current_step:
+            self.current_step = total_step
         return Event(EventType.FREE, [], []), total_step
 
 
@@ -201,7 +209,6 @@ class Event2DCells(ArrayOfCells):
                     ts.append(t + starting_t)
         return np.sort(list(dict.fromkeys([t for t in ts if t <= total_step])))
 
-
     def perform_total_step(self, cell: Cell, sphere: Sphere, total_step, v_hat):
         """
         Perform step for all the spheres, starting from sphere inside cell
@@ -210,7 +217,8 @@ class Event2DCells(ArrayOfCells):
         :param total_step: total step left to perform
         :param v_hat: direction of step
         """
-        cell.remove(sphere)
+        v_hat = np.array(v_hat)/np.linalg.norm(v_hat)
+        cell.remove_sphere(sphere)
         cells = []  # list of sub_cells, sub_cells is a list of cells
         sub_cells = []
         step = Step(sphere, total_step, v_hat, self.boundaries)
@@ -221,11 +229,12 @@ class Event2DCells(ArrayOfCells):
                 if c not in previous_sub_cells:
                     sub_cells.append(c)
             cells.append(sub_cells)
+        event = None
         for i, sub_cells in enumerate(cells):
             other_spheres = []
             for c in sub_cells:
                 for s in c.spheres: other_spheres.append(s)
-            event, current_step = step.next_event(sphere, other_spheres)
+            event, current_step = step.next_event(other_spheres)
             if event.event_type != EventType.FREE:
                 if i == len(cells)-1: break
                 else:
@@ -235,20 +244,22 @@ class Event2DCells(ArrayOfCells):
                     another_potential_event, another_current_step = step.next_event(next_other_spheres)
                     if current_step > another_current_step:
                         event = another_potential_event
-                        step.current_step = another_current_step
                         sub_cells = cells[i+1]
-                    else:
-                        step.current_step = current_step
                     break
+        assert event is not None and not np.isnan(step.current_step)
         step.perform_step()  # subtract current step from total step
-        for new_cell in sub_cells:
-            if new_cell.should_sphere_be_in_cell(sphere):
-                new_cell.add_sphere(sphere)
+        for spheres_cell in sub_cells:
+            if spheres_cell.should_sphere_be_in_cell(sphere):
+                spheres_cell.add_spheres(sphere)
                 break
         if event.event_type == EventType.COLLISION:
-            self.perform_step(new_cell.ind, event.other_sphere, step.total_step)
+            for new_cell in sub_cells:
+                if new_cell.should_sphere_be_in_cell(event.other_sphere):
+                    break
+            self.perform_total_step(new_cell, event.other_sphere, step.total_step, step.v_hat)
         if event.event_type == EventType.WALL:
+            new_cell = spheres_cell
             step.v_hat = CubeBoundaries.flip_v_hat_wall_part(event.wall, sphere, v_hat)
-            self.perform_step(new_cell.ind, sphere, step.total_step)
+            self.perform_total_step(new_cell, sphere, step.total_step, step.v_hat)
         if event.event_type == EventType.FREE:
             return

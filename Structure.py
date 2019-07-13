@@ -2,7 +2,7 @@ import numpy as np
 import random
 import copy
 from enum import Enum
-epsilon = 1e-4
+epsilon = 1e-6
 
 
 class Sphere:
@@ -38,7 +38,17 @@ class Sphere:
         :type sphere2: Sphere
         :return: True if they overlap
         """
-        return sphere1.sphere_dist(sphere2) < sphere1.rad + sphere2.rad
+        delta = sphere1.sphere_dist(sphere2) - (sphere1.rad + sphere2.rad)
+        if delta < -epsilon:
+            return True
+        else:
+            if delta > 0:
+                return False
+            else:
+                Warning("Spheres are epsilon close to each other, seperating them")
+                dr_hat = sphere1.center - np.array(sphere2.center)
+                dr_hat /= np.linalg.norm(dr_hat)
+                sphere1.center += epsilon*dr_hat
 
     @staticmethod
     def spheres_overlap(spheres):
@@ -49,7 +59,7 @@ class Sphere:
         """
         for i in range(len(spheres)):
             for j in range(i):
-                if Sphere.overlap(spheres[i],spheres[j]):
+                if Sphere.overlap(spheres[i], spheres[j]):
                     return True
         return False
 
@@ -346,6 +356,8 @@ class Metric:
         :type boundaries: CubeBoundaries
         :return: distance for collision if the move is allowed, infty if move can not lead to collision
         """
+        if Sphere.overlap(sphere1, sphere2):
+            print("WHAT?")
         assert(not Sphere.overlap(sphere1, sphere2))
         d = sphere1.rad + sphere2.rad
         v_hat = np.array(v_hat) / np.linalg.norm(v_hat)

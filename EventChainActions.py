@@ -96,7 +96,7 @@ class Event2DCells(ArrayOfCells):
         cells = [[[] for _ in range(n_columns)] for _ in range(n_rows)]
         for i in range(n_rows):
             for j in range(n_columns):
-                site = [edge*j, edge*i]
+                site = (edge*j, edge*i)
                 cells[i][j] = Cell(site, [edge, edge], ind=(i, j))
         boundaries = CubeBoundaries([l_x, l_y], [BoundaryType.CYCLIC, BoundaryType.CYCLIC])
         super().__init__(2, boundaries, cells=cells)
@@ -109,8 +109,8 @@ class Event2DCells(ArrayOfCells):
 
     def add_third_dimension_for_sphere(self, l_z):
         self.l_z = l_z
-        self.boundaries = CubeBoundaries([self.l_x, self.l_y, self.l_z], \
-                                         [BoundaryType.CYCLIC, BoundaryType.CYCLIC, BoundaryType.WALL])
+        self.boundaries = CubeBoundaries(self.boundaries.edges + [self.l_z], \
+                                         self.boundaries.boundaries_type + [BoundaryType.WALL])
         return
 
     def random_generate_spheres(self, n_spheres_per_cell, rad, extra_edges=[]):
@@ -124,8 +124,8 @@ class Event2DCells(ArrayOfCells):
         Solve for closest site to point, in 2d, assuming all cells edges have the same length edge
         :return: tuple (i,j) of the closest cell = cells[i][j]
         """
-        i = round(point[1] % self.edge) % self.n_rows
-        j = round(point[0] % self.edge) % self.n_columns
+        i = int(round(point[1] / self.edge) % self.n_rows)
+        j = int(round(point[0] / self.edge) % self.n_columns)
         return i, j
 
     def relevant_cells_around_point_2d(self, rad, point):
@@ -133,11 +133,13 @@ class Event2DCells(ArrayOfCells):
         Finds cells which a sphere with radius rad with center at point would have overlap with
         :param rad: radius of interest
         :param point: point around which we find cells
-        :return: list of cells with overlap with
+        :return: list of cells with overlap with sphere
         """
-        lx = self.boundaries.edges[0]
-        ly = self.boundaries.edges[1]
+        point = np.array([point[0], point[1]])
+        l_x = self.boundaries.edges[0]
+        l_y = self.boundaries.edges[1]
         i, j = self.closest_site_2d(point)
+        assert(rad < self.edge, 'Not supported yet rad>=edge')
         cells = self.cells
         a = cells[i][j]
         b = cells[i - 1][j]
@@ -147,10 +149,10 @@ class Event2DCells(ArrayOfCells):
 
         #Boundaries:
         e = self.edge
-        if dx > e: dx = dx - lx
-        if dy > e: dy = dy - ly
-        if dx < -e: dx = lx + dx
-        if dy < -e: dy = ly + dy
+        if dx > e: dx = dx - l_x
+        if dy > e: dy = dy - l_y
+        if dx < -e: dx = l_x + dx
+        if dy < -e: dy = l_y + dy
 
         # cases for overlap
         if dx > rad and dy > rad:  # 0<theta<90  # 1
@@ -172,33 +174,33 @@ class Event2DCells(ArrayOfCells):
         else:  # abs(dx) <= rad and abs(dy) <= rad:  # x=y=0  # 9
             return [a, b, c, d]
 
-    def get_all_crossed_points_2d(self, sphere: Sphere, total_step, v_hat):
+    def get_all_crossed_points_2d(self, step: Step):
         """
-        :type sphere: Sphere
-        :param sphere: sphere about to perform step
-        :param total_step: total length of step that might be performed
-        :param v_hat: direction of step
+        :param step: Step structure containing the information such as which sphere, v_hat and total step
         :return: list of ts such that trajectory(t) is a point crossing cell boundary
         """
-        vx = np.dot(v_hat, [1, 0])
-        vy = np.dot(v_hat, [0, 1])
+        sphere, total_step, v_hat = step.sphere, step.total_step, step.v_hat
+        vx = v_hat[0]
+        vy = v_hat[1]
         ts = [0]
         len_v = sphere.systems_length_in_v_direction(v_hat, self.boundaries)
-        for starting_point, _ in sphere.trajectories_braked_to_lines(total_step, v_hat, self.boundaries)[:-1]:
+        starting_points, starting_ts = sphere.trajectories_braked_to_lines(total_step, v_hat, self.boundaries)
+        for starting_point, starting_t in zip(starting_points[:-1], starting_ts[:-1]):
             # [-1]=end point
             if vy != 0:
                 for i in range(self.n_rows):
-                    y = i * self.edge
-                    t = (y - np.dot(starting_point, [0, 1])) / vy
+                    y = float(i * self.edge)
+                    t = (y - starting_point[1]) / vy
                     if t < 0: t = t + len_v
-                    ts.append(t)
+                    ts.append(t + starting_t)
             if vx != 0:
                 for j in range(self.n_columns):
-                    x = j*self.edge
-                    t = (x - np.dot(starting_point, [1, 0])) / vx
+                    x = float(j*self.edge)
+                    t = (x - starting_point[0]) / vx
                     if t < 0: t = t + len_v
-                    ts.append(t)
-        return np.sort([t for t in ts if t <= total_step])
+                    ts.append(t + starting_t)
+        return np.sort(list(dict.fromkeys([t for t in ts if t <= total_step])))
+
 
     def perform_total_step(self, cell: Cell, sphere: Sphere, total_step, v_hat):
         """
@@ -211,14 +213,14 @@ class Event2DCells(ArrayOfCells):
         cell.remove(sphere)
         cells = []  # list of sub_cells, sub_cells is a list of cells
         sub_cells = []
-        for t in self.get_all_crossed_points_2d(sphere, total_step, v_hat):
+        step = Step(sphere, total_step, v_hat, self.boundaries)
+        for t in self.get_all_crossed_points_2d(step):
             previous_sub_cells = sub_cells
             sub_cells = []
             for c in self.relevant_cells_around_point_2d(sphere.rad, sphere.trajectory(t, v_hat, self.boundaries)):
                 if c not in previous_sub_cells:
                     sub_cells.append(c)
             cells.append(sub_cells)
-        step = Step(sphere, total_step, v_hat, self.boundaries)
         for i, sub_cells in enumerate(cells):
             other_spheres = []
             for c in sub_cells:

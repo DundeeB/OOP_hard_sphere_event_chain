@@ -71,24 +71,26 @@ class Sphere:
 
     def systems_length_in_v_direction(self, v_hat, boundaries):
         """
-        :type v_hat: list
         :type boundaries: CubeBoundaries
         """
         lx = boundaries.edges[0]
         ly = boundaries.edges[1]
-        vx = np.dot(v_hat, [1, 0])
-        vy = np.dot(v_hat, [0, 1])
+        vx = v_hat[0]
+        vy = v_hat[1]
+        x_hat = (1, 0)
+        y_hat = (0, 1)
+        r_c = np.array((self.center[0], self.center[1]))
         if vx != 0 and vy != 0:
-            dist_upper_boundary = min(abs((ly - np.dot(self.center, [0, 1])) / vy),
-                                      abs((lx - np.dot(self.center, [1, 0])) / vx))
-            dist_bottom_boundary = min(abs((0 - np.dot(self.center, [0, 1])) / vy),
-                                       abs((0 - np.dot(self.center, [1, 0])) / vx))
+            dist_upper_boundary = min(abs((ly - np.dot(r_c, y_hat)) / vy),
+                                      abs((lx - np.dot(r_c, x_hat)) / vx))
+            dist_bottom_boundary = min(abs((0 - np.dot(r_c, y_hat)) / vy),
+                                       abs((0 - np.dot(r_c, x_hat)) / vx))
         if vx != 0  and vy ==0:
-            dist_upper_boundary = abs((lx - np.dot(self.center, [1, 0])) / vx)
-            dist_bottom_boundary = abs((0 - np.dot(self.center, [1, 0])) / vx)
+            dist_upper_boundary = abs((lx - np.dot(r_c, x_hat)) / vx)
+            dist_bottom_boundary = abs((0 - np.dot(r_c, x_hat)) / vx)
         if vx == 0 and vy != 0:
-            dist_upper_boundary = abs((ly - np.dot(self.center, [0, 1])) / vy)
-            dist_bottom_boundary = abs((0 - np.dot(self.center, [0, 1])) / vy)
+            dist_upper_boundary = abs((ly - np.dot(r_c, y_hat)) / vy)
+            dist_bottom_boundary = abs((0 - np.dot(r_c, y_hat)) / vy)
         return dist_bottom_boundary + dist_upper_boundary
 
     def trajectory(self, t, v_hat, boundaries):
@@ -202,8 +204,9 @@ class CubeBoundaries:
         :param point: the specified point to get the vertical step to plain from
         :return: the smallest vector v s.t. v+point is on the plain of the wall
         """
-        assert(len(wall) == len(point))
-        d = len(wall)
+        for w in wall:
+            assert(len(w) == len(point))
+        d = len(point)
         p = np.array(point)
         v = [np.array(w) for w in wall]
         if d == 1:

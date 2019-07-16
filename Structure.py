@@ -128,7 +128,8 @@ class Sphere:
         len_v = self.systems_length_in_v_direction(v_hat, boundaries)
         first_step, _ = Metric.dist_to_boundary_without_r(self, total_step, v_hat, boundaries)
         if first_step == float('inf'):
-            return [self.center], [0]
+            return [self.center, self.trajectory(total_step, v_hat, boundaries)], \
+                   [0, total_step]
         ts = [first_step + len_v * k for k in
               range(int(np.floor(((total_step - first_step) / len_v)))+1)]
         if ts[-1] != total_step: ts.append(total_step)
@@ -356,8 +357,6 @@ class Metric:
         :type boundaries: CubeBoundaries
         :return: distance for collision if the move is allowed, infty if move can not lead to collision
         """
-        if Sphere.overlap(sphere1, sphere2):
-            print("WHAT?")
         assert(not Sphere.overlap(sphere1, sphere2))
         d = sphere1.rad + sphere2.rad
         v_hat = np.array(v_hat) / np.linalg.norm(v_hat)

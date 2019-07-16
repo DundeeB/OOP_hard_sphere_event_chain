@@ -104,6 +104,7 @@ class Event2DCells(ArrayOfCells):
             for j in range(n_columns):
                 site = (edge*j, edge*i)
                 cells[i][j] = Cell(site, [edge, edge], ind=(i, j))
+                cells[i][j].spheres = []
         boundaries = CubeBoundaries([l_x, l_y], [BoundaryType.CYCLIC, BoundaryType.CYCLIC])
         super().__init__(2, boundaries, cells=cells)
         self.edge = edge
@@ -219,6 +220,7 @@ class Event2DCells(ArrayOfCells):
                                          self, 'total_step=' + str(round(step.total_step, 4)), step)
 
         sphere, total_step, v_hat = step.sphere, step.total_step, step.v_hat
+        step.current_step = np.nan
         v_hat = np.array(v_hat)/np.linalg.norm(v_hat)
 
         cell.remove_sphere(sphere)

@@ -4,6 +4,7 @@ import os
 import numpy as np
 
 from Structure import Sphere, CubeBoundaries, ArrayOfCells
+from EventChainActions import Step
 
 
 class View2D:
@@ -39,30 +40,35 @@ class View2D:
         self.plt_spheres(title, spheres)
         pylab.savefig(os.path.join(self.output_dir, img_name+".png"))
 
-    def step_snapshot(self, title, spheres, sphere_ind, img_name, vel, arrow_scale):
-        self.plt_spheres(title, spheres)
-
-        x, y = spheres[sphere_ind].center
+    @staticmethod
+    def plt_step(sphere, vel, arrow_scale):
+        x, y = sphere.center[0:2]
         circle = pylab.Circle((x, y),
-                              radius=spheres[sphere_ind].rad, fc='r')
+                              radius=sphere.rad, fc='r')
         pylab.gca().add_patch(circle)
 
-        (dx, dy) = vel
+        (dx, dy) = vel[0:2]
         dx *= arrow_scale
         dy *= arrow_scale
         pylab.arrow(x, y, dx, dy, fc="k", ec="k",
-                    head_width=0.1*np.linalg.norm(vel), head_length=0.1*np.linalg.norm(vel))
+                    head_width=0.1 * np.linalg.norm(vel), head_length=0.1 * np.linalg.norm(vel))
 
+    def step_snapshot(self, title, spheres, sphere_ind, img_name, vel, arrow_scale):
+        self.plt_spheres(title, spheres)
+        View2D.plt_step(spheres[sphere_ind], vel, arrow_scale)
         pylab.savefig(os.path.join(self.output_dir, img_name+".png"))
 
-    def array_of_cells_snapshot(self, title, array_of_cells, img_name):
+    def array_of_cells_snapshot(self, title, array_of_cells, img_name, step=None):
         """
-        :param title:
-        :param img_name:
+        :param title: title of the figure
         :type array_of_cells: ArrayOfCells
+        :param img_name: file name
+        :type step: Step
         """
         spheres = array_of_cells.cushioning_array_for_boundary_cond().all_spheres
         self.plt_spheres(title, spheres)
+        if step is not None:
+            View2D.plt_step(step.sphere, np.array(step.v_hat)*step.total_step, 0.1)
         for cell in array_of_cells.all_cells:
             x, y = cell.site
             rec = pylab.Rectangle((x, y), cell.edges[0], cell.edges[1], fill=False)

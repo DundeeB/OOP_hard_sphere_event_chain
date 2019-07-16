@@ -47,8 +47,8 @@ class Sphere:
             else:
                 Warning("Spheres are epsilon close to each other, seperating them")
                 dr_hat = sphere1.center - np.array(sphere2.center)
-                dr_hat /= np.linalg.norm(dr_hat)
-                sphere1.center += epsilon*dr_hat
+                dr_hat = dr_hat / (np.linalg.norm(dr_hat))
+                sphere1.center = sphere1.center + epsilon*dr_hat
 
     @staticmethod
     def spheres_overlap(spheres):
@@ -417,7 +417,7 @@ class Cell:
             assert(single_sphere_exception.args[0], '\'Sphere\' object is not iterable')
             self.spheres.remove(spheres_to_remove)
 
-    def should_sphere_be_in_cell(self, sphere):
+    def sphere_in_cell(self, sphere):
         """
         A Sphere object should be in a cell if its center is inside the physical d-dimension
         cube of the cell. Notice in the case dim(cell)!=dim(sphere), a sphere is considered
@@ -429,7 +429,7 @@ class Cell:
         for i in range(len(self.site)):
             x_sphere, x_site, edge = sphere.center[i], self.site[i], self.edges[i]
             #Notice this implementation instead of for x_... in zip() is for the case dim(sphere)!=dim(cell)
-            if x_sphere <= x_site or x_sphere >= x_site + edge:
+            if x_sphere <= x_site or x_sphere > x_site + edge:
                 return False
         return True
 

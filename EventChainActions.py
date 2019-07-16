@@ -217,21 +217,23 @@ class Event2DCells(ArrayOfCells):
         if draw is not None:
             draw.array_of_cells_snapshot('During step snapshot, total_step=' + str(step.total_step),
                                          self, 'total_step=' + str(round(step.total_step, 4)), step)
+
         sphere, total_step, v_hat = step.sphere, step.total_step, step.v_hat
         v_hat = np.array(v_hat)/np.linalg.norm(v_hat)
-        cells = []  # list of sub_cells, sub_cells is a list of cells
-        sub_cells = []
 
         cell.remove_sphere(sphere)
+
+        cells, sub_cells, all_cells_on_traject = [], [], []  # list of sub_cells, sub_cells is a list of cells
         for t in self.get_all_crossed_points_2d(step):
             previous_sub_cells = sub_cells
             sub_cells = []
             for c in self.relevant_cells_around_point_2d(sphere.rad, sphere.trajectory(t, v_hat, self.boundaries)):
                 if c not in previous_sub_cells:
                     sub_cells.append(c)
+                    all_cells_on_traject.append(c)
             cells.append(sub_cells)
 
-        event = None
+        event, sub_cells = None, None
         for i, sub_cells in enumerate(cells):
             other_spheres = []
             for c in sub_cells:
@@ -252,18 +254,16 @@ class Event2DCells(ArrayOfCells):
         step.perform_step()  # subtract current step from total step
 
         new_cell, flag = None, None
-        for new_cell in sub_cells:
+        for new_cell in all_cells_on_traject:
             if new_cell.sphere_in_cell(sphere):
                 new_cell.add_spheres(sphere)
                 flag = not None
                 break
-        if flag is None:
-            print("WHAT?")
         assert flag is not None, "sphere has not been added to any cell"
 
         if event.event_type == EventType.COLLISION:
             new_cell, flag = None, None
-            for new_cell in sub_cells:
+            for new_cell in all_cells_on_traject:
                 if new_cell.sphere_in_cell(event.other_sphere):
                     flag = not None
                     break
@@ -273,5 +273,4 @@ class Event2DCells(ArrayOfCells):
         if event.event_type == EventType.WALL:
             step.v_hat = CubeBoundaries.flip_v_hat_wall_part(event.wall, sphere, v_hat)
             self.perform_total_step(new_cell, step, draw)
-        if event.event_type == EventType.FREE:
-            return
+        if event.event_type == EventType.FREE: return

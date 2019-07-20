@@ -70,17 +70,13 @@ class Sphere:
         """
         self.center = [x % e for x, e in zip(self.center, boundaries.edges)]
 
-    def perform_step(self, step):
-        """
-        :type step: Step
-        :param step: step to be perform
-        :return:
-        """
-        self.center = self.center + np.array(step.v_hat)*step.current_step
-        self.box_it(step.boundaries)
+    def perform_step(self, v_hat, current_step, boundaries):
+        self.center = self.center + np.array(v_hat)*current_step
+        self.box_it(boundaries)
 
     def systems_length_in_v_direction(self, v_hat, boundaries):
         """
+        :param v_hat: direction of step
         :type boundaries: CubeBoundaries
         """
         lx = boundaries.edges[0]
@@ -125,17 +121,24 @@ class Sphere:
         :type boundaries: CubeBoundaries
         :return: list [p1, p2, ..., pn] of points for which p1 and direction v_hat defines the trajectories
         """
-        len_v = self.systems_length_in_v_direction(v_hat, boundaries)
         first_step, _ = Metric.dist_to_boundary_without_r(self, total_step, v_hat, boundaries)
         if first_step == float('inf'):
             return [self.center, self.trajectory(total_step, v_hat, boundaries)], \
                    [0, total_step]
-        ts = [first_step + len_v * k for k in
-              range(int(np.floor(((total_step - first_step) / len_v)))+1)]
-        if ts[-1] != total_step: ts.append(total_step)
-        ps = [self.center] + [self.trajectory(t, v_hat, boundaries) for t in ts]
-        ps = [np.array(p) for p in ps]
-        return ps, [0] + ts
+        ts = [0, first_step]
+        cloned_sphere = copy.deepcopy(self)
+        cloned_sphere.perform_step(v_hat, first_step, boundaries)
+        t = first_step
+        while t < total_step:
+            len_v = cloned_sphere.systems_length_in_v_direction(v_hat, boundaries)
+            t += len_v
+            if t > total_step:
+                len_v = t - total_step
+                t = total_step
+            ts += [t]
+            cloned_sphere.perform_step(v_hat, len_v, boundaries)
+        ps = [np.array(self.trajectory(t, v_hat, boundaries)) for t in ts]
+        return ps, ts
 
 
 class BoundaryType(Enum):
@@ -257,8 +260,20 @@ class CubeBoundaries:
         l_x = self.edges[0]
         l_y = self.edges[1]
         if self.dim == 3 and self.boundaries_type[2] == BoundaryType.CYCLIC: raise Exception('z wall CYCLIC not supported')
-        for bound_vec, boundary_type in zip([[l_x, 0], [0, l_y], [-l_x, 0], [0, -l_y]], 2*self.boundaries_type[0:2]):
-            if boundary_type != BoundaryType.CYCLIC: continue
+        x_cyclic = (self.boundaries_type[0] == BoundaryType.CYCLIC)
+        y_cyclic = (self.boundaries_type[1] == BoundaryType.CYCLIC)
+        both_cyclic = (x_cyclic and y_cyclic)
+        vecs = []
+        if x_cyclic:
+            for vec in [(l_x, 0), (-l_x, 0)]:
+                vecs.append(vec)
+        if y_cyclic:
+            for vec in [(0, l_y), (0, -l_y)]:
+                vecs.append(vec)
+        if both_cyclic:
+            for vec in [(l_x, l_y), (l_x, -l_y), (-l_x, -l_y), (-l_x, l_y)]:
+                vecs.append(vec)
+        for bound_vec in vecs:
             if self.dim == 3: bound_vec = [b for b in bound_vec] + [0]
             cloned_sphere.center = sphere1.center + np.array(bound_vec)
             new_dist = cloned_sphere.sphere_dist(sphere2)
@@ -366,16 +381,17 @@ class Metric:
             dx = np.array(pos_b) - np.array(pos_a)
             dx_len = np.linalg.norm(dx)
             dx_dot_v = np.dot(dx, v_hat)
-            if dx_dot_v <= 0:
-                continue
-            if dx_len - d <= epsilon:
-                # new pos_a is already overlapping, meaning the sphere is leaking through the boundary condition
-                go_back = -dx_dot_v + np.sqrt(dx_dot_v**2 + d**2 - dx_len**2)
-                return t - go_back
-            discriminant = dx_dot_v ** 2 + d ** 2 - np.linalg.norm(dx) ** 2
+            discriminant = dx_dot_v ** 2 + d ** 2 - dx_len ** 2
             if discriminant > 0:  # found a solution!
-                dist: float = t + dx_dot_v - np.sqrt(discriminant)
-                if dist <= total_step: return dist
+                if dx_len - d < 0:
+                    # new pos_a is already overlapping, meaning the sphere is leaking through the boundary condition
+                    go_back = dx_dot_v - np.sqrt(discriminant)
+                    return t + go_back
+                else:
+                    if dx_dot_v <= 0:
+                        continue
+                    dist: float = t + dx_dot_v - np.sqrt(discriminant)
+                    if dist <= total_step: return dist
         return float('inf')
 
 

@@ -50,7 +50,7 @@ class Step:
         """
         if np.isnan(self.current_step):
             raise ValueError("Current step is nan and step is about to occur")
-        self.sphere.perform_step(self)
+        self.sphere.perform_step(self.v_hat, self.current_step, self.boundaries)
         self.total_step = self.total_step - self.current_step
 
     def next_event(self, other_spheres):
@@ -186,27 +186,26 @@ class Event2DCells(ArrayOfCells):
         :param step: Step structure containing the information such as which sphere, v_hat and total step
         :return: list of ts such that trajectory(t) is a point crossing cell boundary
         """
-        sphere, total_step, v_hat = step.sphere, step.total_step, step.v_hat
+        sphere = copy.deepcopy(step.sphere)
+        total_step, v_hat = step.total_step, step.v_hat
         vx = v_hat[0]
         vy = v_hat[1]
         ts = [0]
-        len_v = sphere.systems_length_in_v_direction(v_hat, self.boundaries)
         starting_points, starting_ts = sphere.trajectories_braked_to_lines(total_step, v_hat, self.boundaries)
         for starting_point, starting_t in zip(starting_points[:-1], starting_ts[:-1]):
             # [-1]=end point
             if vy != 0:
-                for i in range(self.n_rows):
+                for i in range(self.n_rows + 1):  # +1 for last row/col
                     y = float(i * self.edge)
                     t = (y - starting_point[1]) / vy
-                    if t < 0: t = t + len_v
-                    ts.append(t + starting_t)
+                    if t > 0: ts.append(starting_t + t)
             if vx != 0:
-                for j in range(self.n_columns):
+                for j in range(self.n_columns + 1):
                     x = float(j*self.edge)
                     t = (x - starting_point[0]) / vx
-                    if t < 0: t = t + len_v
-                    ts.append(t + starting_t)
-        return np.sort(list(dict.fromkeys([t for t in ts if t <= total_step])))
+                    if t > 0: ts.append(starting_t + t)
+        sorted_ts = np.sort(list(dict.fromkeys([t for t in ts if t <= total_step])))
+        return sorted_ts
 
     def perform_total_step(self, cell: Cell, step: Step, draw=None):
         """

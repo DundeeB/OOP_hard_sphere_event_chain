@@ -135,52 +135,20 @@ class Event2DCells(ArrayOfCells):
         j = int(round(point[0] / self.edge) % self.n_columns)
         return i, j
 
-    def relevant_cells_around_point_2d(self, rad, point):
+    def cells_around_intersect_2d(self, point):
         """
         Finds cells which a sphere with radius rad with center at point would have overlap with
         :param rad: radius of interest
         :param point: point around which we find cells
         :return: list of cells with overlap with sphere
         """
-        rad = 2*rad  # all cells in 2r dist can overlap
         point = np.array([point[0], point[1]])
-        l_x = self.boundaries.edges[0]
-        l_y = self.boundaries.edges[1]
-        i, j = self.closest_site_2d(point)
-        assert(rad < self.edge, 'Not supported yet rad>=edge')
-        cells = self.cells
-        a = cells[i][j]
-        b = cells[i - 1][j]
-        c = cells[i - 1][j - 1]
-        d = cells[i][j - 1]
-        dx, dy = np.array(point)-cells[i][j].site
-
-        #Boundaries:
+        point = point + np.array((epsilon, epsilon))
+        x, y = point[0], point[1]
         e = self.edge
-        if dx > e: dx = dx - l_x
-        if dy > e: dy = dy - l_y
-        if dx < -e: dx = l_x + dx
-        if dy < -e: dy = l_y + dy
-
-        # cases for overlap
-        if dx > rad and dy > rad:  # 0<theta<90  # 1
-            return [a]
-        if dx > rad and abs(dy) <= rad:  # 0=theta  # 2
-            return [a, b]
-        if dx > rad and dy < -rad:  # -90<theta<0  # 3
-            return [b]
-        if abs(dx) <= rad and dy < -rad:  # theta=-90  # 4
-            return [b, c]
-        if dx < -rad and dy < -rad:  # -180<theta<-90  # 5
-            return [c]
-        if dx < -rad and abs(dy) <= rad:  # theta=180  # 6
-            return [c, d]
-        if dx < -rad and dy > rad:  # 90<theta<180  # 7
-            return [d]
-        if abs(dx) <= rad and dy > rad:  # theta=90  # 8
-            return [a, d]
-        else:  # abs(dx) <= rad and abs(dy) <= rad:  # x=y=0  # 9
-            return [a, b, c, d]
+        i, j = int(y/e) % self.n_rows, int(x/e) % self.n_columns
+        ip1, jp1, im1, jm1 = ArrayOfCells.inds_boundary(i, j, self.n_rows, self.n_columns)
+        return [self.cells[a][b] for a in [im1, i, ip1] for b in [jm1, j, jp1]]
 
     def get_all_crossed_points_2d(self, step: Step):
         """
@@ -227,7 +195,7 @@ class Event2DCells(ArrayOfCells):
         ts = self.get_all_crossed_points_2d(step)
         for t in ts:
             sub_cells = []
-            for c in self.relevant_cells_around_point_2d(sphere.rad, sphere.trajectory(t, v_hat, self.boundaries)):
+            for c in self.cells_around_intersect_2d(sphere.trajectory(t, v_hat, self.boundaries)):
                 if c not in all_cells_on_traject:
                     sub_cells.append(c)
                     all_cells_on_traject.append(c)

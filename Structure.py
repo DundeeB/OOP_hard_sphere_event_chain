@@ -621,6 +621,14 @@ class ArrayOfCells:
             cells[0][n_columns + 1] = Cell(c.site, c.edges)
         return ArrayOfCells(self.dim, self.boundaries, cells)
 
+    @staticmethod
+    def inds_boundary(i, j, n_rows, n_columns):
+        ip1 = int((i + 1) % n_rows)
+        jp1 = int((j + 1) % n_columns)
+        im1 = int((i - 1) % n_rows)
+        jm1 = int((j - 1) % n_columns)
+        return ip1, jp1, im1, jm1
+
     def legal_configuration(self):
         """
         :return: True if there are no overlapping spheres in the configuration
@@ -657,9 +665,7 @@ class ArrayOfCells:
                         r = sphere.rad
                         if c_y - r < 0 or c_y + r > self.boundaries.edges[1]:
                             return False
-                ip1 = (i + 1) % n_rows
-                jp1 = (j + 1) % n_columns
-                jm1 = (j - 1) % n_columns
+                ip1, jp1, _, jm1 = ArrayOfCells.inds_boundary(i, j, n_rows, n_columns)
                 neighbors = [self.cells[ip1][jm1], self.cells[ip1][j],
                              self.cells[ip1][jp1], self.cells[i][jp1]]
                 for neighbor in neighbors:

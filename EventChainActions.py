@@ -142,6 +142,7 @@ class Event2DCells(ArrayOfCells):
         :param point: point around which we find cells
         :return: list of cells with overlap with sphere
         """
+        rad = 2*rad  # all cells in 2r dist can overlap
         point = np.array([point[0], point[1]])
         l_x = self.boundaries.edges[0]
         l_y = self.boundaries.edges[1]
@@ -262,7 +263,7 @@ class Event2DCells(ArrayOfCells):
         new_cell, flag = None, None
         for new_cell in all_cells_on_traject:
             if new_cell.sphere_in_cell(sphere):
-                new_cell.add_spheres(sphere)
+                new_cell.append(sphere)
                 flag = not None
                 break
         assert flag is not None, "sphere has not been added to any cell"

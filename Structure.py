@@ -415,7 +415,7 @@ class Cell:
         self.ind = ind
         self.spheres = spheres
 
-    def add_spheres(self, new_spheres):
+    def append(self, new_spheres):
         """
         Add spheres to the cell
         :param new_spheres: list of Sphere objects to be added to the cell
@@ -636,6 +636,8 @@ class ArrayOfCells:
                 cell = self.cells[i][j]
                 if Sphere.spheres_overlap(cell.spheres):
                     return False
+                for sphere in cell.spheres:
+                    assert cell.sphere_in_cell(sphere), "sphere is in cell it should not be in"
                 if self.boundaries.dim == 3:
                     for sphere in cell.spheres:
                         c_z = sphere.center[2]

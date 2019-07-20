@@ -280,12 +280,17 @@ class CubeBoundaries:
             if new_dist < dist: dist = new_dist
         return dist
 
+    def dist(self, p1: tuple, p2: tuple):
+        return self.sphere_dist(Sphere(p1, 0), Sphere(p2, 0))
+
     def overlap(self, sphere1, sphere2):
         """
         :type sphere1: Sphere
         :type sphere2: Sphere
         :return: True if sphere1 and sphere2 are overlaping, even through CYCLIC boundary condition
         """
+        if sphere1 == sphere2:
+            return False
         return (self.sphere_dist(sphere1, sphere2) <= sphere1.rad + sphere2.rad)
 
     def spheres_overlap(self, spheres):
@@ -624,12 +629,11 @@ class ArrayOfCells:
         d = self.dim
         if d != 2:
             raise (Exception('Only d=2 supported!'))
-        cushioned_cells = self.cushioning_array_for_boundary_cond().cells
-        n_rows = len(cushioned_cells) - 2
-        for i in range(1, n_rows + 1):
-            n_columns = len(cushioned_cells[i]) - 2
-            for j in range(1, n_columns + 1):
-                cell = cushioned_cells[i][j]
+        n_rows = len(self.cells)
+        for i in range(n_rows):
+            n_columns = len(self.cells[i])
+            for j in range(n_columns):
+                cell = self.cells[i][j]
                 if Sphere.spheres_overlap(cell.spheres):
                     return False
                 if self.boundaries.dim == 3:
@@ -639,20 +643,23 @@ class ArrayOfCells:
                         if self.boundaries.boundaries_type[2] == BoundaryType.WALL and \
                             (c_z - r < 0 or c_z + r > self.boundaries.edges[2]):
                             return False
-                if (j == n_columns or j == 1) and self.boundaries.boundaries_type[0] == BoundaryType.WALL:
+                if (j == n_columns - 1 or j == 0) and self.boundaries.boundaries_type[0] == BoundaryType.WALL:
                     for sphere in cell.spheres:
                         c_x = sphere.center[0]
                         r = sphere.rad
                         if c_x - r < 0 or c_x + r > self.boundaries.edges[0]:
                             return False
-                if (i == n_rows or i == 1) and self.boundaries.boundaries_type[1] == BoundaryType.WALL:
+                if (i == n_rows - 1 or i == 0) and self.boundaries.boundaries_type[1] == BoundaryType.WALL:
                     for sphere in cell.spheres:
                         c_y = sphere.center[1]
                         r = sphere.rad
                         if c_y - r < 0 or c_y + r > self.boundaries.edges[1]:
                             return False
-                neighbors = [cushioned_cells[i + 1][j - 1], cushioned_cells[i + 1][j],
-                             cushioned_cells[i + 1][j + 1], cushioned_cells[i][j + 1]]
+                ip1 = (i + 1) % n_rows
+                jp1 = (j + 1) % n_columns
+                jm1 = (j - 1) % n_columns
+                neighbors = [self.cells[ip1][jm1], self.cells[ip1][j],
+                             self.cells[ip1][jp1], self.cells[i][jp1]]
                 for neighbor in neighbors:
                     if self.overlap_2_cells(cell, neighbor):
                         return False

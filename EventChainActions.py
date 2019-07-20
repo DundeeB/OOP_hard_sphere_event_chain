@@ -221,35 +221,40 @@ class Event2DCells(ArrayOfCells):
         sphere, total_step, v_hat = step.sphere, step.total_step, step.v_hat
         step.current_step = np.nan
         v_hat = np.array(v_hat)/np.linalg.norm(v_hat)
-
         cell.remove_sphere(sphere)
-
         cells, sub_cells, all_cells_on_traject = [], [], []  # list of sub_cells, sub_cells is a list of cells
-        for t in self.get_all_crossed_points_2d(step):
-            previous_sub_cells = sub_cells
+        ts = self.get_all_crossed_points_2d(step)
+        for t in ts:
             sub_cells = []
             for c in self.relevant_cells_around_point_2d(sphere.rad, sphere.trajectory(t, v_hat, self.boundaries)):
-                if c not in previous_sub_cells:
+                if c not in all_cells_on_traject:
                     sub_cells.append(c)
                     all_cells_on_traject.append(c)
-            cells.append(sub_cells)
+            if sub_cells != []: cells.append(sub_cells)
 
-        event, sub_cells = None, None
+        final_event, relevent_sub_cells = None, None
+        minimal_step = float('inf')
         for i, sub_cells in enumerate(cells):
             other_spheres = []
             for c in sub_cells:
                 for s in c.spheres: other_spheres.append(s)
             event, current_step = step.next_event(other_spheres)
-            if event.event_type != EventType.FREE:
-                if i != len(cells)-1:
-                    next_other_spheres = []
-                    for next_cell in cells[i+1]:
-                        for s in next_cell.spheres: next_other_spheres.append(s)
-                    another_potential_event, another_current_step = step.next_event(next_other_spheres)
-                    if current_step > another_current_step:
-                        event = another_potential_event
-                        sub_cells = cells[i+1]
+            if current_step < minimal_step:
+                final_event = event
+                minimal_step = current_step
+                relevent_sub_cells = sub_cells
+            if event.event_type != EventType.FREE and i != len(cells) - 1:
+                next_other_spheres = []
+                for next_cell in cells[i+1]:
+                    for s in next_cell.spheres: next_other_spheres.append(s)
+                another_potential_event, another_current_step = step.next_event(next_other_spheres)
+                if another_current_step < minimal_step:
+                    final_event = another_potential_event
+                    minimal_step = another_current_step
+                    relevent_sub_cells = cells[i+1]
+            if i == len(cells) - 1 or minimal_step < ts[i+1]:
                 break
+        sub_cells, event = relevent_sub_cells, final_event
         assert event is not None and not np.isnan(step.current_step)
 
         step.perform_step()  # subtract current step from total step

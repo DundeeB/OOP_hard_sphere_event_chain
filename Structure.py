@@ -252,10 +252,11 @@ class CubeBoundaries:
         """
         :type sphere1: Sphere
         :type sphere2: Sphere
-        :return: distance between the two sphere, but including CYCLIC boundary conditions
+        :return: distance between the two sphere, but including CYCLIC boundary conditions. Also vector dx = r2 - r1
         """
         direct = sphere1.sphere_dist(sphere2)
         dist = direct
+        dx_min = np.array(sphere2.center) - sphere1.center
         cloned_sphere = copy.deepcopy(sphere1)
         l_x = self.edges[0]
         l_y = self.edges[1]
@@ -277,8 +278,10 @@ class CubeBoundaries:
             if self.dim == 3: bound_vec = [b for b in bound_vec] + [0]
             cloned_sphere.center = sphere1.center + np.array(bound_vec)
             new_dist = cloned_sphere.sphere_dist(sphere2)
-            if new_dist < dist: dist = new_dist
-        return dist
+            if new_dist < dist:
+                dist = new_dist
+                dx_min = np.array(sphere2.center) - cloned_sphere.center
+        return dist, dx_min
 
     def dist(self, p1: tuple, p2: tuple):
         return self.sphere_dist(Sphere(p1, 0), Sphere(p2, 0))
@@ -291,7 +294,8 @@ class CubeBoundaries:
         """
         if sphere1 == sphere2:
             return False
-        return (self.sphere_dist(sphere1, sphere2) <= sphere1.rad + sphere2.rad)
+        dist, _ = self.sphere_dist(sphere1, sphere2)
+        return dist <= sphere1.rad + sphere2.rad
 
     def spheres_overlap(self, spheres):
         """
@@ -381,14 +385,12 @@ class Metric:
         d = sphere1.rad + sphere2.rad
         v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
         ps, ts = sphere1.trajectories_braked_to_lines(total_step, v_hat, boundaries)
-        pos_b = sphere2.center
         for pos_a, t in zip(ps, ts):
-            dx = np.array(pos_b) - np.array(pos_a)
-            dx_len = np.linalg.norm(dx)
+            dx_len, dx = boundaries.dist(pos_a, sphere2.center)
             dx_dot_v = np.dot(dx, v_hat)
             discriminant = dx_dot_v ** 2 + d ** 2 - dx_len ** 2
             if discriminant > 0:  # found a solution!
-                if dx_len - d < 0:
+                if dx_len - d < -epsilon:
                     # new pos_a is already overlapping, meaning the sphere is leaking through the boundary condition
                     go_back = dx_dot_v - np.sqrt(discriminant)
                     return t + go_back

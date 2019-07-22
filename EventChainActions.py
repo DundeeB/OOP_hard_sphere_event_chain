@@ -112,7 +112,7 @@ class Event2DCells(ArrayOfCells):
         self.n_columns = n_columns
         self.l_x = l_x
         self.l_y = l_y
-        self.l_z = np.nan
+        self.l_z = None
 
     def add_third_dimension_for_sphere(self, l_z):
         self.l_z = l_z
@@ -121,10 +121,16 @@ class Event2DCells(ArrayOfCells):
         return
 
     def random_generate_spheres(self, n_spheres_per_cell, rad, extra_edges=[]):
-        if extra_edges == [] and self.l_z != np.nan:
+        if extra_edges == [] and self.l_z is not None:
             super().random_generate_spheres(n_spheres_per_cell, rad, extra_edges=[self.l_z])
         else:
             super().random_generate_spheres(n_spheres_per_cell, rad, extra_edges)
+
+    def generate_spheres_in_cubic_structure(self, n_spheres_per_cell, rad, extra_edges=[]):
+        if extra_edges == [] and self.l_z is not None:
+            super().generate_spheres_in_cubic_structure(n_spheres_per_cell, rad, extra_edges=[self.l_z])
+        else:
+            super().generate_spheres_in_cubic_structure(n_spheres_per_cell, rad, extra_edges)
 
     def closest_site_2d(self, point):
         """
@@ -137,17 +143,17 @@ class Event2DCells(ArrayOfCells):
 
     def cells_around_intersect_2d(self, point):
         """
-        Finds cells which a sphere with radius rad with center at point would have overlap with
+        Finds cells which a sphere with radius rad with center at point would have direct_overlap with
         :param rad: radius of interest
         :param point: point around which we find cells
-        :return: list of cells with overlap with sphere
+        :return: list of cells with direct_overlap with sphere
         """
         point = np.array([point[0], point[1]])
         point = point + np.array((epsilon, epsilon))
         x, y = point[0], point[1]
         e = self.edge
         i, j = int(y/e) % self.n_rows, int(x/e) % self.n_columns
-        ip1, jp1, im1, jm1 = ArrayOfCells.inds_boundary(i, j, self.n_rows, self.n_columns)
+        ip1, jp1, im1, jm1 = ArrayOfCells.cyclic_indices(i, j, self.n_rows, self.n_columns)
         return [self.cells[a][b] for a in [im1, i, ip1] for b in [jm1, j, jp1]]
 
     def get_all_crossed_points_2d(self, step: Step):

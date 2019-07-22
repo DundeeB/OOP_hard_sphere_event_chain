@@ -1,7 +1,4 @@
-import pylab
-import cv2
-import os
-import numpy as np
+import pylab, cv2, os, numpy as np, copy
 
 from Structure import Sphere, CubeBoundaries, ArrayOfCells
 from EventChainActions import Step
@@ -51,7 +48,7 @@ class View2D:
         dx *= arrow_scale
         dy *= arrow_scale
         pylab.arrow(x, y, dx, dy, fc="k", ec="k",
-                    head_width=0.1 * np.linalg.norm(vel), head_length=0.1 * np.linalg.norm(vel))
+                    head_width=0.03 * np.linalg.norm(vel), head_length=0.03 * np.linalg.norm(vel))
 
     def step_snapshot(self, title, spheres, sphere_ind, img_name, vel, arrow_scale):
         self.plt_spheres(title, spheres)
@@ -68,7 +65,10 @@ class View2D:
         spheres = array_of_cells.cushioning_array_for_boundary_cond().all_spheres
         self.plt_spheres(title, spheres)
         if step is not None:
-            View2D.plt_step(step.sphere, np.array(step.v_hat)*step.total_step, 0.1)
+            cloned_step = copy.deepcopy(step)
+            for bound_vec in array_of_cells.boundaries.boundary_transformed_vectors():
+                cloned_step.sphere.center = step.sphere.center[:2] + bound_vec
+                View2D.plt_step(cloned_step.sphere, np.array(step.v_hat) * step.total_step, 0.1)
         for cell in array_of_cells.all_cells:
             x, y = cell.site
             rec = pylab.Rectangle((x, y), cell.edges[0], cell.edges[1], fill=False)

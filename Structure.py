@@ -39,7 +39,8 @@ class Sphere:
         :return: True if they direct_overlap
         """
         delta = sphere1.direct_sphere_dist(sphere2) - (sphere1.rad + sphere2.rad)
-        if delta < -epsilon:
+        if delta < -10*epsilon:
+            print(delta)
             return True
         else:
             if delta > 0:
@@ -681,21 +682,21 @@ class ArrayOfCells:
 
     def generate_spheres_in_cubic_structure(self, n_spheres_per_cell, rad, extra_edges=[]):
         if type(rad) != list: rad = n_spheres_per_cell*[rad]
-        while True:
-            for cell in self.all_cells:
-                x, y = 0, 0
-                e = cell.edges + extra_edges
-                for i in range(n_spheres_per_cell):
-                    center = (e[0] + x + rad[i], e[1] + y + rad[i])
-                    r = rad[i]
-                    if len(extra_edges) > 0:
-                        center = [c for c in center] + [r + random.random() * (ex - 2 * r) for ex in extra_edges]
-                    cell.append(Sphere(center, r))
-                    x += 2*rad[i]
-                    if i < n_spheres_per_cell-1 and (x + 2*rad[i+1] > e[0]):
-                        x = 0
-                        y += 2 * rad[i]
-                        if i < n_spheres_per_cell-1 and (y + 2*rad[i+1] > e[1]):
-                            break
-            if self.legal_configuration():
-                return
+        for cell in self.all_cells:
+            dx, dy = 0, 0
+            x0, y0 = cell.site
+            max_r = 0
+            for i in range(n_spheres_per_cell):
+                r = rad[i]
+                if r > max_r: max_r = r
+                center = (x0 + dx + r, y0 + dy + r)
+                if len(extra_edges) > 0:
+                    center = [c for c in center] + [r + random.random() * (e - 2 * r) for e in extra_edges]
+                cell.append(Sphere(center, r))
+                dx += 2 * r
+                if (i < n_spheres_per_cell - 1) and (dx + 2 * rad[i+1] > cell.edges[0]):
+                    dx = 0
+                    dy += 2 * max_r
+                    max_r = 0
+                if (i < n_spheres_per_cell - 1) and (dy + 2 * rad[i+1] > cell.edges[1]):
+                    break

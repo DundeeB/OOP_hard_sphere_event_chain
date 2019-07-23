@@ -167,19 +167,26 @@ class Event2DCells(ArrayOfCells):
         vy = v_hat[1]
         ts = [0]
         starting_points, starting_ts = sphere.trajectories_braked_to_lines(total_step, v_hat, self.boundaries)
-        for starting_point, starting_t in zip(starting_points[:-1], starting_ts[:-1]):
-            # [-1]=end point
+        for starting_point, starting_t in zip(starting_points, starting_ts):
             if vy != 0:
                 for i in range(self.n_rows + 1):  # +1 for last row/col
                     y = float(i * self.edge)
                     t = (y - starting_point[1]) / vy
-                    if t > 0: ts.append(starting_t + t)
+                    current_t = starting_t + t
+                    if t < 0 or current_t > total_step:
+                        continue
+                    ts.append(current_t)
             if vx != 0:
                 for j in range(self.n_columns + 1):
                     x = float(j*self.edge)
                     t = (x - starting_point[0]) / vx
-                    if t > 0: ts.append(starting_t + t)
+                    current_t = starting_t + t
+                    if t < 0 or current_t > total_step:
+                        continue
+                    ts.append(current_t)
         sorted_ts = np.sort(list(dict.fromkeys([t for t in ts if t <= total_step])))
+        if sorted_ts[-1] != total_step:
+            sorted_ts = [t for t in sorted_ts] + [total_step]
         return sorted_ts
 
     def perform_total_step(self, cell: Cell, step: Step, draw=None):
@@ -190,8 +197,13 @@ class Event2DCells(ArrayOfCells):
         :type draw: View2D
         """
         if draw is not None:
+            if draw.counter is not None:
+                draw.counter += 1
+                img_name = str(draw.counter)
+            else:
+                img_name = 'total_step=' + str(round(step.total_step, 4))
             draw.array_of_cells_snapshot('During step snapshot, total_step=' + str(step.total_step),
-                                         self, 'total_step=' + str(round(step.total_step, 4)), step)
+                                         self, img_name, step)
 
         sphere, total_step, v_hat = step.sphere, step.total_step, step.v_hat
         step.current_step = np.nan

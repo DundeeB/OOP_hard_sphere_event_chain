@@ -6,7 +6,7 @@ from EventChainActions import Step
 
 class View2D:
 
-    def __init__(self, output_dir, boundaries):
+    def __init__(self, output_dir, boundaries, counter=None):
         """
         Create new View instance, saving pictures to directory output_dir and having simulation boundary
         boundaries
@@ -15,6 +15,7 @@ class View2D:
         """
         self.output_dir = output_dir
         self.boundaries = boundaries
+        self.counter = counter
 
     def plt_spheres(self, title, spheres):
         """

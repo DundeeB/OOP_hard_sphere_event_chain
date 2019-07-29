@@ -260,7 +260,7 @@ class CubeBoundaries:
         for v in self.boundary_transformed_vectors():
             if sphere1.dim == 3: v = np.array([x for x in v] + [0])
             cloned_sphere = Sphere(sphere1.center + v, sphere1.rad)
-            if cloned_sphere.direct_sphere_dist(sphere2) < sphere1.rad + sphere2.rad:
+            if cloned_sphere.direct_sphere_dist(sphere2) < sphere1.rad + sphere2.rad - epsilon:
                 return True
         return False
 
@@ -443,7 +443,7 @@ class Cell:
         for i in range(len(self.site)):
             x_sphere, x_site, edge = sphere.center[i], self.site[i], self.edges[i]
             #Notice this implementation instead of for x_... in zip() is for the case dim(sphere)!=dim(cell)
-            if x_sphere <= x_site or x_sphere > x_site + edge:
+            if x_sphere < x_site or x_sphere > x_site + edge:
                 return False
         return True
 
@@ -645,19 +645,19 @@ class ArrayOfCells:
                         c_z = sphere.center[2]
                         r = sphere.rad
                         if self.boundaries.boundaries_type[2] == BoundaryType.WALL and \
-                            (c_z - r < 0 or c_z + r > self.boundaries.edges[2]):
+                            (c_z - r < -epsilon or c_z + r > self.boundaries.edges[2] + epsilon):
                             return False
                 if (j == n_columns - 1 or j == 0) and self.boundaries.boundaries_type[0] == BoundaryType.WALL:
                     for sphere in cell.spheres:
                         c_x = sphere.center[0]
                         r = sphere.rad
-                        if c_x - r < 0 or c_x + r > self.boundaries.edges[0]:
+                        if c_x - r < -epsilon or c_x + r > self.boundaries.edges[0] + epsilon:
                             return False
                 if (i == n_rows - 1 or i == 0) and self.boundaries.boundaries_type[1] == BoundaryType.WALL:
                     for sphere in cell.spheres:
                         c_y = sphere.center[1]
                         r = sphere.rad
-                        if c_y - r < 0 or c_y + r > self.boundaries.edges[1]:
+                        if c_y - r < -epsilon or c_y + r > self.boundaries.edges[1] + epsilon:
                             return False
                 ip1, jp1, _, jm1 = ArrayOfCells.cyclic_indices(i, j, n_rows, n_columns)
                 neighbors = [self.cells[ip1][jm1], self.cells[ip1][j],

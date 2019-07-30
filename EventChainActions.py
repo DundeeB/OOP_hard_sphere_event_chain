@@ -2,7 +2,7 @@ from Structure import *
 #from SnapShot import View2D
 
 
-epsilon = 1e-4
+epsilon = 1e-10
 
 
 class EventType(Enum):
@@ -68,6 +68,8 @@ class Step:
         closest_sphere = []
         closest_sphere_dist = float('inf')
         for other_sphere in other_spheres:
+            if other_sphere == sphere:
+                continue
             sphere_dist = Metric.dist_to_collision(sphere, other_sphere, total_step, v_hat, self.boundaries)
             if sphere_dist < closest_sphere_dist:
                 closest_sphere_dist = sphere_dist
@@ -263,7 +265,9 @@ class Event2DCells(ArrayOfCells):
             assert flag is not None, "Did not find new cell for the collided sphere"
             step.sphere = event.other_sphere
             self.perform_total_step(new_cell, step, draw)
+            return
         if event.event_type == EventType.WALL:
             step.v_hat = CubeBoundaries.flip_v_hat_wall_part(event.wall, sphere, v_hat)
             self.perform_total_step(new_cell, step, draw)
+            return
         if event.event_type == EventType.FREE: return

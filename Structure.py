@@ -2,7 +2,7 @@ import numpy as np
 import random
 import copy
 from enum import Enum
-epsilon = 1e-6
+epsilon = 1e-10
 
 
 class Sphere:
@@ -39,7 +39,7 @@ class Sphere:
         :return: True if they direct_overlap
         """
         delta = sphere1.direct_sphere_dist(sphere2) - (sphere1.rad + sphere2.rad)
-        if delta < -10*epsilon:
+        if delta < -1e4*epsilon:
             print(delta)
             return True
         else:

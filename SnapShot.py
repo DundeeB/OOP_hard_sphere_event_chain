@@ -48,6 +48,8 @@ class View2D:
         (dx, dy) = vel[0:2]
         dx *= arrow_scale
         dy *= arrow_scale
+
+        if dx == 0 and dy == 0: dx = 0.001
         pylab.arrow(x, y, dx, dy, fc="k", ec="k",
                     head_width=0.03 * np.linalg.norm(vel), head_length=0.03 * np.linalg.norm(vel))
 

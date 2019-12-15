@@ -267,7 +267,7 @@ class Event2DCells(ArrayOfCells):
             self.perform_total_step(new_cell, step, draw)
             return
         if event.event_type == EventType.WALL:
-            step.v_hat = CubeBoundaries.flip_v_hat_wall_part(event.wall, sphere, v_hat)
+            step.v_hat = CubeBoundaries.flip_v_hat_at_wall(event.wall, sphere, v_hat)
             self.perform_total_step(new_cell, step, draw)
             return
         if event.event_type == EventType.FREE: return

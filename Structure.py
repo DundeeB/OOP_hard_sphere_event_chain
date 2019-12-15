@@ -23,47 +23,6 @@ class Sphere:
         """
         return len(self.center)
 
-    def direct_sphere_dist(self, other_sphere):
-        """
-        :type other_sphere: Sphere
-        :return: distance between two spheres, without boundary conditions
-        """
-        return np.linalg.norm(np.array(self.center) - other_sphere.center)
-
-    @staticmethod
-    def direct_overlap(sphere1, sphere2):
-        """
-        Test of two d-dimensional Sphere objects over lap
-        :type sphere1: Sphere
-        :type sphere2: Sphere
-        :return: True if they direct_overlap
-        """
-        delta = sphere1.direct_sphere_dist(sphere2) - (sphere1.rad + sphere2.rad)
-        if delta < -1e4*epsilon:
-            print(delta)
-            return True
-        else:
-            if delta > 0:
-                return False
-            else:
-                Warning("Spheres are epsilon close to each other, seperating them")
-                dr_hat = sphere1.center - np.array(sphere2.center)
-                dr_hat = dr_hat / (np.linalg.norm(dr_hat))
-                sphere1.center = sphere1.center + np.abs(delta)*dr_hat
-
-    @staticmethod
-    def direct_spheres_overlap(spheres):
-        """
-        :type spheres: list
-        :param spheres: list of spheres to check direct_overlap between all couples
-        :return:
-        """
-        for i in range(len(spheres)):
-            for j in range(i):
-                if Sphere.direct_overlap(spheres[i], spheres[j]):
-                    return True
-        return False
-
     def box_it(self, boundaries):
         """
         Put the sphere inside the boundaries of the simulation, usefull for cyclic boundary conditions
@@ -74,72 +33,6 @@ class Sphere:
     def perform_step(self, v_hat, current_step, boundaries):
         self.center = self.center + np.array(v_hat)*current_step
         self.box_it(boundaries)
-
-    def systems_length_in_v_direction(self, v_hat, boundaries):
-        """
-        :param v_hat: direction of step
-        :type boundaries: CubeBoundaries
-        """
-        lx = boundaries.edges[0]
-        ly = boundaries.edges[1]
-        vx = v_hat[0]
-        vy = v_hat[1]
-        x_hat = (1, 0)
-        y_hat = (0, 1)
-        r_c = np.array((self.center[0], self.center[1]))
-        if vx != 0 and vy != 0:
-            dist_upper_boundary = min(abs((ly - np.dot(r_c, y_hat)) / vy),
-                                      abs((lx - np.dot(r_c, x_hat)) / vx))
-            dist_bottom_boundary = min(abs((0 - np.dot(r_c, y_hat)) / vy),
-                                       abs((0 - np.dot(r_c, x_hat)) / vx))
-        if vx != 0  and vy ==0:
-            dist_upper_boundary = abs((lx - np.dot(r_c, x_hat)) / vx)
-            dist_bottom_boundary = abs((0 - np.dot(r_c, x_hat)) / vx)
-        if vx == 0 and vy != 0:
-            dist_upper_boundary = abs((ly - np.dot(r_c, y_hat)) / vy)
-            dist_bottom_boundary = abs((0 - np.dot(r_c, y_hat)) / vy)
-        return dist_bottom_boundary + dist_upper_boundary
-
-    def trajectory(self, t, v_hat, boundaries):
-        """
-        Solve for the trajectory from the starting point self.center, assuming cyclic boundary conditions
-        :param t: length of step
-        :param v_hat: direction of step
-        :type boundaries: CubeBoundaries
-        :return:
-        """
-        r = self.center+np.array(v_hat)*t/np.linalg.norm(v_hat)
-        r = [x % e for x, e in zip(r, boundaries.edges)]
-        return np.array(r)
-
-    def trajectories_braked_to_lines(self, total_step, v_hat, boundaries):
-        """
-        return list [p1, p2, ..., pn] of points for which p1 and direction v_hat defines the trajectories. p1 is the
-        starting point and last pn is the last point. All the points in between are at the bottom or to the left of the
-        simulation
-        :param total_step: total step left to be carried out
-        :param v_hat: direction of step
-        :type boundaries: CubeBoundaries
-        :return: list [p1, p2, ..., pn] of points for which p1 and direction v_hat defines the trajectories
-        """
-        first_step, _ = Metric.dist_to_boundary_without_r(self, total_step, v_hat, boundaries)
-        if first_step == float('inf'):
-            return [self.center, self.trajectory(total_step, v_hat, boundaries)], \
-                   [0, total_step]
-        ts = [0, first_step]
-        cloned_sphere = copy.deepcopy(self)
-        cloned_sphere.perform_step(v_hat, first_step, boundaries)
-        t = first_step
-        while t < total_step:
-            len_v = cloned_sphere.systems_length_in_v_direction(v_hat, boundaries)
-            t += len_v
-            if t > total_step:
-                len_v = t - total_step
-                t = total_step
-            ts += [t]
-            cloned_sphere.perform_step(v_hat, len_v, boundaries)
-        ps = [np.array(self.trajectory(t, v_hat, boundaries)) for t in ts]
-        return ps, ts
 
 
 class BoundaryType(Enum):
@@ -180,7 +73,7 @@ class CubeBoundaries:
                     (0, e1, e2), (e0, 0, e2), (e0, e1, 0), (e0, e1, e2)]
 
     @property
-    def walls(self):
+    def planes(self):
         vs = self.vertices
         if self.dim == 1:
             return [(vs[0],), (vs[1],)]
@@ -196,7 +89,7 @@ class CubeBoundaries:
                     (vs[2], vs[4], vs[6], vs[7])]  # xz (y=1)
 
     @property
-    def walls_type(self):
+    def planes_type(self):
         """
         :return: list of boundary conditions, the i'th boundary condition is for i'th wall in self.walls
         """
@@ -211,19 +104,19 @@ class CubeBoundaries:
             return 2*[bc2, bc0, bc1]
 
     @staticmethod
-    def vertical_step_to_wall(wall, point):
+    def vertical_step_to_wall(plane, point):
         """
         For a wall=[v0,v1,...], which is a plain going through all the vertices [v0,v1...],
         Return the vertical to the plain vector, with length the distance to the point
-        :param wall: list of vertices, which the define the wall which is the plain going through them
+        :param plane: list of vertices, which define the wall which is the plain going through them
         :param point: the specified point to get the vertical step to plain from
         :return: the smallest vector v s.t. v+point is on the plain of the wall
         """
-        for w in wall:
+        for w in plane:
             assert(len(w) == len(point))
         d = len(point)
         p = np.array(point)
-        v = [np.array(w) for w in wall]
+        v = [np.array(w) for w in plane]
         if d == 1:
             return v[0] - p
         if d == 2:
@@ -237,10 +130,10 @@ class CubeBoundaries:
             return v[0] - p + t*(v[1]-v[0]) + s*(v[2]-v[0])
 
     @staticmethod
-    def flip_v_hat_wall_part(wall, sphere, v_hat):
+    def flip_v_hat_at_wall(wall, sphere, v_hat):
         """
         Next to rigid wall boundary condition, we would want v_hat to flip direction
-        :param wall: list of points, definig the wall's plane
+        :param wall: list of points, defining the wall's plane
         :type sphere: Sphere
         :param v_hat: current direction of step
         :return: flipped direction of  step, opposite to wall
@@ -249,20 +142,36 @@ class CubeBoundaries:
         n_hat = np.array(n_hat)/np.linalg.norm(n_hat)
         return v_hat-2*np.dot(v_hat, n_hat)*n_hat
 
+    def cyclic_dist(self, sphere1, sphere2):
+        dx = np.linalg.norm(np.array(sphere1.center) - sphere2.center)  # direct vector
+        dsq = 0
+        for i, b in enumerate(self.boundaries_type):
+            if b != BoundaryType.CYCLIC:
+                dsq = dsq + dx[i]**2
+                continue
+            L = self.edges[i]
+            dsq = dsq + min(dx[i]**2, (dx[i] + L)**2, (dx[i] - L)**2)  # find shorter path through B.D.
+        return np.sqrt(dsq)
+
     def overlap(self, sphere1, sphere2):
         """
+        Test of two d-dimensional Sphere objects over lap
         :type sphere1: Sphere
         :type sphere2: Sphere
-        :return: True if sphere1 and sphere2 are overlaping, even through CYCLIC boundary condition
+        :return: True if they direct_overlap
         """
-        if sphere1 == sphere2:
-            return False
-        for v in self.boundary_transformed_vectors():
-            if sphere1.dim == 3: v = np.array([x for x in v] + [0])
-            cloned_sphere = Sphere(sphere1.center + v, sphere1.rad)
-            if cloned_sphere.direct_sphere_dist(sphere2) < sphere1.rad + sphere2.rad - epsilon:
-                return True
-        return False
+        delta = self.cyclic_dist(sphere1, sphere2) - (sphere1.rad + sphere2.rad)
+        if delta < -1e4*epsilon:
+            print(delta)
+            return True
+        else:
+            if delta > 0:
+                return False
+            else:
+                Warning("Spheres are epsilon close to each other, seperating them")
+                dr_hat = sphere1.center - np.array(sphere2.center)
+                dr_hat = dr_hat / (np.linalg.norm(dr_hat))
+                sphere1.center = sphere1.center + np.abs(delta)*dr_hat
 
     def spheres_overlap(self, spheres):
         """
@@ -272,30 +181,9 @@ class CubeBoundaries:
         """
         for i in range(len(spheres)):
             for j in range(i):
-                if self.overlap(spheres[i],spheres[j]):
+                if self.overlap(spheres[i], spheres[j]):
                     return True
         return False
-
-    def boundary_transformed_vectors(self):
-        l_x = self.edges[0]
-        l_y = self.edges[1]
-        if self.dim == 3 and self.boundaries_type[2] == BoundaryType.CYCLIC: raise Exception(
-            'z wall CYCLIC not supported')
-        x_cyclic = (self.boundaries_type[0] == BoundaryType.CYCLIC)
-        y_cyclic = (self.boundaries_type[1] == BoundaryType.CYCLIC)
-        both_cyclic = (x_cyclic and y_cyclic)
-        vectors = [(0, 0)]
-        if x_cyclic:
-            for vec in [(l_x, 0), (-l_x, 0)]:
-                vectors.append(vec)
-        if y_cyclic:
-            for vec in [(0, l_y), (0, -l_y)]:
-                vectors.append(vec)
-        if both_cyclic:
-            for vec in [(l_x, l_y), (l_x, -l_y), (-l_x, -l_y), (-l_x, l_y)]:
-                vectors.append(vec)
-        vectors = [np.array(v) for v in vectors]
-        return vectors
 
 
 class Metric:
@@ -316,7 +204,7 @@ class Metric:
         r = sphere.rad
         min_dist_to_wall = float('inf')
         closest_wall = []
-        for wall, BC_type in zip(boundaries.walls, boundaries.walls_type):
+        for wall, BC_type in zip(boundaries.planes, boundaries.planes_type):
             if BC_type != BoundaryType.WALL: continue
             u = CubeBoundaries.vertical_step_to_wall(wall, pos)
             u = u - r*u/np.linalg.norm(u)  # shift the wall closer by r
@@ -342,7 +230,7 @@ class Metric:
         pos = np.array(sphere.center)
         min_dist_to_wall = float('inf')
         closest_wall = []
-        for wall in boundaries.walls:
+        for wall in boundaries.planes:
             u = CubeBoundaries.vertical_step_to_wall(wall, pos)
             if np.dot(u, v_hat) <= 0:
                 continue

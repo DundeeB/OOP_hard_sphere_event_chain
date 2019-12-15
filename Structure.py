@@ -49,7 +49,7 @@ class Sphere:
                 Warning("Spheres are epsilon close to each other, seperating them")
                 dr_hat = sphere1.center - np.array(sphere2.center)
                 dr_hat = dr_hat / (np.linalg.norm(dr_hat))
-                sphere1.center = sphere1.center + epsilon*dr_hat
+                sphere1.center = sphere1.center + np.abs(delta)*dr_hat
 
     @staticmethod
     def direct_spheres_overlap(spheres):
@@ -417,7 +417,7 @@ class Cell:
         try:
             for sphere in new_spheres: self.spheres.append(sphere)
         except TypeError as single_sphere_exception:
-            assert(single_sphere_exception.args[0], '\'Sphere\' object is not iterable')
+            assert single_sphere_exception.args[0], '\'Sphere\' object is not iterable'
             self.spheres.append(new_spheres)
 
     def remove_sphere(self, spheres_to_remove):
@@ -428,7 +428,7 @@ class Cell:
         try:
             for sphere in spheres_to_remove: self.spheres.remove(sphere)
         except TypeError as single_sphere_exception:
-            assert(single_sphere_exception.args[0], '\'Sphere\' object is not iterable')
+            assert single_sphere_exception.args[0], '\'Sphere\' object is not iterable'
             self.spheres.remove(spheres_to_remove)
 
     def sphere_in_cell(self, sphere):

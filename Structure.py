@@ -34,26 +34,6 @@ class Sphere:
         self.center = self.center + np.array(v_hat)*current_step
         self.box_it(boundaries)
 
-    @staticmethod
-    def direct_overlap(spheres):
-        for i in range(len(spheres)):
-            for j in range(i):
-                sphere1 = spheres[i]
-                sphere2 = spheres[j]
-                dist = np.linalg.norm(sphere1.center - sphere2.center)
-                delta = dist - (sphere1.rad + sphere2.rad)
-                if delta < -1e4 * epsilon:
-                    print(delta)
-                    return True
-                else:
-                    if delta > 0:
-                        return False
-                    else:
-                        Warning("Spheres are epsilon close to each other, seperating them")
-                        dr_hat = sphere1.center - np.array(sphere2.center)
-                        dr_hat = dr_hat / (np.linalg.norm(dr_hat))
-                        sphere1.center = sphere1.center + np.abs(delta) * dr_hat
-
 
 class BoundaryType(Enum):
     WALL = "RigidWall"
@@ -184,49 +164,6 @@ class CubeBoundaries:
         if self.dim == 3: vectors = np.array([x for x in vectors] + [0])
         return vectors
 
-    def cyclic_dist(self, sphere1, sphere2):
-        dx = np.linalg.norm(np.array(sphere1.center) - sphere2.center)  # direct vector
-        dsq = 0
-        for i, b in enumerate(self.boundaries_type):
-            if b != BoundaryType.CYCLIC:
-                dsq = dsq + dx[i]**2
-                continue
-            L = self.edges[i]
-            dsq = dsq + min(dx[i]**2, (dx[i] + L)**2, (dx[i] - L)**2)  # find shorter path through B.D.
-        return np.sqrt(dsq)
-
-    def overlap(self, sphere1, sphere2):
-        """
-        Test of two d-dimensional Sphere objects over lap
-        :type sphere1: Sphere
-        :type sphere2: Sphere
-        :return: True if they direct_overlap
-        """
-        delta = self.cyclic_dist(sphere1, sphere2) - (sphere1.rad + sphere2.rad)
-        if delta < -1e4*epsilon:
-            print(delta)
-            return True
-        else:
-            if delta > 0:
-                return False
-            else:
-                Warning("Spheres are epsilon close to each other, seperating them")
-                dr_hat = sphere1.center - np.array(sphere2.center)
-                dr_hat = dr_hat / (np.linalg.norm(dr_hat))
-                sphere1.center = sphere1.center + np.abs(delta)*dr_hat
-
-    def spheres_overlap(self, spheres):
-        """
-        :type spheres: list
-        :param spheres: list of spheres to check direct_overlap between all couples
-        :return: True if there are two overlaping spheres, even if they direct_overlap through boundary condition
-        """
-        for i in range(len(spheres)):
-            for j in range(i):
-                if self.overlap(spheres[i], spheres[j]):
-                    return True
-        return False
-
 
 class Metric:
 
@@ -299,7 +236,7 @@ class Metric:
         :type boundaries: CubeBoundaries
         :return: distance for collision if the move is allowed, infty if move can not lead to collision
         """
-        assert(not boundaries.overlap(sphere1, sphere2))
+        assert not Metric.overlap(sphere1, sphere2, boundaries)
         d = sphere1.rad + sphere2.rad
         v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
         vectors = boundaries.boundary_transformed_vectors()
@@ -313,6 +250,76 @@ class Metric:
             dist: float = dx_dot_v - np.sqrt(discriminant)
             if dist <= total_step: return dist
         return float('inf')
+
+    @staticmethod
+    def cyclic_dist(boundaries, sphere1, sphere2):
+        dx = np.linalg.norm(np.array(sphere1.center) - sphere2.center)  # direct vector
+        dsq = 0
+        for i, b in enumerate(boundaries.boundaries_type):
+            if b != BoundaryType.CYCLIC:
+                dsq = dsq + dx[i]**2
+                continue
+            L = boundaries.edges[i]
+            dsq = dsq + min(dx[i]**2, (dx[i] + L)**2, (dx[i] - L)**2)  # find shorter path through B.D.
+        return np.sqrt(dsq)
+
+    @staticmethod
+    def overlap(sphere1: Sphere, sphere2: Sphere, boundaries: CubeBoundaries):
+        """
+        Test of two d-dimensional Sphere objects overlap
+        :type sphere1: Sphere
+        :type sphere2: Sphere
+        :type boundaries: CubeBoundaries
+        :return: True if they overlap
+        """
+        delta = Metric.cyclic_dist(boundaries, sphere1, sphere2) - (sphere1.rad + sphere2.rad)
+        if delta < -1e4 * epsilon:
+            print(delta)
+            return True
+        else:
+            if delta > 0:
+                return False
+            else:
+                Warning("Spheres are epsilon close to each other, seperating them")
+                dr_hat = sphere1.center - np.array(sphere2.center)
+                dr_hat = dr_hat / (np.linalg.norm(dr_hat))
+                sphere1.center = sphere1.center + np.abs(delta) * dr_hat
+                return False
+
+    @staticmethod
+    def spheres_overlap(spheres, boundaries: CubeBoundaries):
+        """
+        :type spheres: list
+        :param spheres: list of spheres to check direct_overlap between all couples
+        :param boundaries: important for the cyclic boundary conditions
+        :return: True if there are two overlapping spheres, even if they direct_overlap through boundary condition
+        """
+        for i in range(len(spheres)):
+            for j in range(i):
+                if boundaries.overlap(spheres[i], spheres[j]):
+                    return True
+        return False
+
+    @staticmethod
+    def direct_overlap(spheres):
+        for i in range(len(spheres)):
+            for j in range(i):
+                sphere1 = spheres[i]
+                sphere2 = spheres[j]
+                dist = np.linalg.norm(sphere1.center - sphere2.center)
+                delta = dist - (sphere1.rad + sphere2.rad)
+                if delta < -1e4 * epsilon:
+                    print(delta)
+                    return True
+                else:
+                    if delta > 0:
+                        return False
+                    else:
+                        Warning("Spheres are epsilon close to each other, seperating them")
+                        dr_hat = sphere1.center - np.array(sphere2.center)
+                        dr_hat = dr_hat / (np.linalg.norm(dr_hat))
+                        sphere1.center = sphere1.center + np.abs(delta) * dr_hat
+                        return False
 
 
 class Cell:
@@ -394,7 +401,7 @@ class Cell:
                     center = [c for c in center] + [r + random.random()*(e - 2*r) for e in extra_edges]
                     #assumes for now extra edge is rigid wall and so generate in the allowed locations
                 spheres.append(Sphere(center, rads[i]))
-            if not Sphere.direct_overlap(spheres):
+            if not Metric.direct_overlap(spheres):
                 break
         self.spheres = spheres
 
@@ -426,7 +433,6 @@ class ArrayOfCells:
         self.boundaries = boundaries
         self.n_rows = len(cells)
         self.n_columns = len(cells[0])
-
 
     @property
     def all_cells(self):
@@ -467,7 +473,7 @@ class ArrayOfCells:
         spheres2 = cell2.spheres
         for sphere1 in spheres1:
             for sphere2 in spheres2:
-                if self.boundaries.overlap(sphere1, sphere2):
+                if Metric.overlap(sphere1, sphere2, self.boundaries):
                     return True
         return False
 
@@ -567,7 +573,7 @@ class ArrayOfCells:
         for i in range(n_rows):
             for j in range(n_columns):
                 cell = self.cells[i][j]
-                if self.boundaries.spheres_overlap(cell.spheres):
+                if Metric.spheres_overlap(cell.spheres, self.boundaries):
                     return False
                 for sphere in cell.spheres:
                     assert cell.center_in_cell(sphere), "sphere is in missing from cell"
@@ -632,11 +638,12 @@ class ArrayOfCells:
                     max_r = 0
                 if (i < n_spheres_per_cell - 1) and (dy + 2 * rad[i+1] > cell.edges[1]):
                     break
+        assert self.legal_configuration()
 
     def append_sphere(self, spheres):
         if type(spheres) != list:
             assert type(spheres) == Sphere
-            spheres=[spheres]
+            spheres = [spheres]
         for sphere in spheres:
             for c in self.all_cells:
                 if c.center_in_cell(sphere):

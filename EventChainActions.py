@@ -250,7 +250,7 @@ class Event2DCells(ArrayOfCells):
 
         new_cell, flag = None, None
         for new_cell in all_cells_on_traject:
-            if new_cell.sphere_in_cell(sphere):
+            if new_cell.center_in_cell(sphere):
                 new_cell.append(sphere)
                 flag = not None
                 break
@@ -259,7 +259,7 @@ class Event2DCells(ArrayOfCells):
         if event.event_type == EventType.COLLISION:
             new_cell, flag = None, None
             for new_cell in all_cells_on_traject:
-                if new_cell.sphere_in_cell(event.other_sphere):
+                if new_cell.center_in_cell(event.other_sphere):
                     flag = not None
                     break
             assert flag is not None, "Did not find new cell for the collided sphere"

@@ -34,6 +34,26 @@ class Sphere:
         self.center = self.center + np.array(v_hat)*current_step
         self.box_it(boundaries)
 
+    @staticmethod
+    def direct_overlap(spheres):
+        for i in range(len(spheres)):
+            for j in range(i):
+                sphere1 = spheres[i]
+                sphere2 = spheres[j]
+                dist = np.linalg.norm(sphere1.center - sphere2.center)
+                delta = dist - (sphere1.rad + sphere2.rad)
+                if delta < -1e4 * epsilon:
+                    print(delta)
+                    return True
+                else:
+                    if delta > 0:
+                        return False
+                    else:
+                        Warning("Spheres are epsilon close to each other, seperating them")
+                        dr_hat = sphere1.center - np.array(sphere2.center)
+                        dr_hat = dr_hat / (np.linalg.norm(dr_hat))
+                        sphere1.center = sphere1.center + np.abs(delta) * dr_hat
+
 
 class BoundaryType(Enum):
     WALL = "RigidWall"
@@ -310,15 +330,19 @@ class Cell:
         self.ind = ind
         self.spheres = spheres
 
+    @property
+    def dim(self):
+        return len(self.site)
+
     def append(self, new_spheres):
         """
         Add spheres to the cell
         :param new_spheres: list of Sphere objects to be added to the cell
         """
-        try:
+        if type(new_spheres) == list:
             for sphere in new_spheres: self.spheres.append(sphere)
-        except TypeError as single_sphere_exception:
-            assert single_sphere_exception.args[0], '\'Sphere\' object is not iterable'
+        else:
+            assert type(new_spheres) == Sphere
             self.spheres.append(new_spheres)
 
     def remove_sphere(self, spheres_to_remove):
@@ -326,13 +350,13 @@ class Cell:
         Delete spheres from the cell
         :param spheres_to_remove: the Sphere objects to be removed (pointers!)
         """
-        try:
+        if type(spheres_to_remove) == list:
             for sphere in spheres_to_remove: self.spheres.remove(sphere)
-        except TypeError as single_sphere_exception:
-            assert single_sphere_exception.args[0], '\'Sphere\' object is not iterable'
+        else:
+            assert type(spheres_to_remove) == Sphere
             self.spheres.remove(spheres_to_remove)
 
-    def sphere_in_cell(self, sphere):
+    def center_in_cell(self, sphere):
         """
         A Sphere object should be in a cell if its center is inside the physical d-dimension
         cube of the cell. Notice in the case dim(cell)!=dim(sphere), a sphere is considered
@@ -341,16 +365,12 @@ class Cell:
         :type sphere: Sphere
         :return: True if the sphere should be considered inside the cell, false otherwise
         """
-        for i in range(len(self.site)):
+        for i in range(self.dim):
             x_sphere, x_site, edge = sphere.center[i], self.site[i], self.edges[i]
             #Notice this implementation instead of for x_... in zip() is for the case dim(sphere)!=dim(cell)
-            if x_sphere < x_site or x_sphere > x_site + edge:
+            if x_sphere <= x_site or x_sphere > x_site + edge:
                 return False
         return True
-
-    @property
-    def dim(self):
-        return len(self.site)
 
     def random_generate_spheres(self, n_spheres, rads, extra_edges=[]):
         """
@@ -374,7 +394,7 @@ class Cell:
                     center = [c for c in center] + [r + random.random()*(e - 2*r) for e in extra_edges]
                     #assumes for now extra edge is rigid wall and so generate in the allowed locations
                 spheres.append(Sphere(center, rads[i]))
-            if not Sphere.direct_spheres_overlap(spheres):
+            if not Sphere.direct_overlap(spheres):
                 break
         self.spheres = spheres
 
@@ -395,7 +415,7 @@ class Cell:
 
 class ArrayOfCells:
 
-    def __init__(self, dim, boundaries, cells=[]):
+    def __init__(self, dim, boundaries, cells=[[]]):
         """
         :type boundaries: CubeBoundaries
         :param dim: dimension of the array of cells. Doesn't have to be dimension of a single sphere.
@@ -404,6 +424,13 @@ class ArrayOfCells:
         self.dim = dim
         self.cells = cells
         self.boundaries = boundaries
+        self.n_rows = len(cells)
+        self.n_columns = len(cells[0])
+
+
+    @property
+    def all_cells(self):
+        return [c for c in np.reshape(self.cells, -1)]
 
     @property
     def all_spheres(self):
@@ -411,7 +438,7 @@ class ArrayOfCells:
         :return: list of Sphere objects of all the spheres in the array
         """
         spheres = []
-        for cell in np.reshape(self.cells, -1):
+        for cell in self.all_cells:
             if cell == []: continue
             for sphere in cell.spheres:
                 spheres.append(sphere)
@@ -423,22 +450,17 @@ class ArrayOfCells:
         :return: list of all the centers (d-dimension vectors) of all the Sphere objects in the simulation.
         """
         centers = []
-        for cell in np.reshape(self.cells, -1):
-            for sphere in cell.spheres:
-                centers.append(sphere.center)
+        for sphere in self.all_spheres:
+            centers.append(sphere.center)
         return centers
 
-    @property
-    def all_cells(self):
-        return [c for c in np.reshape(self.cells, -1)]
-
-    def overlap_2_cells(self, cell1, cell2):
+    def overlap_2_cells(self, i1, j1, i2, j2):
         """
         Checks if the spheres in cell1 and cell2 are overlapping with each other. Does not check inside cell.
-        :type cell1: Cell
-        :type cell2: Cell
         :return: True if one of the spheres in cell1 direct_overlap with one of the spheres in cell2
         """
+        cell1 = self.cells[i1][j1]
+        cell2 = self.cells[i2][j2]
         if cell1 == [] or cell2 == []:
             return False
         spheres1 = cell1.spheres
@@ -455,8 +477,8 @@ class ArrayOfCells:
         cells in the other end
         """
         if self.dim != 2: raise Exception("dim!=2 not implemented yet")
-        n_rows = len(self.cells)
-        n_columns = len(self.cells[0])
+        n_rows = self.n_rows
+        n_columns = self.n_columns
         x_cyclic = self.boundaries.boundaries_type[0] == BoundaryType.CYCLIC
         y_cyclic = self.boundaries.boundaries_type[1] == BoundaryType.CYCLIC
         both_cyclic = x_cyclic and y_cyclic
@@ -524,23 +546,31 @@ class ArrayOfCells:
         jm1 = int((j - 1) % n_columns)
         return ip1, jp1, im1, jm1
 
+    def neighbors(self, i, j):
+        ip1, jp1, im1, jm1 = ArrayOfCells.cyclic_indices(i, j, self.n_rows, self.n_columns)
+        neighbor_cells = [self.cells[ip1][jm1], self.cells[ip1][j],
+                     self.cells[ip1][jp1], self.cells[i][jp1],
+                     self.cells[i][jm1], self.cells[im1][jm1],
+                     self.cells[im1][j], self.cells[im1][jp1]]
+        # First for are top and to the right, then to the left and bottom.
+        # For efficient legal_configuration implementation
+        return neighbor_cells
+
     def legal_configuration(self):
         """
         :return: True if there are no overlapping spheres in the configuration
         """
-        if self.cells == []: return True
-        d = self.dim
-        if d != 2:
+        if self.all_cells == []: return True
+        if self.dim != 2:
             raise (Exception('Only d=2 supported!'))
-        n_rows = len(self.cells)
+        n_rows, n_columns = self.n_rows, self.n_columns
         for i in range(n_rows):
-            n_columns = len(self.cells[i])
             for j in range(n_columns):
                 cell = self.cells[i][j]
-                if Sphere.direct_spheres_overlap(cell.spheres):
+                if self.boundaries.spheres_overlap(cell.spheres):
                     return False
                 for sphere in cell.spheres:
-                    assert cell.sphere_in_cell(sphere), "sphere is in cell it should not be in"
+                    assert cell.center_in_cell(sphere), "sphere is in missing from cell"
                 if self.boundaries.dim == 3:
                     for sphere in cell.spheres:
                         c_z = sphere.center[2]
@@ -560,15 +590,16 @@ class ArrayOfCells:
                         r = sphere.rad
                         if c_y - r < -epsilon or c_y + r > self.boundaries.edges[1] + epsilon:
                             return False
-                ip1, jp1, _, jm1 = ArrayOfCells.cyclic_indices(i, j, n_rows, n_columns)
-                neighbors = [self.cells[ip1][jm1], self.cells[ip1][j],
-                             self.cells[ip1][jp1], self.cells[i][jp1]]
-                for neighbor in neighbors:
+                for neighbor in ArrayOfCells.neighbors(i, j)[0:4]:  # First four neighbors
                     if self.overlap_2_cells(cell, neighbor):
                         return False
         return True
 
     def cell_from_ind(self, ind):
+        """
+        :param ind: tuple (i,j,...)
+        :return: cell at ind
+        """
         cell = self.cells
         for i in ind: cell = cell[i]
         return cell
@@ -601,3 +632,14 @@ class ArrayOfCells:
                     max_r = 0
                 if (i < n_spheres_per_cell - 1) and (dy + 2 * rad[i+1] > cell.edges[1]):
                     break
+
+    def append_sphere(self, spheres):
+        if type(spheres) != list:
+            assert type(spheres) == Sphere
+            spheres=[spheres]
+        for sphere in spheres:
+            for c in self.all_cells:
+                if c.center_in_cell(sphere):
+                    c.append(sphere)
+                    break
+            Warning("A sphere was not added to any of the cells")

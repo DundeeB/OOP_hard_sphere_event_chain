@@ -2,7 +2,7 @@ import numpy as np
 import random
 import copy
 from enum import Enum
-epsilon = 1e-10
+epsilon = 1e-7
 
 
 class Sphere:
@@ -161,7 +161,7 @@ class CubeBoundaries:
             for vec in [(l_x, l_y), (l_x, -l_y), (-l_x, -l_y), (-l_x, l_y)]:
                 vectors.append(vec)
         vectors = [np.array(v) for v in vectors]
-        if self.dim == 3: vectors = np.array([x for x in vectors] + [0])
+        if self.dim == 3: vectors = np.array([[x for x in v] + [0] for v in vectors])
         return vectors
 
 
@@ -241,6 +241,8 @@ class Metric:
         v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
         vectors = boundaries.boundary_transformed_vectors()
         for v in vectors:
+            if len(sphere2.center) > len(v):
+                v = [x for x in v] + [0 for _ in range(len(sphere2.center) - len(v))]
             dx = sphere2.center + v - sphere1.center
             dx_len = np.linalg.norm(dx)
             dx_dot_v = np.dot(dx, v_hat)
@@ -253,14 +255,14 @@ class Metric:
 
     @staticmethod
     def cyclic_dist(boundaries, sphere1, sphere2):
-        dx = np.linalg.norm(np.array(sphere1.center) - sphere2.center)  # direct vector
+        dx = np.array(sphere1.center) - sphere2.center  # direct vector
         dsq = 0
         for i, b in enumerate(boundaries.boundaries_type):
             if b != BoundaryType.CYCLIC:
-                dsq = dsq + dx[i]**2
+                dsq += dx[i]**2
                 continue
             L = boundaries.edges[i]
-            dsq = dsq + min(dx[i]**2, (dx[i] + L)**2, (dx[i] - L)**2)  # find shorter path through B.D.
+            dsq += min(dx[i]**2, (dx[i] + L)**2, (dx[i] - L)**2)  # find shorter path through B.D.
         return np.sqrt(dsq)
 
     @staticmethod
@@ -273,8 +275,8 @@ class Metric:
         :return: True if they overlap
         """
         delta = Metric.cyclic_dist(boundaries, sphere1, sphere2) - (sphere1.rad + sphere2.rad)
-        if delta < -1e4 * epsilon:
-            print(delta)
+        if sphere1 == sphere2: return False
+        if delta < -epsilon:
             return True
         else:
             if delta > 0:
@@ -296,7 +298,7 @@ class Metric:
         """
         for i in range(len(spheres)):
             for j in range(i):
-                if boundaries.overlap(spheres[i], spheres[j]):
+                if Metric.overlap(spheres[i], spheres[j], boundaries):
                     return True
         return False
 
@@ -308,8 +310,7 @@ class Metric:
                 sphere2 = spheres[j]
                 dist = np.linalg.norm(sphere1.center - sphere2.center)
                 delta = dist - (sphere1.rad + sphere2.rad)
-                if delta < -1e4 * epsilon:
-                    print(delta)
+                if delta < -epsilon:
                     return True
                 else:
                     if delta > 0:
@@ -460,13 +461,11 @@ class ArrayOfCells:
             centers.append(sphere.center)
         return centers
 
-    def overlap_2_cells(self, i1, j1, i2, j2):
+    def overlap_2_cells(self, cell1: Cell, cell2: Cell):
         """
         Checks if the spheres in cell1 and cell2 are overlapping with each other. Does not check inside cell.
         :return: True if one of the spheres in cell1 direct_overlap with one of the spheres in cell2
         """
-        cell1 = self.cells[i1][j1]
-        cell2 = self.cells[i2][j2]
         if cell1 == [] or cell2 == []:
             return False
         spheres1 = cell1.spheres
@@ -476,6 +475,15 @@ class ArrayOfCells:
                 if Metric.overlap(sphere1, sphere2, self.boundaries):
                     return True
         return False
+
+    def overlap_2_cells_inds(self, i1: int, j1: int, i2: int, j2: int):
+        """
+        Checks if the spheres in cell1 and cell2 are overlapping with each other. Does not check inside cell.
+        :return: True if one of the spheres in cell1 direct_overlap with one of the spheres in cell2
+        """
+        cell1 = self.cells[i1][j1]
+        cell2 = self.cells[i2][j2]
+        return self.overlap_2_cells(cell1, cell2)
 
     def cushioning_array_for_boundary_cond(self):
         """
@@ -576,7 +584,7 @@ class ArrayOfCells:
                 if Metric.spheres_overlap(cell.spheres, self.boundaries):
                     return False
                 for sphere in cell.spheres:
-                    assert cell.center_in_cell(sphere), "sphere is in missing from cell"
+                    assert cell.center_in_cell(sphere), "sphere is missing from cell"
                 if self.boundaries.dim == 3:
                     for sphere in cell.spheres:
                         c_z = sphere.center[2]
@@ -596,7 +604,7 @@ class ArrayOfCells:
                         r = sphere.rad
                         if c_y - r < -epsilon or c_y + r > self.boundaries.edges[1] + epsilon:
                             return False
-                for neighbor in ArrayOfCells.neighbors(i, j)[0:4]:  # First four neighbors
+                for neighbor in self.neighbors(i, j)[0:4]:  # First four neighbors
                     if self.overlap_2_cells(cell, neighbor):
                         return False
         return True

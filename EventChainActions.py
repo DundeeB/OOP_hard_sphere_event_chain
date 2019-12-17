@@ -69,17 +69,19 @@ class Step:
         for other_sphere in other_spheres:
             if other_sphere == sphere:
                 continue
-            sphere_dist = Metric.dist_to_collision(sphere, other_sphere, total_step, v_hat, self.boundaries)
+            sphere_dist = Metric.dist_to_collision(sphere, other_sphere, total_step, v_hat, self.boundaries)  #
             if sphere_dist < closest_sphere_dist:
                 closest_sphere_dist = sphere_dist
                 closest_sphere = other_sphere
         # it hits a wall
-        if min_dist_to_wall < closest_sphere_dist:
+        if min_dist_to_wall < closest_sphere_dist and \
+                (np.isnan(current_step) or min_dist_to_wall < current_step):
             if np.isnan(current_step) or min_dist_to_wall < current_step:
                 self.current_step = min_dist_to_wall
             return Event(EventType.WALL, [], closest_wall), min_dist_to_wall
         # it hits another sphere
-        if min_dist_to_wall > closest_sphere_dist:
+        if min_dist_to_wall > closest_sphere_dist and \
+                (np.isnan(current_step) or closest_sphere_dist < current_step):
             if np.isnan(current_step) or closest_sphere_dist < current_step:
                 self.current_step = closest_sphere_dist
             return Event(EventType.COLLISION, closest_sphere, []), closest_sphere_dist
@@ -152,10 +154,10 @@ class Event2DCells(ArrayOfCells):
         p, v_hat, e, c, r = step.sphere.center, step.v_hat, self.edge, self.cells[i][j].site, step.sphere.rad
         xp, xm, yp, ym = c[0] + 2*e, c[0] - e, c[1] + 2*e, c[1] - e
 
-        if v_hat[0] >= 0: x = xp - r
-        else: x = xm
-        if v_hat[1] >= 0: y = yp - r
-        else: y = ym
+        if v_hat[0] >= 0: x = xp - 2*r
+        else: x = xm + 2*r
+        if v_hat[1] >= 0: y = yp - 2*r
+        else: y = ym + 2*r
 
         if v_hat[0] != 0:
             tx = (float) (x - p[0])/v_hat[0]
@@ -193,7 +195,7 @@ class Event2DCells(ArrayOfCells):
         for c in relevant_cells:
             for s in c.spheres: other_spheres.append(s)
         step.current_step = self.maximal_free_step(i, j, step)
-        event, current_step = step.next_event(other_spheres)
+        event, current_step = step.next_event(other_spheres)  #
 
         assert event is not None and not np.isnan(step.current_step)
 
@@ -206,7 +208,7 @@ class Event2DCells(ArrayOfCells):
                 flag = not None
                 break
         assert flag is not None, "sphere has not been added to any cell"
-        i_n, j_n = new_cell.index[0],new_cell.index[1]
+        i_n, j_n = new_cell.ind[:2]
 
         if event.event_type == EventType.COLLISION:
             new_cell, flag = None, None
@@ -216,7 +218,7 @@ class Event2DCells(ArrayOfCells):
                     break
             assert flag is not None, "Did not find new cell for the collided sphere"
             step.sphere = event.other_sphere
-            i_n, j_n = new_cell.index[0], new_cell.index[1]
+            i_n, j_n = new_cell.ind[:2]
             self.perform_total_step(i_n, j_n, step, draw)
             return
         if event.event_type == EventType.WALL:

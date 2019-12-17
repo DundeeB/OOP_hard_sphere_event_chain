@@ -70,7 +70,7 @@ class View2D:
         if step is not None:
             cloned_step = copy.deepcopy(step)
             for bound_vec in array_of_cells.boundaries.boundary_transformed_vectors():
-                cloned_step.sphere.center = step.sphere.center[:2] + bound_vec
+                cloned_step.sphere.center = step.sphere.center + bound_vec
                 View2D.plt_step(cloned_step.sphere, np.array(step.v_hat) * step.total_step, 0.1)
         for cell in array_of_cells.all_cells:
             x, y = cell.site

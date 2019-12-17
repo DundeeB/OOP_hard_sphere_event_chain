@@ -142,6 +142,28 @@ class CubeBoundaries:
         n_hat = np.array(n_hat)/np.linalg.norm(n_hat)
         return v_hat-2*np.dot(v_hat, n_hat)*n_hat
 
+    def boundary_transformed_vectors(self):
+        l_x = self.edges[0]
+        l_y = self.edges[1]
+        if self.dim == 3 and self.boundaries_type[2] == BoundaryType.CYCLIC: raise Exception(
+            'z wall CYCLIC not supported')
+        x_cyclic = (self.boundaries_type[0] == BoundaryType.CYCLIC)
+        y_cyclic = (self.boundaries_type[1] == BoundaryType.CYCLIC)
+        both_cyclic = (x_cyclic and y_cyclic)
+        vectors = [(0, 0)]
+        if x_cyclic:
+            for vec in [(l_x, 0), (-l_x, 0)]:
+                vectors.append(vec)
+        if y_cyclic:
+            for vec in [(0, l_y), (0, -l_y)]:
+                vectors.append(vec)
+        if both_cyclic:
+            for vec in [(l_x, l_y), (l_x, -l_y), (-l_x, -l_y), (-l_x, l_y)]:
+                vectors.append(vec)
+        vectors = [np.array(v) for v in vectors]
+        if self.dim == 3: vectors = np.array([x for x in vectors] + [0])
+        return vectors
+
     def cyclic_dist(self, sphere1, sphere2):
         dx = np.linalg.norm(np.array(sphere1.center) - sphere2.center)  # direct vector
         dsq = 0
@@ -244,9 +266,9 @@ class Metric:
     def dist_to_collision(sphere1, sphere2, total_step, v_hat, boundaries):
         """
         Distance sphere1 would need to go in v_hat direction in order to collide with sphere2
-        It is not implemented in the most efficient way, as each time two spheres are compared we need to run over all
-        the first sphere's trajectory. It is not important, because in most cases a sphere would cross at most one
-        boundary condition, so we can allow ourselves to have a less efficient implementation.
+        It is not implemented in the most efficient way,  because for cyclic xy we copy sphere2 8 times (for all
+        cyclic boundaries) and then check for collision.
+        It is implemented only for steps smaller then system size.
         :param sphere1: sphere about to move
         :type sphere1: Sphere
         :param sphere2: potential for collision
@@ -257,28 +279,19 @@ class Metric:
         :type boundaries: CubeBoundaries
         :return: distance for collision if the move is allowed, infty if move can not lead to collision
         """
-        assert(not Sphere.direct_overlap(sphere1, sphere2))
+        assert(not boundaries.overlap(sphere1, sphere2))
         d = sphere1.rad + sphere2.rad
         v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
-        ps, ts = sphere1.trajectories_braked_to_lines(total_step, v_hat, boundaries)
         vectors = boundaries.boundary_transformed_vectors()
-        for pos_a, t in zip(ps, ts):
-            for v in vectors:
-                if sphere1.dim == 3: v = np.array([x for x in v] + [0])
-                dx = sphere2.center + v - pos_a
-                dx_len = np.linalg.norm(dx)
-                dx_dot_v = np.dot(dx, v_hat)
-                discriminant = dx_dot_v ** 2 + d ** 2 - dx_len ** 2
-                if discriminant > 0:  # found a solution!
-                    if dx_len - d < -epsilon:
-                        # new pos_a is already overlapping, meaning the sphere is leaking through the boundary condition
-                        go_back = dx_dot_v - np.sqrt(discriminant)
-                        return t + go_back
-                    else:
-                        if dx_dot_v <= 0:
-                            continue
-                        dist: float = t + dx_dot_v - np.sqrt(discriminant)
-                        if dist <= total_step: return dist
+        for v in vectors:
+            dx = sphere2.center + v - sphere1.center
+            dx_len = np.linalg.norm(dx)
+            dx_dot_v = np.dot(dx, v_hat)
+            if dx_dot_v <= 0: continue
+            discriminant = dx_dot_v ** 2 + d ** 2 - dx_len ** 2
+            if discriminant <= 0: continue
+            dist: float = dx_dot_v - np.sqrt(discriminant)
+            if dist <= total_step: return dist
         return float('inf')
 
 

@@ -34,6 +34,11 @@ class View2D:
             pylab.gca().add_patch(circle)
         pylab.title(title)
 
+    def dump_spheres(self, centers, file_name):
+        output_dir = os.path.join(self.output_dir, file_name)
+        np.savetxt(output_dir, centers)
+        return
+
     def spheres_snapshot(self, title, spheres, img_name):
         self.plt_spheres(title, spheres)
         pylab.savefig(os.path.join(self.output_dir, img_name+".png"))

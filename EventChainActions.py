@@ -2,7 +2,7 @@ from Structure import *
 #from SnapShot import View2D
 
 
-epsilon = 1e-10
+epsilon = 1e-8
 
 
 class EventType(Enum):
@@ -69,24 +69,22 @@ class Step:
         for other_sphere in other_spheres:
             if other_sphere == sphere:
                 continue
-            sphere_dist = Metric.dist_to_collision(sphere, other_sphere, total_step, v_hat, self.boundaries)  #
+            sphere_dist = Metric.dist_to_collision(sphere, other_sphere, total_step, v_hat, self.boundaries)
             if sphere_dist < closest_sphere_dist:
                 closest_sphere_dist = sphere_dist
                 closest_sphere = other_sphere
+        if np.isnan(current_step): current_step = float('inf')
+        m = min(min_dist_to_wall, closest_sphere_dist, total_step, current_step)
         # it hits a wall
-        if min_dist_to_wall < closest_sphere_dist and \
-                (np.isnan(current_step) or min_dist_to_wall < current_step):
-            if np.isnan(current_step) or min_dist_to_wall < current_step:
-                self.current_step = min_dist_to_wall
+        if m == min_dist_to_wall:
+            self.current_step = min_dist_to_wall
             return Event(EventType.WALL, [], closest_wall), min_dist_to_wall
         # it hits another sphere
-        if min_dist_to_wall > closest_sphere_dist and \
-                (np.isnan(current_step) or closest_sphere_dist < current_step):
-            if np.isnan(current_step) or closest_sphere_dist < current_step:
-                self.current_step = closest_sphere_dist
+        if m == closest_sphere_dist:
+            self.current_step = closest_sphere_dist
             return Event(EventType.COLLISION, closest_sphere, []), closest_sphere_dist
         # it hits nothing, both min_dist_to_wall and closest_sphere_dist are inf
-        if np.isnan(current_step) or total_step < current_step:
+        if m == total_step:
             self.current_step = total_step
             return Event(EventType.FREE, [], []), total_step
         else:  # total_step > current_step
@@ -153,7 +151,7 @@ class Event2DCells(ArrayOfCells):
         """
         p, v_hat, e, c, r = step.sphere.center, step.v_hat, self.edge, self.cells[i][j].site, step.sphere.rad
         xp, xm, yp, ym = c[0] + 2*e, c[0] - e, c[1] + 2*e, c[1] - e
-
+        # ip1, jp1, im1, jm1 = Event2DCells.cyclic_indices(i, j, self.n_rows, self.n_columns)
         if v_hat[0] >= 0: x = xp - 2*r
         else: x = xm + 2*r
         if v_hat[1] >= 0: y = yp - 2*r
@@ -184,14 +182,15 @@ class Event2DCells(ArrayOfCells):
                 img_name = 'total_step=' + str(round(step.total_step, 4))
             draw.array_of_cells_snapshot('During step snapshot, total_step=' + str(step.total_step),
                                          self, img_name, step)
+            draw.dump_spheres(self.all_centers, img_name)
 
         sphere, total_step, v_hat, cell = step.sphere, step.total_step, step.v_hat, self.cells[i][j]
         step.current_step = np.nan
         v_hat = np.array(v_hat)/np.linalg.norm(v_hat)
         cell.remove_sphere(sphere)
 
-        other_spheres = []
         relevant_cells = [self.cells[i][j]] + self.neighbors(i, j)
+        other_spheres = []
         for c in relevant_cells:
             for s in c.spheres: other_spheres.append(s)
         step.current_step = self.maximal_free_step(i, j, step)

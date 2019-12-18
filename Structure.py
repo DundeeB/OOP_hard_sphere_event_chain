@@ -2,7 +2,7 @@ import numpy as np
 import random
 import copy
 from enum import Enum
-epsilon = 1e-7
+epsilon = 1e-8
 
 
 class Sphere:
@@ -183,17 +183,16 @@ class Metric:
         r = sphere.rad
         min_dist_to_wall = float('inf')
         closest_wall = []
-        for wall, BC_type in zip(boundaries.planes, boundaries.planes_type):
+        for plane, BC_type in zip(boundaries.planes, boundaries.planes_type):
             if BC_type != BoundaryType.WALL: continue
-            u = CubeBoundaries.vertical_step_to_wall(wall, pos)
+            u = CubeBoundaries.vertical_step_to_wall(plane, pos)
             u = u - r*u/np.linalg.norm(u)  # shift the wall closer by r
-            if np.dot(u, v_hat) < 0:
-                continue
+            if np.dot(u, v_hat) <= 0: continue
             v = np.dot(u, u)/np.dot(u, v_hat)
             if v < min_dist_to_wall and v <= total_step:
                 min_dist_to_wall = v
-                closest_wall = wall
-        return min_dist_to_wall, closest_wall
+                closest_wall = plane
+        return min_dist_to_wall - epsilon, closest_wall
 
     @staticmethod
     def dist_to_boundary_without_r(sphere, total_step, v_hat, boundaries):
@@ -217,7 +216,7 @@ class Metric:
             if v < min_dist_to_wall and v <= total_step:
                 min_dist_to_wall = v
                 closest_wall = wall
-        return min_dist_to_wall + epsilon, closest_wall
+        return min_dist_to_wall - epsilon, closest_wall
 
     @staticmethod
     def dist_to_collision(sphere1, sphere2, total_step, v_hat, boundaries):
@@ -274,9 +273,9 @@ class Metric:
         :type boundaries: CubeBoundaries
         :return: True if they overlap
         """
-        delta = Metric.cyclic_dist(boundaries, sphere1, sphere2) - (sphere1.rad + sphere2.rad)
         if sphere1 == sphere2: return False
-        if delta < -epsilon:
+        delta = Metric.cyclic_dist(boundaries, sphere1, sphere2) - (sphere1.rad + sphere2.rad)
+        if delta < -1e3*epsilon:  # stabelize calculation by forgiving some penteration
             return True
         else:
             if delta > 0:
@@ -310,7 +309,7 @@ class Metric:
                 sphere2 = spheres[j]
                 dist = np.linalg.norm(sphere1.center - sphere2.center)
                 delta = dist - (sphere1.rad + sphere2.rad)
-                if delta < -epsilon:
+                if delta < -1e3 * epsilon:  # stabelize calculation by forgiving some penteration
                     return True
                 else:
                     if delta > 0:
@@ -399,7 +398,7 @@ class Cell:
                 r = rads[i]
                 center = np.array(self.site) + [random.random()*e for e in self.edges]
                 if len(extra_edges) > 0:
-                    center = [c for c in center] + [r + random.random()*(e - 2*r) for e in extra_edges]
+                    center = [c for c in center] + [r + epsilon + random.random()*(e - 2*(r + epsilon)) for e in extra_edges]
                     #assumes for now extra edge is rigid wall and so generate in the allowed locations
                 spheres.append(Sphere(center, rads[i]))
             if not Metric.direct_overlap(spheres):
@@ -629,7 +628,7 @@ class ArrayOfCells:
     def generate_spheres_in_cubic_structure(self, n_spheres_per_cell, rad, extra_edges=[]):
         if type(rad) != list: rad = n_spheres_per_cell*[rad]
         for cell in self.all_cells:
-            dx, dy = 0, 0
+            dx, dy = epsilon, epsilon
             x0, y0 = cell.site
             max_r = 0
             for i in range(n_spheres_per_cell):
@@ -639,10 +638,10 @@ class ArrayOfCells:
                 if len(extra_edges) > 0:
                     center = [c for c in center] + [r + random.random() * (e - 2 * r) for e in extra_edges]
                 cell.append(Sphere(center, r))
-                dx += 2 * r
+                dx += 2 * r + epsilon
                 if (i < n_spheres_per_cell - 1) and (dx + 2 * rad[i+1] > cell.edges[0]):
                     dx = 0
-                    dy += 2 * max_r
+                    dy += 2 * max_r + epsilon
                     max_r = 0
                 if (i < n_spheres_per_cell - 1) and (dy + 2 * rad[i+1] > cell.edges[1]):
                     break

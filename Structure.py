@@ -676,8 +676,15 @@ class ArrayOfCells:
                 spheres.append(Sphere((xj, yi), rad))
         return spheres
 
-    def generate_spheres_in_AF_triangular_structure(self, n_row, n_col, rad, extra_edges=[]):
+    def generate_spheres_in_AF_triangular_structure(self, n_row, n_col, rad):
+        """
+        For 3D case, created spheres in the 6-fold comb lattice Anti-Ferromagnetic ground state
+        :param n_row: create 2 n_row/2 triangular lattices
+        :param n_col: same, each triangular lattice has n_col columns
+        :param rad: not a list, a single number of the same radius for all spheres
+        """
         assert(type(rad) != list, "list of different rads is not supported for initial condition AF triangular")
+        assert(self.dim == 3, "Anti Ferromagnetic inital conditions make no sense in 2D")
         l_x, l_y, l_z = self.boundaries.edges
         assert(n_row % 2 == 0, "n_row should be even for anti-ferromagnetic triangular Initial conditions")
         ay = 2 * l_y / n_row

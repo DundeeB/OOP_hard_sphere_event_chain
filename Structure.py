@@ -652,11 +652,14 @@ class ArrayOfCells:
             assert type(spheres) == Sphere
             spheres = [spheres]
         for sphere in spheres:
+            sp_added_to_cell = False
             for c in self.all_cells:
                 if c.center_in_cell(sphere):
                     c.append(sphere)
+                    sp_added_to_cell = True
                     break
-            raise ValueError("A sphere was not added to any of the cells")
+            if not sp_added_to_cell:
+                raise ValueError("A sphere was not added to any of the cells")
 
     @staticmethod
     def spheres_in_triangular(n_row, n_col, rad, l_x, l_y):
@@ -675,31 +678,3 @@ class ArrayOfCells:
                 yi = (1+epsilon)*rad + ay*i
                 spheres.append(Sphere((xj, yi), rad))
         return spheres
-
-    def generate_spheres_in_AF_triangular_structure(self, n_row, n_col, rad):
-        """
-        For 3D case, created spheres in the 6-fold comb lattice Anti-Ferromagnetic ground state
-        :param n_row: create 2 n_row/2 triangular lattices
-        :param n_col: same, each triangular lattice has n_col columns
-        :param rad: not a list, a single number of the same radius for all spheres
-        """
-        assert(type(rad) != list, "list of different rads is not supported for initial condition AF triangular")
-        assert(self.dim == 3, "Anti Ferromagnetic inital conditions make no sense in 2D")
-        l_x, l_y, l_z = self.boundaries.edges
-        assert(n_row % 2 == 0, "n_row should be even for anti-ferromagnetic triangular Initial conditions")
-        ay = 2 * l_y / n_row
-        spheres_down = ArrayOfCells.spheres_in_triangular(n_row/2, n_col, rad, l_x, l_y)
-        spheres_up = ArrayOfCells.spheres_in_triangular(n_row/2, n_col, rad, l_x, l_y)
-        z_up = l_z - (1+epsilon)*rad
-        z_down = (1+epsilon)*rad
-        for s in spheres_down:
-            assert(type(s) == Sphere)
-            cx, cy = s.center
-            s.center = (cx, cy, z_down)
-        for s in spheres_up:
-            assert(type(s) == Sphere)
-            cx, cy = s.center
-            s.center = (cx, cy + ay*2/3, z_up)
-            s.box_it(self.boundaries)
-        self.append_sphere(spheres_down + spheres_up)
-        assert self.legal_configuration()

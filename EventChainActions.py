@@ -227,3 +227,31 @@ class Event2DCells(ArrayOfCells):
         if event.event_type == EventType.PASS:
             self.perform_total_step(i_n, j_n, step, draw)
         if event.event_type == EventType.FREE: return
+
+    def generate_spheres_in_AF_triangular_structure(self, n_row, n_col, rad):
+        """
+        For 3D case, created spheres in the 6-fold comb lattice Anti-Ferromagnetic ground state
+        :param n_row: create 2 n_row/2 triangular lattices
+        :param n_col: same, each triangular lattice has n_col columns
+        :param rad: not a list, a single number of the same radius for all spheres
+        """
+        assert(type(rad) != list, "list of different rads is not supported for initial condition AF triangular")
+        assert(self.dim == 3, "Anti Ferromagnetic inital conditions make no sense in 2D")
+        l_x, l_y, l_z = self.boundaries.edges
+        assert(n_row % 2 == 0, "n_row should be even for anti-ferromagnetic triangular Initial conditions")
+        ay = 2 * l_y / n_row
+        spheres_down = ArrayOfCells.spheres_in_triangular(int(n_row/2), n_col, rad, l_x, l_y)
+        spheres_up = ArrayOfCells.spheres_in_triangular(int(n_row/2), n_col, rad, l_x, l_y)
+        z_up = l_z - (1+10*epsilon)*rad
+        z_down = (1+10*epsilon)*rad
+        for s in spheres_down:
+            assert(type(s) == Sphere)
+            cx, cy = s.center
+            s.center = (cx, cy, z_down)
+        for s in spheres_up:
+            assert(type(s) == Sphere)
+            cx, cy = s.center
+            s.center = (cx, cy + ay*2/3, z_up)
+            s.box_it(self.boundaries)
+        self.append_sphere(spheres_down + spheres_up)
+        assert self.legal_configuration()

@@ -656,4 +656,43 @@ class ArrayOfCells:
                 if c.center_in_cell(sphere):
                     c.append(sphere)
                     break
-            Warning("A sphere was not added to any of the cells")
+            raise ValueError("A sphere was not added to any of the cells")
+
+    @staticmethod
+    def spheres_in_triangular(n_row, n_col, rad, l_x, l_y):
+        assert (type(rad) != list, "list of different rads is not supported for initial condition triangular")
+        ax = l_x/(n_col + 1/2)
+        ay = l_y/(n_row + 1)
+        assert (ax >= 2*rad and ay / np.cos(np.pi/6) >= 2*rad,
+                "ferro triangle initial conditions are not defined for a<2*r, too many spheres")
+        spheres = []
+        for i in range(n_row):
+            for j in range(n_col):
+                if i % 2 == 0:
+                    xj = (1+epsilon)*rad + ax*j  # cos(pi / 3) = 1 / 2
+                else:
+                    xj = (1+epsilon)*rad + ax*(j + 1 / 2)
+                yi = (1+epsilon)*rad + ay*i
+                spheres.append(Sphere((xj, yi), rad))
+        return spheres
+
+    def generate_spheres_in_AF_triangular_structure(self, n_row, n_col, rad, extra_edges=[]):
+        assert(type(rad) != list, "list of different rads is not supported for initial condition AF triangular")
+        l_x, l_y, l_z = self.boundaries.edges
+        assert(n_row % 2 == 0, "n_row should be even for anti-ferromagnetic triangular Initial conditions")
+        ay = 2 * l_y / n_row
+        spheres_down = ArrayOfCells.spheres_in_triangular(n_row/2, n_col, rad, l_x, l_y)
+        spheres_up = ArrayOfCells.spheres_in_triangular(n_row/2, n_col, rad, l_x, l_y)
+        z_up = l_z - (1+epsilon)*rad
+        z_down = (1+epsilon)*rad
+        for s in spheres_down:
+            assert(type(s) == Sphere)
+            cx, cy = s.center
+            s.center = (cx, cy, z_down)
+        for s in spheres_up:
+            assert(type(s) == Sphere)
+            cx, cy = s.center
+            s.center = (cx, cy + ay*2/3, z_up)
+            s.box_it(self.boundaries)
+        self.append_sphere(spheres_down + spheres_up)
+        assert self.legal_configuration()

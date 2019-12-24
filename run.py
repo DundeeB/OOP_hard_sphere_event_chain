@@ -6,18 +6,20 @@ import os, random
 # Input
 rho_H = 0.85  # closest rho_H, the code will generate it with different but close value
 h = 1
-n_row = 50
-n_col = 18
+n_row = 2*50
+n_col = 2*18
 n_sp_per_dim_per_cell = 1
 
 # More physical properties calculated from Input
 N = n_row*n_col
-N_iteration = int(N*1e3)
-dn_save = N
-equib_cycles = dn_save  # make it much bigger after figuring out when it equilabrate
 r = 1
 sig = 2*r
 H = (h+1)*sig
+
+# Numeric choices calibrated for fast convergence
+N_iteration = N*250
+dn_save = N
+equib_cycles = N * 50
 
 # build input parameters for cells
 a_dest = sig*np.sqrt(2/(rho_H*(1+h)*np.sin(np.pi/3)))
@@ -86,3 +88,5 @@ for i in range(last_ind, N_iteration):
         draw.dump_spheres(arr.all_centers, str(i + 1))
     if (i+1) % (N_iteration/100) == 0:
         print(str(100*(i+1) / N_iteration) + "%", end=", ")
+    if i+1 == equib_cycles:
+        print("\nFinish equilibrating")

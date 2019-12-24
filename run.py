@@ -1,7 +1,7 @@
 from EventChainActions import *
 from SnapShot import View2D
 import numpy as np
-import os, shutil, random
+import os, random
 
 # Input
 rho_H = 0.85  # closest rho_H, the code will generate it with different but close value
@@ -12,9 +12,9 @@ n_sp_per_dim_per_cell = 1
 
 # More physical properties calculated from Input
 N = n_row*n_col
-N_iteration = 100*N
+N_iteration = int(N*1e3)
 dn_save = N
-equib_cycles = 4*dn_save
+equib_cycles = dn_save  # make it much bigger after figuring out when it equilabrate
 r = 1
 sig = 2*r
 H = (h+1)*sig
@@ -30,13 +30,6 @@ l_y = n_row_cells * e
 a = np.sqrt(l_x*l_y/N)
 rho_H = (sig**2)/((a**2)*(h+1))
 
-# Folder Handeling
-sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_triangle_ECMC'
-output_dir = '../simulation-results/' + sim_name
-if os.path.exists(output_dir):
-    shutil.rmtree(output_dir)
-os.mkdir(output_dir)
-
 # Simulation description
 print("New rho_H chosen: " + str(rho_H))
 print("N=" + str(N) + ", N_iterations=" + str(N_iteration) +
@@ -45,17 +38,27 @@ print("N=" + str(N) + ", N_iterations=" + str(N_iteration) +
 # construct array of cells and fill with spheres
 arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)
 arr.add_third_dimension_for_sphere(H)
-arr.generate_spheres_in_AF_triangular_structure(n_row, n_col, r)
 total_step = a * np.sqrt(n_row) * 0.1
 
-# Initialize View
+# Initialize View and folder, and add spheres
+sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_triangle_ECMC'
+output_dir = '../simulation-results/' + sim_name
 draw = View2D(output_dir, arr.boundaries)
-draw.array_of_cells_snapshot('Initial Conditions', arr, 'Initial Conditions')
-draw.dump_spheres(arr.all_centers, 'Initial Conditions')
-draw.save_matlab_Input_parameters(arr.all_spheres[0].rad, rho_H)
+if os.path.exists(output_dir):
+    last_centers, last_ind = draw.last_spheres()
+    sp = [Sphere(tuple(c), r) for c in last_centers]
+    arr.append_sphere(sp)
+    print("Simulation with same parameters exist already, continuing from last file")
+else:
+    os.mkdir(output_dir)
+    arr.generate_spheres_in_AF_triangular_structure(n_row, n_col, r)
+    draw.array_of_cells_snapshot('Initial Conditions', arr, 'Initial Conditions')
+    draw.dump_spheres(arr.all_centers, 'Initial Conditions')
+    draw.save_matlab_Input_parameters(arr.all_spheres[0].rad, rho_H)
+    last_ind = 0  # count starts from 1 so 0 means non exist yet and the first one will be i+1=1
 
 # Run loops
-for i in range(N_iteration):
+for i in range(last_ind, N_iteration):
     #Choose sphere
     while True:
         i_all_cells = random.randint(0, len(arr.all_cells) - 1)

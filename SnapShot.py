@@ -1,4 +1,4 @@
-import pylab, cv2, os, numpy as np, copy, scipy.io as sio
+import pylab, cv2, os, numpy as np, copy, scipy.io as sio, re
 
 from Structure import Sphere, CubeBoundaries, ArrayOfCells
 from EventChainActions import Step
@@ -101,3 +101,11 @@ class View2D:
         l_x, l_y, l_z = self.boundaries.edges
         sio.savemat(file_name, {'rad': rad, 'Lx': l_x, 'Ly': l_y,
                                 'H': l_z, 'rho_H': rho_H})
+
+    def last_spheres(self):
+        if not os.path.exists(self.output_dir):
+            return
+        files = os.listdir(self.output_dir)
+        file_ind = sorted([int(f) for f in files if re.findall("^\d+$", f)])[-1]
+        sp_name = str(file_ind)
+        return np.loadtxt(os.path.join(self.output_dir, sp_name)), file_ind

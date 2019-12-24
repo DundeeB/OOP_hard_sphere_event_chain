@@ -4,7 +4,7 @@ import numpy as np
 import os, shutil, random
 
 # Input
-rho_H = 0.9  # closest rho_H, the code will generate it with different but close value
+rho_H = 0.85  # closest rho_H, the code will generate it with different but close value
 h = 1
 n_row = 50
 n_col = 18
@@ -12,9 +12,9 @@ n_sp_per_dim_per_cell = 1
 
 # More physical properties calculated from Input
 N = n_row*n_col
-N_iteration = N*200
+N_iteration = 100*N
 dn_save = N
-equib_cycles = 10*dn_save
+equib_cycles = 4*dn_save
 r = 1
 sig = 2*r
 H = (h+1)*sig
@@ -46,12 +46,13 @@ print("N=" + str(N) + ", N_iterations=" + str(N_iteration) +
 arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)
 arr.add_third_dimension_for_sphere(H)
 arr.generate_spheres_in_AF_triangular_structure(n_row, n_col, r)
-total_step = np.sqrt(n_row) * a
+total_step = a * np.sqrt(n_row) * 0.1
 
 # Initialize View
 draw = View2D(output_dir, arr.boundaries)
 draw.array_of_cells_snapshot('Initial Conditions', arr, 'Initial Conditions')
 draw.dump_spheres(arr.all_centers, 'Initial Conditions')
+draw.save_matlab_Input_parameters(arr.all_spheres[0].rad, rho_H)
 
 # Run loops
 for i in range(N_iteration):
@@ -80,5 +81,5 @@ for i in range(N_iteration):
     # save
     if (i+1) % dn_save == 0 and i+1 > equib_cycles:
         draw.dump_spheres(arr.all_centers, str(i + 1))
-    if (i+1) % (N_iteration/10) == 0:
-        print(str(100*(i+1) / N_iteration) + "%")
+    if (i+1) % (N_iteration/100) == 0:
+        print(str(100*(i+1) / N_iteration) + "%", end=", ")

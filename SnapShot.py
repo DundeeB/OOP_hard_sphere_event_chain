@@ -1,4 +1,4 @@
-import pylab, cv2, os, numpy as np, copy
+import pylab, cv2, os, numpy as np, copy, scipy.io as sio
 
 from Structure import Sphere, CubeBoundaries, ArrayOfCells
 from EventChainActions import Step
@@ -95,3 +95,9 @@ class View2D:
 
         cv2.destroyAllWindows()
         video.release()
+
+    def save_matlab_Input_parameters(self, rad, rho_H):
+        file_name = os.path.join(self.output_dir, 'Input_parameters_from_python')
+        l_x, l_y, l_z = self.boundaries.edges
+        sio.savemat(file_name, {'rad': rad, 'Lx': l_x, 'Ly': l_y,
+                                'H': l_z, 'rho_H': rho_H})

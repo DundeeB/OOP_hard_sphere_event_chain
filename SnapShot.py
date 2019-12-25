@@ -99,8 +99,8 @@ class View2D:
     def save_matlab_Input_parameters(self, rad, rho_H):
         file_name = os.path.join(self.output_dir, 'Input_parameters_from_python')
         l_x, l_y, l_z = self.boundaries.edges
-        sio.savemat(file_name, {'rad': rad, 'Lx': l_x, 'Ly': l_y,
-                                'H': l_z, 'rho_H': rho_H})
+        sio.savemat(file_name, {'rad': float(rad), 'Lx': l_x, 'Ly': l_y,
+                                'H': float(l_z), 'rho_H': rho_H})
 
     def last_spheres(self):
         if not os.path.exists(self.output_dir):

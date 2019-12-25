@@ -255,3 +255,25 @@ class Event2DCells(ArrayOfCells):
             s.box_it(self.boundaries)
         self.append_sphere(spheres_down + spheres_up)
         assert self.legal_configuration()
+
+    def generate_spheres_in_AF_square(self, n_sp_row, n_sp_col, rad):
+        """
+        For 3D case, created spheres in the 6-fold comb lattice Anti-Ferromagnetic ground state
+        :param n_spheres_per_cell: number of total sphere in each cell
+        :param rad: not a list, a single number of the same radius for all spheres
+        """
+        assert(type(rad) != list, "list of different rads is not supported for initial condition AF triangular")
+        assert(self.dim == 3, "Anti Ferromagnetic inital conditions make no sense in 2D")
+        sig = 2*rad
+        ax, ay = self.l_x/n_sp_col, self.l_y/n_sp_col
+        a = min(ax, ay)
+        assert(a**2+(self.l_z-sig)**2>sig**2 and
+               4*a**2>sig**2, "Can not create so many spheres in the AF square lattice")
+        spheres = []
+        for i in range(self.n_rows):
+            for j in range(self.n_columns):
+                sign = (-1)**(i+j)
+                x, y, z = (j+1/2)*ax, (i+1/2)*ay, sign*(rad+epsilon) + self.l_z*(1-sign)/2
+                spheres.append(Sphere((x, y, z), rad))
+        self.append_sphere(spheres)
+        assert self.legal_configuration()

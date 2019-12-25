@@ -273,7 +273,8 @@ class Event2DCells(ArrayOfCells):
         for i in range(self.n_rows):
             for j in range(self.n_columns):
                 sign = (-1)**(i+j)
-                x, y, z = (j+1/2)*ax, (i+1/2)*ay, sign*(rad+epsilon) + self.l_z*(1-sign)/2
+                r = rad+100*epsilon
+                x, y, z = r + j*ax, r + i*ay, sign*(rad+100*epsilon) + self.l_z*(1-sign)/2
                 spheres.append(Sphere((x, y, z), rad))
         self.append_sphere(spheres)
         assert self.legal_configuration()

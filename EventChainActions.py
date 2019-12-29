@@ -265,16 +265,16 @@ class Event2DCells(ArrayOfCells):
         assert(type(rad) != list, "list of different rads is not supported for initial condition AF triangular")
         assert(self.dim == 3, "Anti Ferromagnetic inital conditions make no sense in 2D")
         sig = 2*rad
-        ax, ay = self.l_x/n_sp_col, self.l_y/n_sp_col
+        ax, ay = self.l_x/n_sp_col, self.l_y/n_sp_row
         a = min(ax, ay)
         assert(a**2+(self.l_z-sig)**2>sig**2 and
                4*a**2>sig**2, "Can not create so many spheres in the AF square lattice")
         spheres = []
-        for i in range(self.n_rows):
-            for j in range(self.n_columns):
+        for i in range(n_sp_row):
+            for j in range(n_sp_col):
                 sign = (-1)**(i+j)
                 r = rad+100*epsilon
-                x, y, z = r + j*ax, r + i*ay, sign*(rad+100*epsilon) + self.l_z*(1-sign)/2
+                x, y, z = (j+1/2)*ax, (i+1/2)*ay, sign*r + self.l_z*(1-sign)/2
                 spheres.append(Sphere((x, y, z), rad))
         self.append_sphere(spheres)
         assert self.legal_configuration()

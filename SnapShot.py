@@ -97,7 +97,7 @@ class View2D:
         video.release()
 
     def save_matlab_Input_parameters(self, rad, rho_H):
-        file_name = os.path.join(self.output_dir, 'Input_parameters_from_python')
+        file_name = os.path.join(self.output_dir, 'Input_parameters_from_python.mat')
         l_x, l_y, l_z = self.boundaries.edges
         sio.savemat(file_name, {'rad': float(rad), 'Lx': l_x, 'Ly': l_y,
                                 'H': float(l_z), 'rho_H': rho_H})
@@ -106,6 +106,11 @@ class View2D:
         if not os.path.exists(self.output_dir):
             return
         files = os.listdir(self.output_dir)
-        file_ind = sorted([int(f) for f in files if re.findall("^\d+$", f)])[-1]
-        sp_name = str(file_ind)
+        numbered_files = [int(f) for f in files if re.findall("^\d+$", f)]
+        if len(numbered_files)>0:
+            file_ind = sorted()[-1]
+            sp_name = str(file_ind)
+        else:
+            sp_name = 'Initial Conditions'
+            file_ind = 0
         return np.loadtxt(os.path.join(self.output_dir, sp_name)), file_ind

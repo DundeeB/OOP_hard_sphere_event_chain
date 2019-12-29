@@ -6,9 +6,9 @@ import os, random
 # Input
 rho_H = 0.85  # closest rho_H, the code will generate it with different but close value
 h = 1
-n_row = 20
-n_col = 20
-n_sp_per_dim_per_cell = 1
+n_row = 60
+n_col = 60
+n_sp_per_dim_per_cell = 2
 
 # More physical properties calculated from Input
 N = n_row*n_col
@@ -28,6 +28,7 @@ n_col_cells = int(n_col/n_sp_per_dim_per_cell)
 n_row_cells = int(n_row/n_sp_per_dim_per_cell)
 l_x = n_col_cells * e
 l_y = n_row_cells * e
+a_free = ((l_x*l_y*H - 4*np.pi/3*(r**3))/N)**(1/3)
 
 # Simulation description
 print("N=" + str(N) + ", N_iterations=" + str(N_iteration) +
@@ -36,7 +37,7 @@ print("N=" + str(N) + ", N_iterations=" + str(N_iteration) +
 # construct array of cells and fill with spheres
 arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)
 arr.add_third_dimension_for_sphere(H)
-total_step = a * np.sqrt(n_row) * 0.01
+total_step = a_free * np.sqrt(n_row)
 
 # Initialize View and folder, and add spheres
 sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_square_ECMC'
@@ -67,11 +68,12 @@ for i in range(last_ind, N_iteration):
     sphere = cell.spheres[i_sphere]
 
     #Choose v_hat
-    t = np.random.random() * np.pi
+    t = (0.5-np.random.random()) * np.arccos(H/total_step)
+    phi = np.pi/4
     if i % 2 == 0:
-        v_hat = (np.sin(t), 0, np.cos(t))
+        v_hat = (np.cos(phi)*np.sin(t), np.sin(phi)*np.sin(t), np.cos(t))
     else:
-        v_hat = (0, np.sin(t), np.cos(t))
+        v_hat = (np.cos(phi+np.pi/2)*np.sin(t), np.sin(phi+np.pi/2)*np.sin(t), np.cos(t))
     v_hat = np.array(v_hat)/np.linalg.norm(v_hat)
 
     #perform step

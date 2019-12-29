@@ -17,7 +17,7 @@ sig = 2*r
 H = (h+1)*sig
 
 # Numeric choices calibrated for fast convergence
-N_iteration = N*500
+N_iteration = int(N*2e3)
 dn_save = N
 equib_cycles = N * 50
 

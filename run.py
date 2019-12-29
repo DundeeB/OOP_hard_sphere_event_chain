@@ -71,7 +71,7 @@ for i in range(last_ind, N_iteration):
     sphere = cell.spheres[i_sphere]
 
     #Choose v_hat
-    t = np.random.random() * np.pi
+    t = np.random.random() * np.pi  # TBD try converging faster with t = (0.5-np.random.random()) * np.arccos(H/total_step)
     if i % 2 == 0:
         v_hat = (np.sin(t), 0, np.cos(t))
     else:

@@ -107,7 +107,7 @@ class View2D:
             return
         files = os.listdir(self.output_dir)
         numbered_files = [int(f) for f in files if re.findall("^\d+$", f)]
-        if len(numbered_files)>0:
+        if len(numbered_files) > 0:
             file_ind = sorted(numbered_files)[-1]
             sp_name = str(file_ind)
         else:

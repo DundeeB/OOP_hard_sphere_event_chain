@@ -6,8 +6,8 @@ import os, random
 # Input
 rho_H = 0.85  # closest rho_H, the code will generate it with different but close value
 h = 1
-n_row = 2*50
-n_col = 2*18
+n_row = 50
+n_col = 18
 n_sp_per_dim_per_cell = 1
 
 # More physical properties calculated from Input

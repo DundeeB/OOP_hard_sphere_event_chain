@@ -6,8 +6,8 @@ import os, random
 # Input
 rho_H = 0.85  # closest rho_H, the code will generate it with different but close value
 h = 1
-n_row = 30
-n_col = 30
+n_row = 2*30
+n_col = 2*30
 n_sp_per_dim_per_cell = 2
 
 # More physical properties calculated from Input
@@ -37,7 +37,7 @@ print("N=" + str(N) + ", N_iterations=" + str(N_iteration) +
 # construct array of cells and fill with spheres
 arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)
 arr.add_third_dimension_for_sphere(H)
-total_step = a_free * np.sqrt(n_row)
+total_step = a_free * np.sqrt(n_row)/10  # maximal depth recursion error
 
 # Initialize View and folder, and add spheres
 sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_square_ECMC'

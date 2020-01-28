@@ -28,7 +28,10 @@ class Sphere:
         Put the sphere inside the boundaries of the simulation, usefull for cyclic boundary conditions
         :type boundaries: CubeBoundaries
         """
-        self.center = [x % e for x, e in zip(self.center, boundaries.edges)]
+        try:
+            self.center = [x % e for x, e in zip(self.center, boundaries.edges)]
+        except RuntimeWarning:
+            disp(RuntimeWarning)
 
     def perform_step(self, v_hat, current_step, boundaries):
         self.center = self.center + np.array(v_hat)*current_step

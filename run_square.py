@@ -7,12 +7,16 @@ import os, random
 # closest rho_H, the code will generate it with different but close value
 for h in [1, 0.8]:
     for n_factor, rho_H in zip(4*[1]+4*[2], [0.5904718662166625, 0.6888838439194397,
-                                             0.8365018104736054, 0.9349137881763825,
+                                             0.7380898327708284, 0.8365018104736054,
+                                             0.885707799324994, 0.9349137881763825,
                                              0.6042037700821663, 0.7049043984291942,
-                                             0.8559553409497356, 0.9566559692967636]):
+                                             0.7552547126027082, 0.805605026776222,
+                                             0.8559553409497356, 0.9063056551232497,
+                                             0.9566559692967636]):
         n_row = n_factor*30
         n_col = n_factor*30
         n_sp_per_dim_per_cell = 2
+
 
         # More physical properties calculated from Input
         N = n_row*n_col
@@ -77,9 +81,9 @@ for h in [1, 0.8]:
                 if total_step>H:
                     t = (0.5-np.random.random()) * np.arccos(H/total_step)
                 else:
-                    t = 0
+                    t = np.pi*np.random.random()
             except RuntimeWarning:
-                disp(RuntimeWarning)
+                print(RuntimeWarning)
             phi = np.pi/4
             if i % 2 == 0:
                 v_hat = (np.cos(phi)*np.sin(t), np.sin(phi)*np.sin(t), np.cos(t))

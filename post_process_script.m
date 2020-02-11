@@ -10,13 +10,14 @@
 
 %% all of interest
 
-father_dir = 'C:\Users\Daniel\OneDrive - Technion\simulation-results\';
+% father_dir = 'C:\Users\Daniel\OneDrive - Technion\simulation-results\';
+father_dir = '../simulation-results/';
 folds_obj = dir(father_dir);
 sim_dirs = {};
 for i=1:length(folds_obj)
     f = folds_obj(i).name;
     if sum(strcmp(f,{'.','..','Small or 2D simulations'}))||...
-            ~isdir([father_dir f])  
+            ~isdir([father_dir f]) || isempty(regexpi(f,'_ECMC'))
         continue
     end
     sim_dirs{end+1} = [father_dir f];
@@ -35,7 +36,11 @@ for i=1:n
         sim_dirs{i},'.*rhoH=',''),'_.*',''));
     ic{i} = regexprep(sim_dirs{i},'.*rhoH=[0-9]*\.[0-9]*_','');
 
-    if regexpi(ic{i},'ECMC') & ~isnan(h_vec(i))
-        post_process('output_psi_frustration100',sim_dirs{i},100,true);
+    if ~isnan(h_vec(i))
+        try
+            post_process('output_psi_frustration100',sim_dirs{i},100,false);
+        catch err
+            disp(err);
+        end
     end
 end

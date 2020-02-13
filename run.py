@@ -42,7 +42,7 @@ for h in [1, 0.8]:
             # construct array of cells and fill with spheres
             arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)
             arr.add_third_dimension_for_sphere(H)
-            total_step = a * np.sqrt(n_row) * 0.1
+            total_step = a * np.sqrt(n_row) * 0.05
 
             # Initialize View and folder, and add spheres
             sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_triangle_ECMC'

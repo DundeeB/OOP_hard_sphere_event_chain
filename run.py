@@ -6,7 +6,7 @@ import os, random
 # Input
 # closest rho_H, the code will generate it with different but close value
 for h in [1, 0.8]:
-    for n_factor in [1, 2]:
+    for n_factor in [2, 1]:
         for rho_H in [0.6, 0.7, 0.85, 0.95]:
             n_row = n_factor*50
             n_col = n_factor*18

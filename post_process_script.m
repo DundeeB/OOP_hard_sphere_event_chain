@@ -36,9 +36,9 @@ for i=1:n
         sim_dirs{i},'.*rhoH=',''),'_.*',''));
     ic{i} = regexprep(sim_dirs{i},'.*rhoH=[0-9]*\.[0-9]*_','');
 
-    if ~isnan(h_vec(i))
+    if ~isnan(h_vec(i)) & N_vec(i) == 3600
         try
-            post_process('output_psi_frustration100',sim_dirs{i},100,false);
+            post_process('output_psi_frustration10',sim_dirs{i},10,false);
         catch err
             disp(err);
         end

@@ -6,7 +6,7 @@ import os, random
 # Input
 # closest rho_H, the code will generate it with different but close value
 for h in [1, 0.8]:
-    for n_factor, rho_H in zip(4*[1]+4*[2], [0.5904718662166625, 0.6888838439194397,
+    for n_factor, rho_H in zip(6*[1]+7*[2], [0.5904718662166625, 0.6888838439194397,
                                              0.7380898327708284, 0.8365018104736054,
                                              0.885707799324994, 0.9349137881763825,
                                              0.6042037700821663, 0.7049043984291942,

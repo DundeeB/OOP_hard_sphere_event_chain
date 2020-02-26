@@ -5,7 +5,7 @@ import os, random
 
 # Input
 # closest rho_H, the code will generate it with different but close value
-for h in [1, 0.8]:
+for h in [0.8]:  # [1, 0.8]:
     for n_factor in [2, 1]:
         for rho_H in [0.6, 0.7, 0.85, 0.95]:
             n_row = n_factor*50
@@ -42,7 +42,7 @@ for h in [1, 0.8]:
             # construct array of cells and fill with spheres
             arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)
             arr.add_third_dimension_for_sphere(H)
-            total_step = a * np.sqrt(n_row) * 0.05
+            total_step = a * np.sqrt(n_row) * 0.04
 
             # Initialize View and folder, and add spheres
             sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_triangle_ECMC'

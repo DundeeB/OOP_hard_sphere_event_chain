@@ -35,10 +35,14 @@ for i=1:n
     rho_H_vec(i) = str2double(regexprep(regexprep(...
         sim_dirs{i},'.*rhoH=',''),'_.*',''));
     ic{i} = regexprep(sim_dirs{i},'.*rhoH=[0-9]*\.[0-9]*_','');
-
-    if ~isnan(h_vec(i)) & N_vec(i) == 3600
+    N_real = 100;
+    out_dir = ['/output_psi_frustration' num2str(N_real)];
+    if exist([sim_dirs{i} out_dir])
+        continue
+    end
+    if ~isnan(h_vec(i))  % & N_vec(i) == 3600
         try
-            post_process('output_psi_frustration10',sim_dirs{i},10,false);
+            post_process(out_dir,sim_dirs{i},N_real,false);
         catch err
             disp(err);
         end

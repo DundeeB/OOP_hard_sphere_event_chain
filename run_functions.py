@@ -1,7 +1,7 @@
 from EventChainActions import *
 from SnapShot import View2D
 import numpy as np
-import os, random
+import os, random, sys
 
 
 def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
@@ -16,7 +16,9 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
           ", Lx=" + str(initial_arr.l_x) + ", Ly=" + str(initial_arr.l_y))
 
     # Initialize View and folder, and add spheres
-    output_dir = '/storage/ph_daniel/danielab/ECMC_simulation_results' + sim_name
+    code_dir = os.getcwd()
+    # output_dir = '/storage/ph_daniel/danielab/ECMC_simulation_results/' + sim_name
+    output_dir = r'C:\Users\Daniel Abutbul\OneDrive - Technion\simulation-results\\' + sim_name
     draw = View2D(output_dir, initial_arr.boundaries)
     if os.path.exists(output_dir):
         last_centers, last_ind = draw.last_spheres()
@@ -33,6 +35,7 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
         draw.dump_spheres(arr.all_centers, 'Initial Conditions')
         draw.save_matlab_Input_parameters(arr.all_spheres[0].rad, rho_H)
         last_ind = 0  # count starts from 1 so 0 means non exist yet and the first one will be i+1=1
+    os.chdir(output_dir)
 
     # Run loops
     for i in range(last_ind, N_iteration):
@@ -67,6 +70,7 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
         if i + 1 == equib_cycles:
             print("\nFinish equilibrating")
     os.system('echo \'Finished ' + str(N_iteration) + ' iterations\' > FINAL_MESSAGE')
+    os.chdir(code_dir)
     return 0
 
 
@@ -121,3 +125,7 @@ def run_square(h, n_row, n_col, rho_H):
 
     sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_square_ECMC'
     return run_sim(initial_arr, N, h, rho_H, total_step, sim_name)
+
+
+h, n_row, n_col, rho_H = [float(x) for x in sys.argv]
+run_square(h, n_row, n_col, rho_H)

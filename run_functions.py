@@ -133,6 +133,8 @@ args = sys.argv[1:]
 if len(args) != 5:
     raise ValueError("Wrong number of argmuents. Should give h, n_row, n_col, rho_H, inital conditions")
 h, n_row, n_col, rho_H = [float(x) for x in args[:-1]]
+n_col = int(n_col)
+n_row = int(n_row)
 if args[-1] == 'square':
     run_square(h, n_row, n_col, rho_H)
     # print("run_square(" + str(h) + ", " + str(n_row) + ", " + str(n_col) + ", " + str(rho_H) + ")")

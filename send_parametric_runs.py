@@ -4,7 +4,7 @@ import os
 
 
 def send_single_run_envelope(h, n_row, n_col, rho_H, initial_conditions):
-    params = "h=" + str(h) + ",n_row=" + str(n_row) + ",n_col=" + str(n_row) + ",rho_H=" + str(rho_H) + \
+    params = "h=" + str(h) + ",n_row=" + str(n_row) + ",n_col=" + str(n_col) + ",rho_H=" + str(rho_H) + \
              ",initial_conditions=" + initial_conditions
     out_pwd = "/storage/ph_daniel/danielab/ECMC_simulation_results/out/" + params + ".out"
     err_pwd = "/storage/ph_daniel/danielab/ECMC_simulation_results/out/" + params + ".err"

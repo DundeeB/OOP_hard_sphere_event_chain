@@ -127,5 +127,17 @@ def run_square(h, n_row, n_col, rho_H):
     return run_sim(initial_arr, N, h, rho_H, total_step, sim_name)
 
 
-h, n_row, n_col, rho_H = [float(x) for x in sys.argv]
-run_square(h, n_row, n_col, rho_H)
+if sys.argv[0] == 'run_functions.py':
+    args = sys.argv[1:]
+else:
+    args = sys.argv
+if len(args) != 5:
+    raise ValueError("Wrong number of argmuents. Should give h, n_row, n_col, rho_H, inital conditions")
+h, n_row, n_col, rho_H = [float(x) for x in args[:-1]]
+if args[-1] == 'square':
+    run_square(h, n_row, n_col, rho_H)
+else:
+    if args[-1] == 'honeycomb':
+        run_honeycomb(h, n_row, n_col, rho_H)
+    else:
+        raise NotImplemented("Implemented initial conditions are: square, honeycomb")

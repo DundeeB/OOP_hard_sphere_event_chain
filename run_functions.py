@@ -1,3 +1,5 @@
+#!/Local/cmp/anaconda3/bin/python
+
 from EventChainActions import *
 from SnapShot import View2D
 import numpy as np
@@ -17,8 +19,8 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
 
     # Initialize View and folder, and add spheres
     code_dir = os.getcwd()
-    # output_dir = '/storage/ph_daniel/danielab/ECMC_simulation_results/' + sim_name
-    output_dir = r'C:\Users\Daniel Abutbul\OneDrive - Technion\simulation-results\\' + sim_name
+    output_dir = '/storage/ph_daniel/danielab/ECMC_simulation_results/' + sim_name
+    # output_dir = r'C:\Users\Daniel Abutbul\OneDrive - Technion\simulation-results\\' + sim_name
     draw = View2D(output_dir, initial_arr.boundaries)
     if os.path.exists(output_dir):
         last_centers, last_ind = draw.last_spheres()
@@ -126,11 +128,8 @@ def run_square(h, n_row, n_col, rho_H):
     sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_square_ECMC'
     return run_sim(initial_arr, N, h, rho_H, total_step, sim_name)
 
+args = sys.argv[1:]
 
-if sys.argv[0] == 'run_functions.py':
-    args = sys.argv[1:]
-else:
-    args = sys.argv
 if len(args) != 5:
     raise ValueError("Wrong number of argmuents. Should give h, n_row, n_col, rho_H, inital conditions")
 h, n_row, n_col, rho_H = [float(x) for x in args[:-1]]

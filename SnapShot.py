@@ -1,7 +1,5 @@
 import matplotlib.pyplot as plt
-import cv2, os, numpy as np, copy, scipy.io as sio, re  # , sys
-# path_in_ATLAS = '/srv01/technion/danielab/ECMC/OOP_hard_sphere_event_chain'
-# sys.path.append(path_in_ATLAS)
+import cv2, os, numpy as np, copy, scipy.io as sio, re
 from Structure import Sphere, CubeBoundaries, ArrayOfCells
 from EventChainActions import Step
 

@@ -1,9 +1,5 @@
 #!/Local/cmp/anaconda3/bin/python
-import os
-# import sys
-
-# path_in_ATLAS = '/srv01/technion/danielab/ECMC/OOP_hard_sphere_event_chain'
-# sys.path.append(path_in_ATLAS)
+import os, sys
 from EventChainActions import *
 from SnapShot import WriteOrLoad
 
@@ -21,8 +17,8 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
 
     # Initialize View and folder, and add spheres
     code_dir = os.getcwd()
-    # output_dir = '/storage/ph_daniel/danielab/ECMC_simulation_results/' + sim_name
-    output_dir = r'C:\Users\Daniel Abutbul\OneDrive - Technion\simulation-results\\' + sim_name
+    output_dir = '/storage/ph_daniel/danielab/ECMC_simulation_results/' + sim_name
+    # output_dir = r'C:\Users\Daniel Abutbul\OneDrive - Technion\simulation-results\\' + sim_name
     files_interface = WriteOrLoad(output_dir, initial_arr.boundaries)
     if os.path.exists(output_dir):
         last_centers, last_ind = files_interface.last_spheres()

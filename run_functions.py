@@ -1,9 +1,11 @@
 #!/Local/cmp/anaconda3/bin/python
+import os
+import sys
 
+path_in_ATLAS = '/srv01/technion/danielab/ECMC/OOP_hard_sphere_event_chain'
+sys.path.append(path_in_ATLAS)
 from EventChainActions import *
 from SnapShot import WriteOrLoad
-import numpy as np
-import os, random, sys
 
 
 def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):

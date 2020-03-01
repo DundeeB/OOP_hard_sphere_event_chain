@@ -1,3 +1,6 @@
+import sys
+path_in_ATLAS = '/srv01/technion/danielab/ECMC/OOP_hard_sphere_event_chain'
+sys.path.append(path_in_ATLAS)
 from Structure import *
 from SnapShot import WriteOrLoad
 

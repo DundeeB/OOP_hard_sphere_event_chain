@@ -1,7 +1,7 @@
 #!/Local/cmp/anaconda3/bin/python
 
 from EventChainActions import *
-from SnapShot import View2D
+from SnapShot import WriteOrLoad
 import numpy as np
 import os, random, sys
 
@@ -21,9 +21,9 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
     code_dir = os.getcwd()
     output_dir = '/storage/ph_daniel/danielab/ECMC_simulation_results/' + sim_name
     # output_dir = r'C:\Users\Daniel Abutbul\OneDrive - Technion\simulation-results\\' + sim_name
-    draw = View2D(output_dir, initial_arr.boundaries)
+    files_interface = WriteOrLoad(output_dir, initial_arr.boundaries)
     if os.path.exists(output_dir):
-        last_centers, last_ind = draw.last_spheres()
+        last_centers, last_ind = files_interface.last_spheres()
         sp = [Sphere(tuple(c), initial_arr.all_spheres[0].rad) for c in last_centers]
         # construct array of cells and fill with spheres
         arr = Event2DCells(edge=initial_arr.edge, n_rows=initial_arr.n_rows, n_columns=initial_arr.n_columns)
@@ -33,9 +33,10 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
     else:
         os.mkdir(output_dir)
         arr = initial_arr
-        draw.array_of_cells_snapshot('Initial Conditions', arr, 'Initial Conditions')
-        draw.dump_spheres(arr.all_centers, 'Initial Conditions')
-        draw.save_matlab_Input_parameters(arr.all_spheres[0].rad, rho_H)
+        # files_interface.array_of_cells_snapshot('Initial Conditions', arr, 'Initial Conditions')
+        # TBD - in ATLAS problem with plotting
+        files_interface.dump_spheres(arr.all_centers, 'Initial Conditions')
+        files_interface.save_matlab_Input_parameters(arr.all_spheres[0].rad, rho_H)
         last_ind = 0  # count starts from 1 so 0 means non exist yet and the first one will be i+1=1
     os.chdir(output_dir)
 
@@ -66,7 +67,7 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
 
         # save
         if (i + 1) % dn_save == 0 and i + 1 > equib_cycles:
-            draw.dump_spheres(arr.all_centers, str(i + 1))
+            files_interface.dump_spheres(arr.all_centers, str(i + 1))
         if (i + 1) % (N_iteration / 100) == 0:
             print(str(100 * (i + 1) / N_iteration) + "%", end=", ")
         if i + 1 == equib_cycles:
@@ -131,7 +132,7 @@ def run_square(h, n_row, n_col, rho_H):
 args = sys.argv[1:]
 
 if len(args) != 5:
-    raise ValueError("Wrong number of argmuents. Should give h, n_row, n_col, rho_H, inital conditions")
+    raise ValueError("Wrong number of argmuents. Should give h, n_row, n_col, rho_H, initial conditions")
 h, n_row, n_col, rho_H = [float(x) for x in args[:-1]]
 n_col = int(n_col)
 n_row = int(n_row)

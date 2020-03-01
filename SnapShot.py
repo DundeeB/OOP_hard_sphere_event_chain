@@ -1,10 +1,11 @@
-import pylab, cv2, os, numpy as np, copy, scipy.io as sio, re
+import matplotlib.pyplot as plt
+import cv2, os, numpy as np, copy, scipy.io as sio, re
 
 from Structure import Sphere, CubeBoundaries, ArrayOfCells
 from EventChainActions import Step
 
 
-class View2D:
+class WriteOrLoad:
 
     def __init__(self, output_dir, boundaries, counter=None):
         """
@@ -17,22 +18,25 @@ class View2D:
         self.boundaries = boundaries
         self.counter = counter
 
-    def plt_spheres(self, title, spheres):
+    def plt_spheres(self, title, spheres, h = 0):
         """
-
-        :param title:
-        :param spheres:
-        :return:
+        :param title: of figure
+        :param spheres: list of obj type Sphere
+        :param h: height of 3D simulation
         """
-        pylab.gcf().set_size_inches(6, 6)
-        pylab.cla()
-        pylab.axis([0, self.boundaries.edges[0], 0, self.boundaries.edges[1]])
+        plt.gcf().set_size_inches(6, 6)
+        plt.cla()
+        plt.axis([0, self.boundaries.edges[0], 0, self.boundaries.edges[1]])
         for sphere in spheres:
             assert isinstance(sphere, Sphere)
             c = sphere.center
-            circle = pylab.Circle((c[0], c[1]), radius=sphere.rad)
-            pylab.gca().add_patch(circle)
-        pylab.title(title)
+            if len(c) == 3 and c[-1] > 2*sphere.rad(h+1)/2:
+                color = 'r'
+            else:
+                color = 'b'
+            circle = plt.Circle((c[0], c[1]), radius=sphere.rad, color=color, alpha=.2)
+            plt.gca().add_patch(circle)
+        plt.title(title)
 
     def dump_spheres(self, centers, file_name):
         output_dir = os.path.join(self.output_dir, file_name)
@@ -41,27 +45,27 @@ class View2D:
 
     def spheres_snapshot(self, title, spheres, img_name):
         self.plt_spheres(title, spheres)
-        pylab.savefig(os.path.join(self.output_dir, img_name+".png"))
+        plt.savefig(os.path.join(self.output_dir, img_name + ".png"))
 
     @staticmethod
     def plt_step(sphere, vel, arrow_scale):
         x, y = sphere.center[0:2]
-        circle = pylab.Circle((x, y),
-                              radius=sphere.rad, fc='r')
-        pylab.gca().add_patch(circle)
+        circle = plt.Circle((x, y),
+                            radius=sphere.rad, fc='r')
+        plt.gca().add_patch(circle)
 
         (dx, dy) = vel[0:2]
         dx *= arrow_scale
         dy *= arrow_scale
 
         if dx == 0 and dy == 0: dx = 0.001
-        pylab.arrow(x, y, dx, dy, fc="k", ec="k",
-                    head_width=0.03 * np.linalg.norm(vel), head_length=0.03 * np.linalg.norm(vel))
+        plt.arrow(x, y, dx, dy, fc="k", ec="k",
+                  head_width=0.03 * np.linalg.norm(vel), head_length=0.03 * np.linalg.norm(vel))
 
     def step_snapshot(self, title, spheres, sphere_ind, img_name, vel, arrow_scale):
         self.plt_spheres(title, spheres)
-        View2D.plt_step(spheres[sphere_ind], vel, arrow_scale)
-        pylab.savefig(os.path.join(self.output_dir, img_name+".png"))
+        WriteOrLoad.plt_step(spheres[sphere_ind], vel, arrow_scale)
+        plt.savefig(os.path.join(self.output_dir, img_name + ".png"))
 
     def array_of_cells_snapshot(self, title, array_of_cells, img_name, step=None):
         """
@@ -76,12 +80,12 @@ class View2D:
             cloned_step = copy.deepcopy(step)
             for bound_vec in array_of_cells.boundaries.boundary_transformed_vectors():
                 cloned_step.sphere.center = step.sphere.center + bound_vec
-                View2D.plt_step(cloned_step.sphere, np.array(step.v_hat) * step.total_step, 0.1)
+                WriteOrLoad.plt_step(cloned_step.sphere, np.array(step.v_hat) * step.total_step, 0.1)
         for cell in array_of_cells.all_cells:
             x, y = cell.site
-            rec = pylab.Rectangle((x, y), cell.edges[0], cell.edges[1], fill=False)
-            pylab.gca().add_patch(rec)
-        pylab.savefig(os.path.join(self.output_dir, img_name + ".png"))
+            rec = plt.Rectangle((x, y), cell.edges[0], cell.edges[1], fill=False)
+            plt.gca().add_patch(rec)
+        plt.savefig(os.path.join(self.output_dir, img_name + ".png"))
 
     def save_video(self, video_name, fps):
         images = [img for img in os.listdir(self.output_dir) if img.endswith(".png")]

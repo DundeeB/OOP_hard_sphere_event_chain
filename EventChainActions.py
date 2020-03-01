@@ -1,6 +1,5 @@
 from Structure import *
-#from SnapShot import View2D
-
+from SnapShot import WriteOrLoad
 
 epsilon = 1e-8
 
@@ -172,7 +171,7 @@ class Event2DCells(ArrayOfCells):
         """
         Perform step for all the spheres, starting from sphere inside cell
         :type step: Step
-        :type draw: View2D
+        :type draw: WriteOrLoad
         """
         if draw is not None:
             if draw.counter is not None:

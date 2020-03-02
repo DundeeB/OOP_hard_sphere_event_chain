@@ -675,9 +675,9 @@ class ArrayOfCells:
         for i in range(n_row):
             for j in range(n_col):
                 if i % 2 == 0:
-                    xj = (1+epsilon)*rad + ax*j  # cos(pi / 3) = 1 / 2
+                    xj = (1+epsilon)*rad + ax*j
                 else:
-                    xj = (1+epsilon)*rad + ax*(j + 1 / 2)
+                    xj = (1+epsilon)*rad + ax*(j + 1 / 2)  # cos(pi / 3) = 1 / 2
                 yi = (1+epsilon)*rad + ay*i
                 spheres.append(Sphere((xj, yi), rad))
         return spheres

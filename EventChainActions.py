@@ -276,3 +276,27 @@ class Event2DCells(ArrayOfCells):
                 spheres.append(Sphere((x, y, z), rad))
         self.append_sphere(spheres)
         assert self.legal_configuration()
+
+    def scale_xy(self, factor):
+        """
+        scale xy dimensions by multiplying by factor.
+        Does not scale the radius of the spheres and the z dimension
+        :param factor: factor>1 means bigger simulation and cells
+        :return:
+        """
+        self.edge *= factor
+        self.l_x *= factor
+        self.l_y *= factor
+        # not self.l_z
+        self.boundaries.edges[0] *= factor
+        self.boundaries.edges[1] *= factor
+        # not self.boundaries[2]
+        for c in self.all_cells:
+            c.site = [x*factor for x in c.site]
+            c.edges = [e*factor for e in c.edges]  # cell is 2D
+        for s in self.all_spheres:
+            cx = s.center[0] * factor
+            cy = s.center[1] * factor
+            s.center = (cx, cy, s.center[2])
+            # Not s.center[2]
+        assert(self.legal_configuration(), "Scaling failed, illegal configuration")

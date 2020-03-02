@@ -7,14 +7,15 @@ from SnapShot import WriteOrLoad
 
 def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
     # Numeric choices calibrated for fast convergence
-    N_iteration = int(N * 2e3)
-    dn_save = N
-    equib_cycles = N * 50
+    N_iteration = int(N * 1e4)
+    equib_cycles = N * 100
+    n_files_per_sim = 1e3
+    dn_save = int(round((N_iteration - equib_cycles) / n_files_per_sim))
 
     # Initialize View and folder, and add spheres
     code_dir = os.getcwd()
-    output_dir = '/storage/ph_daniel/danielab/ECMC_simulation_results/' + sim_name
-    # output_dir = r'C:\Users\Daniel Abutbul\OneDrive - Technion\simulation-results\\' + sim_name
+    # output_dir = '/storage/ph_daniel/danielab/ECMC_simulation_results/' + sim_name
+    output_dir = r'C:\Users\Daniel Abutbul\OneDrive - Technion\simulation-results\\' + sim_name
     batch = output_dir + '/batch'
     files_interface = WriteOrLoad(output_dir, initial_arr.boundaries)
     if os.path.exists(output_dir):
@@ -95,12 +96,13 @@ def run_honeycomb(h, n_row, n_col, rho_H):
     l_x = n_col_cells * e
     l_y = n_row_cells * e
     a = np.sqrt(l_x * l_y / N)
-    rho_H = (sig ** 2) / ((a ** 2) * (h + 1))
+    rho_H_new = (sig ** 2) / ((a ** 2) * (h + 1))
     total_step = a * np.sqrt(n_row) * 0.05
 
     initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)
-    initial_arr.add_third_dimension_for_sphere((h+1)*sig)
+    initial_arr.add_third_dimension_for_sphere((h + 1) * sig)
     initial_arr.generate_spheres_in_AF_triangular_structure(n_row, n_col, r)
+    initial_arr.scale_xy(np.sqrt(rho_H_new/rho_H))
     sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_triangle_ECMC'
     return run_sim(initial_arr, N, h, rho_H, total_step, sim_name)
 
@@ -130,6 +132,7 @@ def run_square(h, n_row, n_col, rho_H):
 
     sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_square_ECMC'
     return run_sim(initial_arr, N, h, rho_H, total_step, sim_name)
+
 
 args = sys.argv[1:]
 

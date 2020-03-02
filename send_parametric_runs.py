@@ -13,14 +13,13 @@ def send_single_run_envelope(h, n_row, n_col, rho_H, initial_conditions):
               "/srv01/technion/danielab/ECMC/OOP_hard_sphere_event_chain/py_env.sh")
 
 
-arr = [round(x,2) for x in np.linspace(0.5, 1.1, 13)] + [0.68, 0.73, 0.88, 0.93, 0.98]
-n_factor_arr = [1 for x in arr] + [2 for x in arr] + [3 for x in arr]
-rho_H_arr = 3*arr
+rho_H_arr = [round(x, 2) for x in np.linspace(0.5, 1.1, 13)] + [0.68, 0.73, 0.88, 0.93, 0.98]
 for h in [1, 0.8]:
-    for n_factor, rho_H in zip(n_factor_arr, rho_H_arr):
-        n_row = 30*n_factor
-        n_col = 30 * n_factor
-        send_single_run_envelope(h, n_row, n_col, rho_H, 'square')
-        n_row = 50 * n_factor
-        n_col = 18 * n_factor
-        send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')
+    for n_factor in [1, 2, 3]:
+        for rho_H in rho_H_arr:
+            n_row = 30 * n_factor
+            n_col = 30 * n_factor
+            send_single_run_envelope(h, n_row, n_col, rho_H, 'square')
+            n_row = 50 * n_factor
+            n_col = 18 * n_factor
+            send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')

@@ -1,4 +1,4 @@
-#!/Local/cmp/anaconda3/bin/python
+#!/Local/cmp/anaconda3/bin/python -u
 import os
 import sys
 from EventChainActions import *
@@ -11,15 +11,11 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
     dn_save = N
     equib_cycles = N * 50
 
-    # Simulation description
-    print("\n\nSimulation: N=" + str(N) + ", rhoH=" + str(rho_H) + ", h=" + str(h))
-    print("N_iterations=" + str(N_iteration) +
-          ", Lx=" + str(initial_arr.l_x) + ", Ly=" + str(initial_arr.l_y))
-
     # Initialize View and folder, and add spheres
     code_dir = os.getcwd()
     output_dir = '/storage/ph_daniel/danielab/ECMC_simulation_results/' + sim_name
     # output_dir = r'C:\Users\Daniel Abutbul\OneDrive - Technion\simulation-results\\' + sim_name
+    batch = output_dir + '/batch'
     files_interface = WriteOrLoad(output_dir, initial_arr.boundaries)
     if os.path.exists(output_dir):
         last_centers, last_ind = files_interface.last_spheres()
@@ -28,7 +24,8 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
         arr = Event2DCells(edge=initial_arr.edge, n_rows=initial_arr.n_rows, n_columns=initial_arr.n_columns)
         arr.add_third_dimension_for_sphere(initial_arr.l_z)
         arr.append_sphere(sp)
-        print("Simulation with same parameters exist already, continuing from last file")
+        sys.stdout = open(batch, "a")
+        print("Simulation with same parameters exist already, continuing from last file", file=sys.stdout)
     else:
         os.mkdir(output_dir)
         arr = initial_arr
@@ -37,7 +34,13 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
         files_interface.dump_spheres(arr.all_centers, 'Initial Conditions')
         files_interface.save_matlab_Input_parameters(arr.all_spheres[0].rad, rho_H)
         last_ind = 0  # count starts from 1 so 0 means non exist yet and the first one will be i+1=1
+        sys.stdout = open(batch, "a")
     os.chdir(output_dir)
+
+    # Simulation description
+    print("\n\nSimulation: N=" + str(N) + ", rhoH=" + str(rho_H) + ", h=" + str(h), file=sys.stdout)
+    print("N_iterations=" + str(N_iteration) +
+          ", Lx=" + str(initial_arr.l_x) + ", Ly=" + str(initial_arr.l_y), file=sys.stdout)
 
     # Run loops
     for i in range(last_ind, N_iteration):
@@ -68,9 +71,9 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
         if (i + 1) % dn_save == 0 and i + 1 > equib_cycles:
             files_interface.dump_spheres(arr.all_centers, str(i + 1))
         if (i + 1) % (N_iteration / 100) == 0:
-            print(str(100 * (i + 1) / N_iteration) + "%", end=", ")
+            print(str(100 * (i + 1) / N_iteration) + "%", end=", ", file=sys.stdout)
         if i + 1 == equib_cycles:
-            print("\nFinish equilibrating")
+            print("\nFinish equilibrating", file=sys.stdout)
     os.system('echo \'Finished ' + str(N_iteration) + ' iterations\' > FINAL_MESSAGE')
     os.chdir(code_dir)
     return 0
@@ -137,10 +140,8 @@ n_col = int(n_col)
 n_row = int(n_row)
 if args[-1] == 'square':
     run_square(h, n_row, n_col, rho_H)
-    # print("run_square(" + str(h) + ", " + str(n_row) + ", " + str(n_col) + ", " + str(rho_H) + ")")
 else:
     if args[-1] == 'honeycomb':
         run_honeycomb(h, n_row, n_col, rho_H)
-        # print("run_honeycomb(" + str(h) + ", " + str(n_row) + ", " + str(n_col) + ", " + str(rho_H) + ")")
     else:
         raise NotImplemented("Implemented initial conditions are: square, honeycomb")

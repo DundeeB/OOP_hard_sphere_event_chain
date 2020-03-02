@@ -1,6 +1,7 @@
 #!/Local/cmp/anaconda3/bin/python -u
 import os
 import numpy as np
+import time
 
 
 def send_single_run_envelope(h, n_row, n_col, rho_H, initial_conditions):
@@ -11,6 +12,7 @@ def send_single_run_envelope(h, n_row, n_col, rho_H, initial_conditions):
     os.system("qsub -V -v " + params + " -N " + params + " -o " + out_pwd + " -e " + err_pwd +
               " -l nodes=1:ppn=1,mem=1gb,vmem=2gb -q N " +
               "/srv01/technion/danielab/ECMC/OOP_hard_sphere_event_chain/py_env.sh")
+    time.sleep(2.0)
 
 
 rho_H_arr = [round(x, 2) for x in np.linspace(0.5, 1.1, 13)] + [0.68, 0.73, 0.88, 0.93, 0.98]

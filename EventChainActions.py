@@ -297,6 +297,6 @@ class Event2DCells(ArrayOfCells):
         for s in self.all_spheres:
             cx = s.center[0] * factor
             cy = s.center[1] * factor
-            s.center = (cx, cy, s.center[2])
             # Not s.center[2]
+            s.center = (cx, cy, s.center[2])
         assert(self.legal_configuration(), "Scaling failed, illegal configuration")

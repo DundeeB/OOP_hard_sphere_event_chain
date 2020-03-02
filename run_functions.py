@@ -135,16 +135,14 @@ def run_square(h, n_row, n_col, rho_H):
 
 
 args = sys.argv[1:]
-
 if len(args) != 5:
-    raise ValueError("Wrong number of argmuents. Should give h, n_row, n_col, rho_H, initial conditions")
+    raise ValueError("Wrong number of arguments. Should give h, n_row, n_col, rho_H, initial conditions")
 h, n_row, n_col, rho_H = [float(x) for x in args[:-1]]
-n_col = int(n_col)
-n_row = int(n_row)
+n_col, n_row = int(n_col), int(n_row)
 if args[-1] == 'square':
     run_square(h, n_row, n_col, rho_H)
 else:
     if args[-1] == 'honeycomb':
         run_honeycomb(h, n_row, n_col, rho_H)
     else:
-        raise NotImplemented("Implemented initial conditions are: square, honeycomb")
+        raise NotImplementedError("Implemented initial conditions are: square, honeycomb")

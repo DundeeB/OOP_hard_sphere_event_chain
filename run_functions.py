@@ -14,8 +14,8 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
 
     # Initialize View and folder, and add spheres
     code_dir = os.getcwd()
-    # output_dir = '/storage/ph_daniel/danielab/ECMC_simulation_results/' + sim_name
-    output_dir = r'C:\Users\Daniel Abutbul\OneDrive - Technion\simulation-results\\' + sim_name
+    output_dir = '/storage/ph_daniel/danielab/ECMC_simulation_results/' + sim_name
+    # output_dir = r'C:\Users\Daniel Abutbul\OneDrive - Technion\simulation-results\\' + sim_name
     batch = output_dir + '/batch'
     files_interface = WriteOrLoad(output_dir, initial_arr.boundaries)
     if os.path.exists(output_dir):

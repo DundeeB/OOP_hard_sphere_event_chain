@@ -1,7 +1,12 @@
+import copy
+import cv2
 import matplotlib.pyplot as plt
-import cv2, os, numpy as np, copy, scipy.io as sio, re
-from Structure import Sphere, CubeBoundaries, ArrayOfCells
+import numpy as np
+import os
+import re
+import scipy.io as sio
 from EventChainActions import Step
+from Structure import Sphere, CubeBoundaries, ArrayOfCells
 
 
 class WriteOrLoad:

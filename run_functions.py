@@ -1,5 +1,6 @@
 #!/Local/cmp/anaconda3/bin/python
-import os, sys
+import os
+import sys
 from EventChainActions import *
 from SnapShot import WriteOrLoad
 

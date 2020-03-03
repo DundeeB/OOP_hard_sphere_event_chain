@@ -4,12 +4,22 @@ import numpy as np
 import time
 
 
-def send_single_run_envelope(h, n_row, n_col, rho_H, initial_conditions):
-    params = "h=" + str(h) + ",n_row=" + str(n_row) + ",n_col=" + str(n_col) + ",rho_H=" + str(rho_H) + \
+def send_single_run_envelope(h, n_row, n_col, rhoH, initial_conditions):
+    params = "h=" + str(h) + ",n_row=" + str(n_row) + ",n_col=" + str(n_col) + ",rhoH=" + str(rhoH) + \
              ",initial_conditions=" + initial_conditions
-    out_pwd = "/storage/ph_daniel/danielab/ECMC_simulation_results/out/" + params + ".out"
-    err_pwd = "/storage/ph_daniel/danielab/ECMC_simulation_results/out/" + params + ".err"
-    os.system("qsub -V -v " + params + " -N " + params + " -o " + out_pwd + " -e " + err_pwd +
+    # N=3600_h=1.0_rhoH=0.9_AF_triangle_ECMC
+    if initial_conditions == 'honeycomb':
+        init_name_in_dir = 'AF_triangle_ECMC'
+    else:
+        if initial_conditions == 'square':
+            init_name_in_dir = 'AF_square_ECMC'
+        else:
+            raise NotImplementedError("Implemented initial conditions are: square, honeycomb")
+    sim_name = "N=" + str(n_row*n_col) + "_h=" + str(h) + "_rhoH=" + str(rhoH) + \
+             "_" + init_name_in_dir
+    out_pwd = "/storage/ph_daniel/danielab/ECMC_simulation_results/out/" + sim_name + ".out"
+    err_pwd = "/storage/ph_daniel/danielab/ECMC_simulation_results/out/" + sim_name + ".err"
+    os.system("qsub -V -v " + params + " -N " + sim_name + " -o " + out_pwd + " -e " + err_pwd +
               " -l nodes=1:ppn=1,mem=1gb,vmem=2gb -q N " +
               "/srv01/technion/danielab/ECMC/OOP_hard_sphere_event_chain/py_env.sh")
     time.sleep(2.0)

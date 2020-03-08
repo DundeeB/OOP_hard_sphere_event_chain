@@ -7,7 +7,6 @@ import time
 def send_single_run_envelope(h, n_row, n_col, rhoH, initial_conditions):
     params = "h=" + str(h) + ",n_row=" + str(n_row) + ",n_col=" + str(n_col) + ",rhoH=" + str(rhoH) + \
              ",initial_conditions=" + initial_conditions
-    # N=3600_h=1.0_rhoH=0.9_AF_triangle_ECMC
     if initial_conditions == 'honeycomb':
         init_name_in_dir = 'AF_triangle_ECMC'
     else:
@@ -25,9 +24,9 @@ def send_single_run_envelope(h, n_row, n_col, rhoH, initial_conditions):
     time.sleep(2.0)
 
 
-rho_H_arr = [round(x, 2) for x in np.linspace(0.5, 1.05, 12)] + [0.68, 0.73, 0.88, 0.93, 0.98]
-for h in [1, 0.8]:
-    for n_factor in [1, 2, 3]:
+rho_H_arr = [round(x, 2) for x in np.linspace(0.5, 1.0, 11)] + [0.68, 0.73, 0.88, 0.93, 0.98]
+for h in [1, 0.8]:  # [0.7]:
+    for n_factor in [1, 2, 3]:  # [2, 3]:
         for rho_H in rho_H_arr:
             n_row = 30 * n_factor
             n_col = 30 * n_factor

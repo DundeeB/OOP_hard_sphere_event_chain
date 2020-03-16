@@ -20,7 +20,7 @@ def send_single_run_envelope(h, n_row, n_col, rhoH, initial_conditions):
     err_pwd = "/storage/ph_daniel/danielab/ECMC_simulation_results/out/" + sim_name + ".err"
     os.system("qsub -V -v " + params + " -N " + sim_name + " -o " + out_pwd + " -e " + err_pwd +
               " -l nodes=1:ppn=1,mem=1gb,vmem=2gb -q N " +
-              "/srv01/technion/danielab/ECMC/OOP_hard_sphere_event_chain/py_env.sh")
+              "/srv01/technion/danielab/OOP_hard_sphere_event_chain/py_env.sh")
     time.sleep(2.0)
 
 

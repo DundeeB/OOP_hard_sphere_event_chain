@@ -25,8 +25,8 @@ def send_single_run_envelope(h, n_row, n_col, rhoH, initial_conditions):
 
 
 rho_H_arr = [round(x, 2) for x in np.linspace(0.5, 1.0, 11)] + [0.68, 0.73, 0.88, 0.93, 0.98]
-for h in [1, 0.8]:  # [0.7]:
-    for n_factor in [1, 2, 3]:  # [2, 3]:
+for h in [1, 0.8, 0.7]:
+    for n_factor in [1, 2, 3]:
         for rho_H in rho_H_arr:
             n_row = 30 * n_factor
             n_col = 30 * n_factor

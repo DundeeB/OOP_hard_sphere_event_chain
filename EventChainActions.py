@@ -40,7 +40,7 @@ class Step:
         self.sphere = sphere
         self.total_step = total_step
         self.current_step = current_step
-        self.v_hat = np.array(v_hat)/np.linalg.norm(v_hat)
+        self.v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
         self.boundaries = boundaries
 
     def perform_step(self):
@@ -103,7 +103,7 @@ class Event2DCells(ArrayOfCells):
         cells = [[[] for _ in range(n_columns)] for _ in range(n_rows)]
         for i in range(n_rows):
             for j in range(n_columns):
-                site = (edge*j, edge*i)
+                site = (edge * j, edge * i)
                 cells[i][j] = Cell(site, [edge, edge], ind=(i, j))
                 cells[i][j].spheres = []
         boundaries = CubeBoundaries([l_x, l_y], [BoundaryType.CYCLIC, BoundaryType.CYCLIC])
@@ -148,20 +148,26 @@ class Event2DCells(ArrayOfCells):
         :return: the corresponding maximal free step allowed
         """
         p, v_hat, e, c, r = step.sphere.center, step.v_hat, self.edge, self.cells[i][j].site, step.sphere.rad
-        xp, xm, yp, ym = c[0] + 2*e, c[0] - e, c[1] + 2*e, c[1] - e
+        xp, xm, yp, ym = c[0] + 2 * e, c[0] - e, c[1] + 2 * e, c[1] - e
         # ip1, jp1, im1, jm1 = Event2DCells.cyclic_indices(i, j, self.n_rows, self.n_columns)
-        if v_hat[0] >= 0: x = xp - 2*r
-        else: x = xm + 2*r
-        if v_hat[1] >= 0: y = yp - 2*r
-        else: y = ym + 2*r
+        if v_hat[0] >= 0:
+            x = xp - 2 * r
+        else:
+            x = xm + 2 * r
+        if v_hat[1] >= 0:
+            y = yp - 2 * r
+        else:
+            y = ym + 2 * r
 
         if v_hat[0] != 0:
-            tx = (float) (x - p[0])/v_hat[0]
-        else: tx = float('inf')
+            tx = (float)(x - p[0]) / v_hat[0]
+        else:
+            tx = float('inf')
 
         if v_hat[1] != 0:
-            ty = (float) (y - p[1])/v_hat[1]
-        else: ty = float('inf')
+            ty = (float)(y - p[1]) / v_hat[1]
+        else:
+            ty = float('inf')
 
         t = min(tx, ty)
         return t
@@ -184,7 +190,7 @@ class Event2DCells(ArrayOfCells):
 
         sphere, total_step, v_hat, cell = step.sphere, step.total_step, step.v_hat, self.cells[i][j]
         step.current_step = np.nan
-        v_hat = np.array(v_hat)/np.linalg.norm(v_hat)
+        v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
         cell.remove_sphere(sphere)
 
         relevant_cells = [self.cells[i][j]] + self.neighbors(i, j)
@@ -192,11 +198,11 @@ class Event2DCells(ArrayOfCells):
         for c in relevant_cells:
             for s in c.spheres: other_spheres.append(s)
         step.current_step = self.maximal_free_step(i, j, step)
-        event, current_step = step.next_event(other_spheres)  #
+        event, current_step = step.next_event(other_spheres)
 
         assert event is not None and not np.isnan(step.current_step)
 
-        step.perform_step()  # subtract current step from total step
+        step.perform_step()  # also subtract current step from total step
 
         new_cell, flag = None, None
         for new_cell in relevant_cells:
@@ -233,23 +239,23 @@ class Event2DCells(ArrayOfCells):
         :param n_col: same, each triangular lattice has n_col columns
         :param rad: not a list, a single number of the same radius for all spheres
         """
-        assert(type(rad) != list, "list of different rads is not supported for initial condition AF triangular")
-        assert(self.dim == 3, "Anti Ferromagnetic inital conditions make no sense in 2D")
+        assert (type(rad) != list, "list of different rads is not supported for initial condition AF triangular")
+        assert (self.dim == 3, "Anti Ferromagnetic inital conditions make no sense in 2D")
         l_x, l_y, l_z = self.boundaries.edges
-        assert(n_row % 2 == 0, "n_row should be even for anti-ferromagnetic triangular Initial conditions")
+        assert (n_row % 2 == 0, "n_row should be even for anti-ferromagnetic triangular Initial conditions")
         ay = 2 * l_y / n_row
-        spheres_down = ArrayOfCells.spheres_in_triangular(int(n_row/2), n_col, rad, l_x, l_y)
-        spheres_up = ArrayOfCells.spheres_in_triangular(int(n_row/2), n_col, rad, l_x, l_y)
-        z_up = l_z - (1+10*epsilon)*rad
-        z_down = (1+10*epsilon)*rad
+        spheres_down = ArrayOfCells.spheres_in_triangular(int(n_row / 2), n_col, rad, l_x, l_y)
+        spheres_up = ArrayOfCells.spheres_in_triangular(int(n_row / 2), n_col, rad, l_x, l_y)
+        z_up = l_z - (1 + 10 * epsilon) * rad
+        z_down = (1 + 10 * epsilon) * rad
         for s in spheres_down:
-            assert(type(s) == Sphere)
+            assert (type(s) == Sphere)
             cx, cy = s.center
             s.center = (cx, cy, z_down)
         for s in spheres_up:
-            assert(type(s) == Sphere)
+            assert (type(s) == Sphere)
             cx, cy = s.center
-            s.center = (cx, cy + ay*2/3, z_up)
+            s.center = (cx, cy + ay * 2 / 3, z_up)
             s.box_it(self.boundaries)
         self.append_sphere(spheres_down + spheres_up)
         assert self.legal_configuration()
@@ -260,19 +266,19 @@ class Event2DCells(ArrayOfCells):
         :param n_spheres_per_cell: number of total sphere in each cell
         :param rad: not a list, a single number of the same radius for all spheres
         """
-        assert(type(rad) != list, "list of different rads is not supported for initial condition AF triangular")
-        assert(self.dim == 3, "Anti Ferromagnetic inital conditions make no sense in 2D")
-        sig = 2*rad
-        ax, ay = self.l_x/n_sp_col, self.l_y/n_sp_row
+        assert (type(rad) != list, "list of different rads is not supported for initial condition AF triangular")
+        assert (self.dim == 3, "Anti Ferromagnetic inital conditions make no sense in 2D")
+        sig = 2 * rad
+        ax, ay = self.l_x / n_sp_col, self.l_y / n_sp_row
         a = min(ax, ay)
-        assert(a**2+(self.l_z-sig)**2>sig**2 and
-               4*a**2>sig**2, "Can not create so many spheres in the AF square lattice")
+        assert (a ** 2 + (self.l_z - sig) ** 2 > sig ** 2 and
+                4 * a ** 2 > sig ** 2, "Can not create so many spheres in the AF square lattice")
         spheres = []
         for i in range(n_sp_row):
             for j in range(n_sp_col):
-                sign = (-1)**(i+j)
-                r = rad+100*epsilon
-                x, y, z = (j+1/2)*ax, (i+1/2)*ay, sign*r + self.l_z*(1-sign)/2
+                sign = (-1) ** (i + j)
+                r = rad + 100 * epsilon
+                x, y, z = (j + 1 / 2) * ax, (i + 1 / 2) * ay, sign * r + self.l_z * (1 - sign) / 2
                 spheres.append(Sphere((x, y, z), rad))
         self.append_sphere(spheres)
         assert self.legal_configuration()
@@ -292,11 +298,46 @@ class Event2DCells(ArrayOfCells):
         self.boundaries.edges[1] *= factor
         # not self.boundaries[2]
         for c in self.all_cells:
-            c.site = [x*factor for x in c.site]
-            c.edges = [e*factor for e in c.edges]  # cell is 2D
+            c.site = [x * factor for x in c.site]
+            c.edges = [e * factor for e in c.edges]  # cell is 2D
         for s in self.all_spheres:
             cx = s.center[0] * factor
             cy = s.center[1] * factor
             # Not s.center[2]
             s.center = (cx, cy, s.center[2])
-        assert(self.legal_configuration(), "Scaling failed, illegal configuration")
+        assert (self.legal_configuration(), "Scaling failed, illegal configuration")
+
+    def quench(self, dest_rho):
+        """
+        Slowly moving spheres far from the boundary conditions and slowly closing the boundary conditions until the
+        density becomes dest_rho. If dest_rho is larger then current rho we simply scale.
+        :param dest_rho: density destination
+        :return:
+        """
+        N = len(self.all_spheres)
+        rho = N * (self.all_spheres[0].rad ** 3) / (self.l_x * self.l_y * self.l_z)
+        if dest_rho <= rho:  # scale system, everything will be farther and rho will go lower
+            factor = np.sqrt(rho / dest_rho)  # >1
+            self.scale_xy(factor)
+            return
+        else:
+            min_x = min([s.center[0] - s.rad for s in self.all_spheres])
+            max_x = max([s.center[0] + s.rad for s in self.all_spheres])
+            min_y = [s.center[1] - s.rad for s in self.all_spheres]
+            max_y = [s.center[1] + s.rad for s in self.all_spheres]
+            new_lx = max_x - min_x
+            new_ly = max_y - min_y
+            if new_lx < self.l_x and new_ly < self.l_z:  # we have some space to squizz
+                vec_to_zero = np.array([min_x, min_y])
+                all_spheres = self.translate(vec_to_zero)  # emptied all spheres from self
+                self.l_x = new_lx
+                self.l_y = new_ly
+                self.boundaries = CubeBoundaries([self.l_x, self.l_y], [BoundaryType.CYCLIC, BoundaryType.CYCLIC])
+                for i in range(len(all_spheres)):
+                    all_spheres[i].box_it(self.boundaries)
+                self.append_sphere(all_spheres)
+                assert self.legal_configuration()
+                return self.quench(dest_rho)
+            else:  # we must move spheres around before squizzing
+                return
+

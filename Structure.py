@@ -2,6 +2,7 @@ import copy
 import numpy as np
 import random
 from enum import Enum
+
 epsilon = 1e-8
 
 
@@ -34,7 +35,7 @@ class Sphere:
             print(RuntimeWarning)
 
     def perform_step(self, v_hat, current_step, boundaries):
-        self.center = self.center + np.array(v_hat)*current_step
+        self.center = self.center + np.array(v_hat) * current_step
         self.box_it(boundaries)
 
 
@@ -54,7 +55,7 @@ class CubeBoundaries:
         """
         assert (len(edges) == len(boundaries_type))
         for bound in boundaries_type:
-            assert(type(bound) == BoundaryType)
+            assert (type(bound) == BoundaryType)
         self.edges = edges
         self.boundaries_type = boundaries_type
         self.dim = len(edges)
@@ -97,14 +98,14 @@ class CubeBoundaries:
         :return: list of boundary conditions, the i'th boundary condition is for i'th wall in self.walls
         """
         bc0 = self.boundaries_type[0]
-        if self.dim == 1: return 2*[bc0]
+        if self.dim == 1: return 2 * [bc0]
         bc1 = self.boundaries_type[1]
         if self.dim == 2:
             return [bc1, bc0, bc0, bc1]
         else:  # dim=3
             bc2 = self.boundaries_type[2]
             # xy yz xz xy yz xz
-            return 2*[bc2, bc0, bc1]
+            return 2 * [bc2, bc0, bc1]
 
     @staticmethod
     def vertical_step_to_wall(plane, point):
@@ -116,21 +117,21 @@ class CubeBoundaries:
         :return: the smallest vector v s.t. v+point is on the plain of the wall
         """
         for w in plane:
-            assert(len(w) == len(point))
+            assert (len(w) == len(point))
         d = len(point)
         p = np.array(point)
         v = [np.array(w) for w in plane]
         if d == 1:
             return v[0] - p
         if d == 2:
-            t = -np.dot(v[0]-p, v[1]-v[0])/np.dot(v[1]-v[0], v[1]-v[0])
-            return v[0] - p + t*(v[1]-v[0])
+            t = -np.dot(v[0] - p, v[1] - v[0]) / np.dot(v[1] - v[0], v[1] - v[0])
+            return v[0] - p + t * (v[1] - v[0])
         if d == 3:
             # assume for now that edges are vertical so calculation is easier
-            assert(np.dot(v[2] - v[0], v[1] - v[0]) < epsilon)
+            assert (np.dot(v[2] - v[0], v[1] - v[0]) < epsilon)
             t = -np.dot(v[0] - p, v[1] - v[0]) / np.dot(v[1] - v[0], v[1] - v[0])
             s = -np.dot(v[0] - p, v[2] - v[0]) / np.dot(v[2] - v[0], v[2] - v[0])
-            return v[0] - p + t*(v[1]-v[0]) + s*(v[2]-v[0])
+            return v[0] - p + t * (v[1] - v[0]) + s * (v[2] - v[0])
 
     @staticmethod
     def flip_v_hat_at_wall(wall, sphere, v_hat):
@@ -142,8 +143,8 @@ class CubeBoundaries:
         :return: flipped direction of  step, opposite to wall
         """
         n_hat = CubeBoundaries.vertical_step_to_wall(wall, sphere.center)
-        n_hat = np.array(n_hat)/np.linalg.norm(n_hat)
-        return v_hat-2*np.dot(v_hat, n_hat)*n_hat
+        n_hat = np.array(n_hat) / np.linalg.norm(n_hat)
+        return v_hat - 2 * np.dot(v_hat, n_hat) * n_hat
 
     def boundary_transformed_vectors(self):
         l_x = self.edges[0]
@@ -189,9 +190,9 @@ class Metric:
         for plane, BC_type in zip(boundaries.planes, boundaries.planes_type):
             if BC_type != BoundaryType.WALL: continue
             u = CubeBoundaries.vertical_step_to_wall(plane, pos)
-            u = u - r*u/np.linalg.norm(u)  # shift the wall closer by r
+            u = u - r * u / np.linalg.norm(u)  # shift the wall closer by r
             if np.dot(u, v_hat) <= 0: continue
-            v = np.dot(u, u)/np.dot(u, v_hat)
+            v = np.dot(u, u) / np.dot(u, v_hat)
             if v < min_dist_to_wall and v <= total_step:
                 min_dist_to_wall = v
                 closest_wall = plane
@@ -261,10 +262,10 @@ class Metric:
         dsq = 0
         for i, b in enumerate(boundaries.boundaries_type):
             if b != BoundaryType.CYCLIC:
-                dsq += dx[i]**2
+                dsq += dx[i] ** 2
                 continue
             L = boundaries.edges[i]
-            dsq += min(dx[i]**2, (dx[i] + L)**2, (dx[i] - L)**2)  # find shorter path through B.D.
+            dsq += min(dx[i] ** 2, (dx[i] + L) ** 2, (dx[i] - L) ** 2)  # find shorter path through B.D.
         return np.sqrt(dsq)
 
     @staticmethod
@@ -278,7 +279,7 @@ class Metric:
         """
         if sphere1 == sphere2: return False
         delta = Metric.cyclic_dist(boundaries, sphere1, sphere2) - (sphere1.rad + sphere2.rad)
-        if delta < -1e3*epsilon:  # stabelize calculation by forgiving some penteration
+        if delta < -1e3 * epsilon:  # stabelize calculation by forgiving some penteration
             return True
         else:
             if delta > 0:
@@ -377,7 +378,7 @@ class Cell:
         """
         for i in range(self.dim):
             x_sphere, x_site, edge = sphere.center[i], self.site[i], self.edges[i]
-            #Notice this implementation instead of for x_... in zip() is for the case dim(sphere)!=dim(cell)
+            # Notice this implementation instead of for x_... in zip() is for the case dim(sphere)!=dim(cell)
             if x_sphere <= x_site or x_sphere > x_site + edge:
                 return False
         return True
@@ -399,10 +400,11 @@ class Cell:
             spheres = []
             for i in range(n_spheres):
                 r = rads[i]
-                center = np.array(self.site) + [random.random()*e for e in self.edges]
+                center = np.array(self.site) + [random.random() * e for e in self.edges]
                 if len(extra_edges) > 0:
-                    center = [c for c in center] + [r + epsilon + random.random()*(e - 2*(r + epsilon)) for e in extra_edges]
-                    #assumes for now extra edge is rigid wall and so generate in the allowed locations
+                    center = [c for c in center] + [r + epsilon + random.random() * (e - 2 * (r + epsilon)) for e in
+                                                    extra_edges]
+                    # assumes for now extra edge is rigid wall and so generate in the allowed locations
                 spheres.append(Sphere(center, rads[i]))
             if not Metric.direct_overlap(spheres):
                 break
@@ -418,7 +420,7 @@ class Cell:
         self.site = new_site
         for sphere in self.spheres:
             if len(dx) < sphere.dim:
-                dx = [dx_ for dx_ in dx] + [0 for _ in range(sphere.dim-len(dx))]
+                dx = [dx_ for dx_ in dx] + [0 for _ in range(sphere.dim - len(dx))]
                 dx = np.array(dx)
             sphere.center = sphere.center + dx
 
@@ -565,9 +567,9 @@ class ArrayOfCells:
     def neighbors(self, i, j):
         ip1, jp1, im1, jm1 = ArrayOfCells.cyclic_indices(i, j, self.n_rows, self.n_columns)
         neighbor_cells = [self.cells[ip1][jm1], self.cells[ip1][j],
-                     self.cells[ip1][jp1], self.cells[i][jp1],
-                     self.cells[i][jm1], self.cells[im1][jm1],
-                     self.cells[im1][j], self.cells[im1][jp1]]
+                          self.cells[ip1][jp1], self.cells[i][jp1],
+                          self.cells[i][jm1], self.cells[im1][jm1],
+                          self.cells[im1][j], self.cells[im1][jp1]]
         # First for are top and to the right, then to the left and bottom.
         # For efficient legal_configuration implementation
         return neighbor_cells
@@ -592,7 +594,7 @@ class ArrayOfCells:
                         c_z = sphere.center[2]
                         r = sphere.rad
                         if self.boundaries.boundaries_type[2] == BoundaryType.WALL and \
-                            (c_z - r < -epsilon or c_z + r > self.boundaries.edges[2] + epsilon):
+                                (c_z - r < -epsilon or c_z + r > self.boundaries.edges[2] + epsilon):
                             return False
                 if (j == n_columns - 1 or j == 0) and self.boundaries.boundaries_type[0] == BoundaryType.WALL:
                     for sphere in cell.spheres:
@@ -621,7 +623,7 @@ class ArrayOfCells:
         return cell
 
     def random_generate_spheres(self, n_spheres_per_cell, rad, extra_edges=[]):
-        if type(rad) != list: rad = n_spheres_per_cell*[rad]
+        if type(rad) != list: rad = n_spheres_per_cell * [rad]
         while True:
             for cell in self.all_cells:
                 cell.random_generate_spheres(n_spheres_per_cell, rad, extra_edges)
@@ -629,7 +631,7 @@ class ArrayOfCells:
                 return
 
     def generate_spheres_in_cubic_structure(self, n_spheres_per_cell, rad, extra_edges=[]):
-        if type(rad) != list: rad = n_spheres_per_cell*[rad]
+        if type(rad) != list: rad = n_spheres_per_cell * [rad]
         for cell in self.all_cells:
             dx, dy = epsilon, epsilon
             x0, y0 = cell.site
@@ -642,11 +644,11 @@ class ArrayOfCells:
                     center = [c for c in center] + [r + random.random() * (e - 2 * r) for e in extra_edges]
                 cell.append(Sphere(center, r))
                 dx += 2 * r + epsilon
-                if (i < n_spheres_per_cell - 1) and (dx + 2 * rad[i+1] > cell.edges[0]):
+                if (i < n_spheres_per_cell - 1) and (dx + 2 * rad[i + 1] > cell.edges[0]):
                     dx = 0
                     dy += 2 * max_r + epsilon
                     max_r = 0
-                if (i < n_spheres_per_cell - 1) and (dy + 2 * rad[i+1] > cell.edges[1]):
+                if (i < n_spheres_per_cell - 1) and (dy + 2 * rad[i + 1] > cell.edges[1]):
                     break
         assert self.legal_configuration()
 
@@ -667,17 +669,37 @@ class ArrayOfCells:
     @staticmethod
     def spheres_in_triangular(n_row, n_col, rad, l_x, l_y):
         assert (type(rad) != list, "list of different rads is not supported for initial condition triangular")
-        ax = l_x/(n_col + 1/2)
-        ay = l_y/(n_row + 1)
-        assert (ax >= 2*rad and ay / np.cos(np.pi/6) >= 2*rad,
+        ax = l_x / (n_col + 1 / 2)
+        ay = l_y / (n_row + 1)
+        assert (ax >= 2 * rad and ay / np.cos(np.pi / 6) >= 2 * rad,
                 "ferro triangle initial conditions are not defined for a<2*r, too many spheres")
         spheres = []
         for i in range(n_row):
             for j in range(n_col):
                 if i % 2 == 0:
-                    xj = (1+epsilon)*rad + ax*j
+                    xj = (1 + epsilon) * rad + ax * j
                 else:
-                    xj = (1+epsilon)*rad + ax*(j + 1 / 2)  # cos(pi / 3) = 1 / 2
-                yi = (1+epsilon)*rad + ay*i
+                    xj = (1 + epsilon) * rad + ax * (j + 1 / 2)  # cos(pi / 3) = 1 / 2
+                yi = (1 + epsilon) * rad + ay * i
                 spheres.append(Sphere((xj, yi), rad))
         return spheres
+
+    def translate(self, vec):
+        """
+        Move all spheres
+        :param vec: vector of translation.
+        :return: transfered spheres, after removing all spheres from the array of cells
+        """
+        transferred_spheres = []
+        for c in self.all_cells:
+            for s in c.spheres:
+                for i in range(min(len(s.center), len(vec))):
+                    c.remove(s)
+                    s.center += vec[i]
+                    transferred_spheres.append(s)
+        # self.append_sphere(transferred_spheres)
+        return transferred_spheres
+
+
+
+

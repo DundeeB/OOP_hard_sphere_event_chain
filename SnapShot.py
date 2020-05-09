@@ -122,3 +122,4 @@ class WriteOrLoad:
             sp_name = 'Initial Conditions'
             file_ind = 0
         return np.loadtxt(os.path.join(self.output_dir, sp_name)), file_ind
+

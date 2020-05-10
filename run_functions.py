@@ -112,6 +112,10 @@ def run_from_quench(other_sim_directory, desired_rho):
     # More physical properties calculated from Input
     physical_info = re.split('[=_]', other_sim_directory)
     N, h, rhoH, IC = int(physical_info[1]), float(physical_info[3]), float(physical_info[5]), physical_info[-2]
+    sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(desired_rho) + '_from_quench_ECMC'
+    prefix = '/storage/ph_daniel/danielab/ECMC_simulation_results/'
+    if os.path.exists(prefix + sim_name):
+        other_sim_dir = sim_name  # instead of re quenching start from last file, find consistence new l_x, l_y
     n_factor = int(N / 900)
     if IC == 'triangle':
         n_row = 50 * n_factor
@@ -122,7 +126,7 @@ def run_from_quench(other_sim_directory, desired_rho):
     r = 1
     sig = 2 * r
 
-    other_sim_path = '/storage/ph_daniel/danielab/ECMC_simulation_results/' + other_sim_directory
+    other_sim_path = prefix + other_sim_directory
     files_interface = WriteOrLoad(other_sim_path, boundaries=[])
     centers, ind = files_interface.last_spheres()
     xs = [r[0] for r in centers]
@@ -136,7 +140,6 @@ def run_from_quench(other_sim_directory, desired_rho):
     initial_arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col)
     initial_arr.add_third_dimension_for_sphere((h + 1) * sig)
     initial_arr.append_sphere([Sphere(c, r) for c in centers])
-    sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(desired_rho) + '_from_quench_ECMC'
     initial_arr.quench(desired_rho)
     batch = other_sim_path + '/batch'
     sys.stdout = open(batch, "a")

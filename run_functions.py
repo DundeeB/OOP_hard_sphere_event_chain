@@ -3,6 +3,7 @@ import os
 import sys
 from EventChainActions import *
 from SnapShot import WriteOrLoad
+import re
 
 
 def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
@@ -102,9 +103,46 @@ def run_honeycomb(h, n_row, n_col, rho_H):
     initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)
     initial_arr.add_third_dimension_for_sphere((h + 1) * sig)
     initial_arr.generate_spheres_in_AF_triangular_structure(n_row, n_col, r)
-    initial_arr.scale_xy(np.sqrt(rho_H_new/rho_H))
+    initial_arr.scale_xy(np.sqrt(rho_H_new / rho_H))
     sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_triangle_ECMC'
     return run_sim(initial_arr, N, h, rho_H, total_step, sim_name)
+
+
+def run_from_quench(other_sim_directory, desired_rho):
+    # More physical properties calculated from Input
+    physical_info = re.split('[=_]', other_sim_directory)
+    N, h, rhoH, IC = int(physical_info[1]), float(physical_info[3]), float(physical_info[5]), physical_info[-2]
+    n_factor = int(N / 900)
+    if IC == 'triangle':
+        n_row = 50 * n_factor
+        n_col = 18 * n_factor
+    else:
+        n_row = 30 * n_factor
+        n_col = 30 * n_factor
+    r = 1
+    sig = 2 * r
+
+    other_sim_path = '/storage/ph_daniel/danielab/ECMC_simulation_results/' + other_sim_directory
+    files_interface = WriteOrLoad(other_sim_path, boundaries=[])
+    centers, ind = files_interface.last_spheres()
+    xs = [r[0] for r in centers]
+    ys = [r[1] for r in centers]
+    edge = max((max(xs) + r) / n_col, (max(ys) + r) / n_row)
+    l_x = edge * n_col
+    l_y = edge * n_row
+    a = np.sqrt(l_x * l_y / N)
+    total_step = a * np.sqrt(n_row) * 0.05
+
+    initial_arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col)
+    initial_arr.add_third_dimension_for_sphere((h + 1) * sig)
+    initial_arr.append_sphere([Sphere(c, r) for c in centers])
+    sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(desired_rho) + '_from_quench_ECMC'
+    initial_arr.quench(desired_rho)
+    batch = other_sim_path + '/batch'
+    sys.stdout = open(batch, "a")
+    os.system('echo \'Taken from' + other_sim_directory + ', file ' + str(ind) + '. Quenched successfully to rho=' +
+              str(desired_rho) + '\' > QUENCHED')
+    return run_sim(initial_arr, N, h, desired_rho, total_step, sim_name)
 
 
 def run_square(h, n_row, n_col, rho_H):
@@ -135,14 +173,15 @@ def run_square(h, n_row, n_col, rho_H):
 
 
 args = sys.argv[1:]
-if len(args) != 5:
-    raise ValueError("Wrong number of arguments. Should give h, n_row, n_col, rho_H, initial conditions")
-h, n_row, n_col, rho_H = [float(x) for x in args[:-1]]
-n_col, n_row = int(n_col), int(n_row)
-if args[-1] == 'square':
-    run_square(h, n_row, n_col, rho_H)
-else:
-    if args[-1] == 'honeycomb':
-        run_honeycomb(h, n_row, n_col, rho_H)
+if len(args) == 5:
+    h, n_row, n_col, rho_H = [float(x) for x in args[0:4]]
+    n_col, n_row = int(n_col), int(n_row)
+    if args[-1] == 'square':
+        run_square(h, n_row, n_col, rho_H)
     else:
-        raise NotImplementedError("Implemented initial conditions are: square, honeycomb")
+        if args[-1] == 'honeycomb':
+            run_honeycomb(h, n_row, n_col, rho_H)
+else:
+    action, other_sim_dir, desired_rho = args[0], args[1], float(args[2])
+    assert action == 'quench'  # must have one more arguments
+    run_from_quench(other_sim_dir, desired_rho)

@@ -135,6 +135,7 @@ def run_from_quench(other_sim_directory, desired_rho):
     initial_arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col)
     initial_arr.add_third_dimension_for_sphere(l_z)
     initial_arr.append_sphere([Sphere(c, rad) for c in centers])
+    assert initial_arr.legal_configuration()
     initial_arr.quench(desired_rho)
     os.system('echo \'Taken from' + other_sim_directory + ', file ' + str(ind) + '. Quenched successfully to rho=' +
               str(desired_rho) + '\' > ' + prefix + sim_name + '/QUENCHED')

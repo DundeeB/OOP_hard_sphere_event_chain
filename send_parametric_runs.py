@@ -35,7 +35,7 @@ def quench_single_run_envelope(action, other_sim_dir, desired_rho):
     time.sleep(2.0)
 
 
-# rho_H_arr = [0.85, 0.86, 0.87, 0.88, 0.885, 0.89, 0.895, 0.9, 0.91, 0.92]
+# rho_H_arr = [0.7, 0.85, 0.86, 0.87, 0.88, 0.885, 0.89, 0.895, 0.9, 0.91, 0.92]
 # for h in [1, 0.8]:  # , 0.7]:
 #     for n_factor in [3]:  # [1, 2, 3]:
 #         for rho_H in rho_H_arr:

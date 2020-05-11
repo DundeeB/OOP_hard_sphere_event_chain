@@ -22,7 +22,7 @@ class WriteOrLoad:
         self.boundaries = boundaries
         self.counter = counter
 
-    def plt_spheres(self, title, spheres, h = 0):
+    def plt_spheres(self, title, spheres, h=0):
         """
         :param title: of figure
         :param spheres: list of obj type Sphere
@@ -34,7 +34,7 @@ class WriteOrLoad:
         for sphere in spheres:
             assert isinstance(sphere, Sphere)
             c = sphere.center
-            if len(c) == 3 and c[-1] > 2*sphere.rad(h+1)/2:
+            if len(c) == 3 and c[-1] > 2 * sphere.rad(h + 1) / 2:
                 color = 'r'
             else:
                 color = 'b'
@@ -95,7 +95,7 @@ class WriteOrLoad:
         images = [img for img in os.listdir(self.output_dir) if img.endswith(".png")]
         frame = cv2.imread(os.path.join(self.output_dir, images[0]))
         height, width, layers = frame.shape
-        video = cv2.VideoWriter(os.path.join(self.output_dir, video_name+".avi"),
+        video = cv2.VideoWriter(os.path.join(self.output_dir, video_name + ".avi"),
                                 0, fps, (width, height))
 
         for image in images:
@@ -122,4 +122,11 @@ class WriteOrLoad:
             sp_name = 'Initial Conditions'
             file_ind = 0
         return np.loadtxt(os.path.join(self.output_dir, sp_name)), file_ind
+
+    def load_macroscopic_parameters(self):
+        file_name = os.path.join(self.output_dir, 'Input_parameters_from_python.mat')
+        dictionary = sio.loadmat(file_name)
+        l_x, l_y, l_z, rad, rho_H = dictionary['Lx'][0][0], dictionary['Ly'][0][0], dictionary['H'][0][0], \
+                                    dictionary['rad'][0][0], dictionary['rho_H'][0][0]
+        return l_x, l_y, l_z, rad, rho_H
 

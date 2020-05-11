@@ -111,11 +111,14 @@ def run_honeycomb(h, n_row, n_col, rho_H):
 def run_from_quench(other_sim_directory, desired_rho):
     # More physical properties calculated from Input
     physical_info = re.split('[=_]', other_sim_directory)
-    N, h, rhoH, IC = int(physical_info[1]), float(physical_info[3]), float(physical_info[5]), physical_info[-2]
+    N, h, IC = int(physical_info[1]), float(physical_info[3]), physical_info[-2]
     sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(desired_rho) + '_from_quench_ECMC'
     prefix = '/storage/ph_daniel/danielab/ECMC_simulation_results/'
     if os.path.exists(prefix + sim_name):
-        other_sim_dir = sim_name  # instead of re quenching start from last file, find consistence new l_x, l_y
+        other_sim_directory = sim_name  # instead of re quenching start from last file, find consistence new l_x, l_y
+    other_sim_path = prefix + other_sim_directory
+    files_interface = WriteOrLoad(other_sim_path, boundaries=[])
+    l_x, l_y, l_z, rad, _ = files_interface.load_macroscopic_parameters()
     n_factor = int(N / 900)
     if IC == 'triangle':
         n_row = 50 * n_factor
@@ -123,28 +126,18 @@ def run_from_quench(other_sim_directory, desired_rho):
     else:
         n_row = 30 * n_factor
         n_col = 30 * n_factor
-    r = 1
-    sig = 2 * r
 
-    other_sim_path = prefix + other_sim_directory
-    files_interface = WriteOrLoad(other_sim_path, boundaries=[])
     centers, ind = files_interface.last_spheres()
-    xs = [r[0] for r in centers]
-    ys = [r[1] for r in centers]
-    edge = max((max(xs) + r) / n_col, (max(ys) + r) / n_row)
-    l_x = edge * n_col
-    l_y = edge * n_row
+    edge = max(l_x / n_col, l_y / n_row)
     a = np.sqrt(l_x * l_y / N)
     total_step = a * np.sqrt(n_row) * 0.05
 
     initial_arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col)
-    initial_arr.add_third_dimension_for_sphere((h + 1) * sig)
-    initial_arr.append_sphere([Sphere(c, r) for c in centers])
+    initial_arr.add_third_dimension_for_sphere(l_z)
+    initial_arr.append_sphere([Sphere(c, rad) for c in centers])
     initial_arr.quench(desired_rho)
-    batch = other_sim_path + '/batch'
-    sys.stdout = open(batch, "a")
     os.system('echo \'Taken from' + other_sim_directory + ', file ' + str(ind) + '. Quenched successfully to rho=' +
-              str(desired_rho) + '\' > QUENCHED')
+              str(desired_rho) + '\' > ' + prefix + sim_name + '/QUENCHED')
     return run_sim(initial_arr, N, h, desired_rho, total_step, sim_name)
 
 

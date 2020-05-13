@@ -115,7 +115,7 @@ def run_from_quench(other_sim_directory, desired_rho):
     sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(desired_rho) + '_from_quench_ECMC'
     prefix = '/storage/ph_daniel/danielab/ECMC_simulation_results/'
     if os.path.exists(prefix + sim_name):
-        other_sim_directory = sim_name  # instead of re quenching start from last file, find consistence new l_x, l_y
+        other_sim_directory = sim_name  # instead of re quenching, start from last file
     other_sim_path = prefix + other_sim_directory
     files_interface = WriteOrLoad(other_sim_path, boundaries=[])
     l_x, l_y, l_z, rad, _ = files_interface.load_macroscopic_parameters()
@@ -124,6 +124,7 @@ def run_from_quench(other_sim_directory, desired_rho):
         n_row = 50 * n_factor
         n_col = 18 * n_factor
     else:
+        assert IC == 'square'
         n_row = 30 * n_factor
         n_col = 30 * n_factor
 
@@ -136,9 +137,14 @@ def run_from_quench(other_sim_directory, desired_rho):
     initial_arr.add_third_dimension_for_sphere(l_z)
     initial_arr.append_sphere([Sphere(c, rad) for c in centers])
     assert initial_arr.legal_configuration()
-    initial_arr.quench(desired_rho)
+    try:
+        initial_arr.quench(desired_rho)
+    except:
+        files_interface.boundaries = initial_arr.boundaries
+        files_interface.array_of_cells_snapshot('Quench failed', initial_arr, 'QUENCH_FAILED')
+        raise
     os.system('echo \'Taken from' + other_sim_directory + ', file ' + str(ind) + '. Quenched successfully to rho=' +
-              str(desired_rho) + '\' > ' + prefix + sim_name + '/QUENCHED')
+              str(desired_rho) + '\' > ' + prefix + 'out/' + sim_name + '.QUENCHED')
     return run_sim(initial_arr, N, h, desired_rho, total_step, sim_name)
 
 
@@ -180,5 +186,5 @@ if len(args) == 5:
             run_honeycomb(h, n_row, n_col, rho_H)
 else:
     action, other_sim_dir, desired_rho = args[0], args[1], float(args[2])
-    assert action == 'quench'  # must have one more arguments
+    assert action == 'quench'
     run_from_quench(other_sim_dir, desired_rho)

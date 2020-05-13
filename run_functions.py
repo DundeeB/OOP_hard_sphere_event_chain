@@ -111,7 +111,7 @@ def run_honeycomb(h, n_row, n_col, rho_H):
 def run_from_quench(other_sim_directory, desired_rho):
     # More physical properties calculated from Input
     physical_info = re.split('[=_]', other_sim_directory)
-    N, h, IC = int(physical_info[1]), float(physical_info[3]), physical_info[-2]
+    N, h = int(physical_info[1]), float(physical_info[3])
     sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(desired_rho) + '_from_quench_ECMC'
     prefix = '/storage/ph_daniel/danielab/ECMC_simulation_results/'
     if os.path.exists(prefix + sim_name):
@@ -119,23 +119,16 @@ def run_from_quench(other_sim_directory, desired_rho):
     other_sim_path = prefix + other_sim_directory
     files_interface = WriteOrLoad(other_sim_path, boundaries=[])
     l_x, l_y, l_z, rad, _ = files_interface.load_macroscopic_parameters()
-    n_factor = int(N / 900)
-    if IC == 'triangle':
-        n_row = 50 * n_factor
-        n_col = 18 * n_factor
-    else:
-        assert IC == 'square'
-        n_row = 30 * n_factor
-        n_col = 30 * n_factor
+    edge = 2 * rad
+    n_row = int(np.ceil(l_y / edge))
+    n_col = int(np.ceil(l_x / edge))
 
     centers, ind = files_interface.last_spheres()
-    edge = max(l_x / n_col, l_y / n_row)
-    assert edge * n_col == l_x and edge * n_row == l_y, "Failed to reconstruct boundaries. l_x=" + str(
-        l_x) + ", l_y=" + str(l_y) + ". Calculated edge=" + str(edge)
     a = np.sqrt(l_x * l_y / N)
     total_step = a * np.sqrt(n_row) * 0.05
 
     initial_arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col)
+    initial_arr.boundaries = CubeBoundaries([l_x, l_y], 2 * [BoundaryType.CYCLIC])
     initial_arr.add_third_dimension_for_sphere(l_z)
     initial_arr.append_sphere([Sphere(c, rad) for c in centers])
     assert initial_arr.legal_configuration()

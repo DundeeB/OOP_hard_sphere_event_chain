@@ -130,6 +130,8 @@ def run_from_quench(other_sim_directory, desired_rho):
 
     centers, ind = files_interface.last_spheres()
     edge = max(l_x / n_col, l_y / n_row)
+    assert edge * n_col == l_x and edge * n_row == l_y, "Failed to reconstruct boundaries. l_x=" + str(
+        l_x) + ", l_y=" + str(l_y) + ". Calculated edge=" + str(edge)
     a = np.sqrt(l_x * l_y / N)
     total_step = a * np.sqrt(n_row) * 0.05
 
@@ -141,10 +143,10 @@ def run_from_quench(other_sim_directory, desired_rho):
         initial_arr.quench(desired_rho)
     except:
         files_interface.boundaries = initial_arr.boundaries
-        files_interface.array_of_cells_snapshot('Quench failed', initial_arr, 'QUENCH_FAILED')
+        files_interface.dump_spheres(initial_arr.all_centers, 'Quench_failed_lx=' + str(l_x) + '_ly=' + str(l_y))
         raise
-    os.system('echo \'Taken from' + other_sim_directory + ', file ' + str(ind) + '. Quenched successfully to rho=' +
-              str(desired_rho) + '\' > ' + prefix + 'out/' + sim_name + '.QUENCHED')
+    print('Taken from' + other_sim_directory + ', file ' + str(ind) + '. Quenched successfully to rho=' +
+          str(desired_rho))
     return run_sim(initial_arr, N, h, desired_rho, total_step, sim_name)
 
 

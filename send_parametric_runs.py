@@ -35,7 +35,7 @@ def quench_single_run_envelope(action, other_sim_dir, desired_rho):
     time.sleep(2.0)
 
 
-for desired_rho in [0.87, 0.88, 0.89, 0.90, 0.91]:
+for desired_rho in [0.87]:  # [0.87, 0.88, 0.89, 0.90, 0.91]:
     sim_for_quench = 'N=8100_h=0.8_rhoH=0.85_AF_triangle_ECMC'
     action = 'quench'
     quench_single_run_envelope(action, sim_for_quench, desired_rho)

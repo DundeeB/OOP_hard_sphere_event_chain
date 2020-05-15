@@ -60,7 +60,7 @@ class Step:
         :return: Event object containing the information about the event about to happen after the step, such as step
         size or step type (wall free or boundary), and the current step
         """
-        sphere, total_step, v_hat, current_step = self.sphere, self.total_step, self.v_hat, self.current_step
+        sphere, total_step, v_hat = self.sphere, self.total_step, self.v_hat
         min_dist_to_wall, closest_wall = Metric.dist_to_boundary(sphere, total_step, v_hat, self.boundaries)
         closest_sphere = []
         closest_sphere_dist = float('inf')
@@ -71,22 +71,23 @@ class Step:
             if sphere_dist < closest_sphere_dist:
                 closest_sphere_dist = sphere_dist
                 closest_sphere = other_sphere
-        if np.isnan(current_step): current_step = float('inf')
-        m = min(min_dist_to_wall, closest_sphere_dist, total_step, current_step)
+        if np.isnan(self.current_step): self.current_step = float('inf')
+        m = min(min_dist_to_wall, closest_sphere_dist, total_step, self.current_step)
         # it hits a wall
         if m == min_dist_to_wall:
             self.current_step = min_dist_to_wall
-            return Event(EventType.WALL, [], closest_wall), min_dist_to_wall
+            return Event(EventType.WALL, [], closest_wall)
         # it hits another sphere
         if m == closest_sphere_dist:
             self.current_step = closest_sphere_dist
-            return Event(EventType.COLLISION, closest_sphere, []), closest_sphere_dist
+            return Event(EventType.COLLISION, closest_sphere, [])
         # it hits nothing, both min_dist_to_wall and closest_sphere_dist are inf
         if m == total_step:
             self.current_step = total_step
-            return Event(EventType.FREE, [], []), total_step
+            return Event(EventType.FREE, [], [])
         else:  # total_step > current_step
-            return Event(EventType.PASS, [], []), current_step
+            return Event(EventType.PASS, [], [])  # do not update step.current_step, because next step is PASS and he
+            # would not actually perform total step
 
 
 class Event2DCells(ArrayOfCells):
@@ -175,6 +176,8 @@ class Event2DCells(ArrayOfCells):
     def perform_total_step(self, i, j, step: Step, draw=None):
         """
         Perform step for all the spheres, starting from sphere inside cell
+        :param i: indices of the cell containing the sphere trying to make a move
+        :param j: indices of the cell containing the sphere trying to make a move
         :type step: Step
         :type draw: WriteOrLoad
         """
@@ -198,7 +201,7 @@ class Event2DCells(ArrayOfCells):
         for c in relevant_cells:
             for s in c.spheres: other_spheres.append(s)
         step.current_step = self.maximal_free_step(i, j, step)
-        event, current_step = step.next_event(other_spheres)
+        event = step.next_event(other_spheres)  # updates step.current_step
 
         assert event is not None and not np.isnan(step.current_step)
 
@@ -219,7 +222,7 @@ class Event2DCells(ArrayOfCells):
                 if new_cell.center_in_cell(event.other_sphere):
                     flag = not None
                     break
-            assert flag is not None, "Did not find new cell for the collided sphere"
+            assert flag is not None, "Didn't find new cell for the collided sphere"
             step.sphere = event.other_sphere
             i_n, j_n = new_cell.ind[:2]
             self.perform_total_step(i_n, j_n, step, draw)

@@ -181,59 +181,59 @@ class Event2DCells(ArrayOfCells):
         :type step: Step
         :type draw: WriteOrLoad
         """
-        if draw is not None:
-            if draw.counter is not None:
-                draw.counter += 1
-                img_name = str(draw.counter)
-            else:
-                img_name = 'total_step=' + str(round(step.total_step, 4))
-            draw.array_of_cells_snapshot('During step snapshot, total_step=' + str(step.total_step),
-                                         self, img_name, step)
-            draw.dump_spheres(self.all_centers, img_name)
+        while step.total_step > 0:
+            if draw is not None:
+                if draw.counter is not None:
+                    draw.counter += 1
+                    img_name = str(draw.counter)
+                else:
+                    img_name = 'total_step=' + str(round(step.total_step, 4))
+                draw.array_of_cells_snapshot('During step snapshot, total_step=' + str(step.total_step),
+                                             self, img_name, step)
+                draw.dump_spheres(self.all_centers, img_name)
 
-        sphere, total_step, v_hat, cell = step.sphere, step.total_step, step.v_hat, self.cells[i][j]
-        step.current_step = np.nan
-        v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
-        cell.remove_sphere(sphere)
+            sphere, total_step, v_hat, cell = step.sphere, step.total_step, step.v_hat, self.cells[i][j]
+            step.current_step = np.nan
+            v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
+            cell.remove_sphere(sphere)
 
-        relevant_cells = [self.cells[i][j]] + self.neighbors(i, j)
-        other_spheres = []
-        for c in relevant_cells:
-            for s in c.spheres: other_spheres.append(s)
-        step.current_step = self.maximal_free_step(i, j, step)
-        event = step.next_event(other_spheres)  # updates step.current_step
+            relevant_cells = [self.cells[i][j]] + self.neighbors(i, j)
+            other_spheres = []
+            for c in relevant_cells:
+                for s in c.spheres: other_spheres.append(s)
+            step.current_step = self.maximal_free_step(i, j, step)
+            event = step.next_event(other_spheres)  # updates step.current_step
 
-        assert event is not None and not np.isnan(step.current_step)
+            assert event is not None and not np.isnan(step.current_step)
 
-        step.perform_step()  # also subtract current step from total step
+            step.perform_step()  # also subtract current step from total step
 
-        new_cell, flag = None, None
-        for new_cell in relevant_cells:
-            if new_cell.center_in_cell(sphere):
-                new_cell.append(sphere)
-                flag = not None
-                break
-        assert flag is not None, "sphere has not been added to any cell"
-        i_n, j_n = new_cell.ind[:2]
-
-        if event.event_type == EventType.COLLISION:
             new_cell, flag = None, None
             for new_cell in relevant_cells:
-                if new_cell.center_in_cell(event.other_sphere):
+                if new_cell.center_in_cell(sphere):
+                    new_cell.append(sphere)
                     flag = not None
                     break
-            assert flag is not None, "Didn't find new cell for the collided sphere"
-            step.sphere = event.other_sphere
-            i_n, j_n = new_cell.ind[:2]
-            self.perform_total_step(i_n, j_n, step, draw)
-            return
-        if event.event_type == EventType.WALL:
-            step.v_hat = CubeBoundaries.flip_v_hat_at_wall(event.wall, sphere, v_hat)
-            self.perform_total_step(i_n, j_n, step, draw)
-            return
-        if event.event_type == EventType.PASS:
-            self.perform_total_step(i_n, j_n, step, draw)
-        if event.event_type == EventType.FREE: return
+            assert flag is not None, "sphere has not been added to any cell"
+            i, j = new_cell.ind[:2]
+
+            if event.event_type == EventType.COLLISION:
+                new_cell, flag = None, None
+                for new_cell in relevant_cells:
+                    if new_cell.center_in_cell(event.other_sphere):
+                        flag = not None
+                        break
+                assert flag is not None, "Didn't find new cell for the collided sphere"
+                step.sphere = event.other_sphere
+                i, j = new_cell.ind[:2]
+                continue
+            if event.event_type == EventType.WALL:
+                step.v_hat = CubeBoundaries.flip_v_hat_at_wall(event.wall, sphere, v_hat)
+                continue
+            if event.event_type == EventType.PASS:
+                continue
+            if event.event_type == EventType.FREE:
+                return
 
     def generate_spheres_in_AF_triangular_structure(self, n_row, n_col, rad):
         """

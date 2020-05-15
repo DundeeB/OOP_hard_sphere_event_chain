@@ -309,21 +309,16 @@ class Event2DCells(ArrayOfCells):
 
     def quench(self, desired_rho):
         """
-        Slowly moving spheres far from the boundary conditions and slowly closing the boundary conditions until the
+        Moving spheres far from the boundary conditions andclosing the boundary conditions until the
         density becomes dest_rho. If dest_rho is larger then current rho we simply scale.
         Quite similiar to Simulated Annealing, and the method name could be annealing as well. As formally I simply
-        rapidly change the boundaries in order to get the desiered density, and Simulated Annealing is a bit more
-        specific then that, I chose the name quench.
+        rapidly change the boundaries in order to get the desiered density, with no equilibration in the proccess,
+        simulated Annealing is a bit more specific then that, I chose the name quench.
         :param desired_rho: density destination
-        :return:
         """
         N = len(self.all_spheres)
         rho = N * ((2 * self.all_spheres[0].rad) ** 3) / (self.l_x * self.l_y * self.l_z)
-        if desired_rho <= rho:  # scale system, everything will be farther and rho will go lower
-            factor = np.sqrt(rho / desired_rho)  # >= 1
-            self.scale_xy(factor)
-            return
-        else:  # we need to compress
+        while rho < desired_rho:  # we need to compress
             min_x, i_min_x = min((s.center[0] - s.rad, i_sp) for (i_sp, s) in enumerate(self.all_spheres))
             max_x, i_max_x = max((s.center[0] + s.rad, i_sp) for (i_sp, s) in enumerate(self.all_spheres))
             min_y, i_min_y = min((s.center[1] - s.rad, i_sp) for (i_sp, s) in enumerate(self.all_spheres))
@@ -342,7 +337,6 @@ class Event2DCells(ArrayOfCells):
                     all_spheres[i_sp].box_it(self.boundaries)
                 self.append_sphere(all_spheres)
                 assert self.legal_configuration()
-                return self.quench(desired_rho)
             else:  # we must move spheres around before squizzing
                 v_hats = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0]]
                 indices = [i_min_x, i_max_x, i_min_y, i_max_y]
@@ -357,4 +351,7 @@ class Event2DCells(ArrayOfCells):
                             break
                     i, j = cell.ind[:2]
                     self.perform_total_step(i, j, step)
-                return self.quench(desired_rho)
+            rho = N * ((2 * self.all_spheres[0].rad) ** 3) / (self.l_x * self.l_y * self.l_z)
+        if rho > desired_rho:
+            factor = np.sqrt(rho / desired_rho)  # >= 1
+            self.scale_xy(factor)

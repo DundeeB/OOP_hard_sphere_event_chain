@@ -345,7 +345,7 @@ class Event2DCells(ArrayOfCells):
                 indices = [i_min_x, i_max_x, i_min_y, i_max_y]
                 for i_sp, v_hat in zip(indices, v_hats):
                     sphere = self.all_spheres[i_sp]
-                    total_step = sphere.rad
+                    total_step = 10*sphere.rad
                     step = Step(sphere, total_step, v_hat, self.boundaries)
                     cell = []
                     for c in self.all_cells:

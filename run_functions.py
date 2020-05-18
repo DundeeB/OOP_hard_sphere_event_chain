@@ -98,7 +98,7 @@ def run_honeycomb(h, n_row, n_col, rho_H):
     l_y = n_row_cells * e
     a = np.sqrt(l_x * l_y / N)
     rho_H_new = (sig ** 2) / ((a ** 2) * (h + 1))
-    total_step = a * np.sqrt(n_row) * 0.05
+    total_step = a * n_row
 
     initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)
     initial_arr.add_third_dimension_for_sphere((h + 1) * sig)
@@ -125,7 +125,7 @@ def run_from_quench(other_sim_directory, desired_rho):
 
     centers, ind = files_interface.last_spheres()
     a = np.sqrt(l_x * l_y / N)
-    total_step = a * np.sqrt(n_row) * 0.05
+    total_step = a * n_row
 
     initial_arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col)
     initial_arr.boundaries = CubeBoundaries([l_x, l_y], 2 * [BoundaryType.CYCLIC])
@@ -159,7 +159,7 @@ def run_square(h, n_row, n_col, rho_H):
     l_x = n_col_cells * e
     l_y = n_row_cells * e
     a_free = ((l_x * l_y * H - 4 * np.pi / 3 * (r ** 3)) / N) ** (1 / 3)
-    total_step = a_free * np.sqrt(n_row) / 10  # avoid maximal depth recursion error by division over 10
+    total_step = a_free * n_row  # avoid maximal depth recursion error by division over 10
 
     # construct array of cells and fill with spheres
     initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)

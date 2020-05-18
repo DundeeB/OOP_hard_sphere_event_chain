@@ -39,6 +39,7 @@ for desired_rho in [0.87, 0.88, 0.89, 0.90, 0.91]:
     sim_for_quench = 'N=8100_h=0.8_rhoH=0.85_AF_triangle_ECMC'
     action = 'quench'
     quench_single_run_envelope(action, sim_for_quench, desired_rho)
+quench_single_run_envelope('quench', ' N=900_h=0.8_rhoH=0.65_AF_triangle_ECMC', 0.7)
 
 rho_H_arr = [0.7, 0.85, 0.86, 0.87, 0.88, 0.885, 0.89, 0.895, 0.9, 0.91, 0.92]
 for h in [1, 0.8]:  # , 0.7]:
@@ -50,3 +51,5 @@ for h in [1, 0.8]:  # , 0.7]:
             n_row = 50 * n_factor
             n_col = 18 * n_factor
             send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')
+send_single_run_envelope(h, 60, 60, 0.88, 'square')
+send_single_run_envelope(h, 100, 36, 0.88, 'honeycomb')

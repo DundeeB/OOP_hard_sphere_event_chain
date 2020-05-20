@@ -208,13 +208,7 @@ class Event2DCells(ArrayOfCells):
 
             step.perform_step()  # also subtract current step from total step
 
-            new_cell, flag = None, None
-            for new_cell in relevant_cells:
-                if new_cell.center_in_cell(sphere):
-                    new_cell.append(sphere)
-                    flag = not None
-                    break
-            assert flag is not None, "sphere has not been added to any cell"
+            new_cell = self.append_sphere(sphere)
             i, j = new_cell.ind[:2]
 
             if event.event_type == EventType.COLLISION:
@@ -328,11 +322,15 @@ class Event2DCells(ArrayOfCells):
             max_y, i_max_y = max((s.center[1] + s.rad, i_sp) for (i_sp, s) in enumerate(self.all_spheres))
             new_lx = max_x - min_x
             new_ly = max_y - min_y
-            if new_lx < self.l_x and new_ly < self.l_z:  # we have some space to squizz
-                vec_to_zero = np.array([min_x, min_y])
+            if new_lx < self.l_x or new_ly < self.l_y:  # we have some space to squizz
+                vec_to_zero = np.array([0, 0])
+                if new_lx < self.l_x:
+                    vec_to_zero[0] = min_x
+                    self.l_x = new_lx
+                if new_ly < self.l_y:
+                    vec_to_zero[1] = min_y
+                    self.l_y = new_lx
                 all_spheres = self.translate(vec_to_zero)  # emptied all spheres from self
-                self.l_x = new_lx
-                self.l_y = new_ly
                 self.boundaries = CubeBoundaries([self.l_x, self.l_y], [BoundaryType.CYCLIC, BoundaryType.CYCLIC])
                 if not np.isnan(self.l_z):
                     self.add_third_dimension_for_sphere(self.l_z)
@@ -341,17 +339,17 @@ class Event2DCells(ArrayOfCells):
                 self.append_sphere(all_spheres)
                 assert self.legal_configuration()
             else:  # we must move spheres around before squizzing
-                v_hats = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0]]
-                indices = [i_min_x, i_max_x, i_min_y, i_max_y]
+                t = np.random.random() * np.pi / 2 + np.pi / 4
+                ts = [t, t - np.pi / 2, t - np.pi, t + np.pi / 2]
+                phi = np.random.random() * np.pi
+                v_hats = [[np.cos(t) * np.cos(phi), np.sin(t) * np.cos(phi), np.sin(phi)] for t in ts]
+                indices = [i_min_y, i_min_x, i_max_y, i_max_x]
                 for i_sp, v_hat in zip(indices, v_hats):
                     sphere = self.all_spheres[i_sp]
-                    total_step = 10*sphere.rad
+                    # total_step = 10 * sphere.rad
+                    total_step = sphere.rad / 2
                     step = Step(sphere, total_step, v_hat, self.boundaries)
-                    cell = []
-                    for c in self.all_cells:
-                        if c.center_in_cell(sphere):
-                            cell = c
-                            break
+                    cell = self.append_sphere(sphere)
                     i, j = cell.ind[:2]
                     self.perform_total_step(i, j, step)
             rho = N * ((2 * self.all_spheres[0].rad) ** 3) / (self.l_x * self.l_y * self.l_z)

@@ -659,15 +659,34 @@ class ArrayOfCells:
         if type(spheres) != list:
             assert type(spheres) == Sphere
             spheres = [spheres]
+        cells = []
         for sphere in spheres:
             sp_added_to_cell = False
-            for c in self.all_cells:
-                if c.center_in_cell(sphere):
-                    c.append(sphere)
-                    sp_added_to_cell = True
-                    break
+            i_likely, j_likely = int(np.floor(sphere.center[1] / self.edge)), int(
+                np.floor(sphere.center[0] / self.edge))
+            if self.cells[i_likely][j_likely].center_in_cell(sphere):
+                self.cells[i_likely][j_likely].append(sphere)
+                cells.append(self.cells[i_likely][j_likely])
+                sp_added_to_cell = True
+            else:
+                for c in self.neighbors(i_likely, j_likely):
+                    if c.center_in_cell(sphere):
+                        c.append(sphere)
+                        cells.append(c)
+                        sp_added_to_cell = True
+                        break
+            if not sp_added_to_cell:
+                for c in self.all_cells:
+                    if c.center_in_cell(sphere):
+                        c.append(sphere)
+                        cells.append(c)
+                        sp_added_to_cell = True
+                        break
             if not sp_added_to_cell:
                 raise ValueError("A sphere was not added to any of the cells")
+        if len(cells) == 1:
+            return cells[0]
+        return cells
 
     @staticmethod
     def spheres_in_triangular(n_row, n_col, rad, l_x, l_y):

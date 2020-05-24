@@ -715,7 +715,7 @@ class ArrayOfCells:
         transferred_spheres = []
         for c in self.all_cells:
             for s in c.spheres:
-                c.remove(s)
+                c.remove_sphere(s)
                 for i in range(min(len(s.center), len(vec))):
                     s.center[i] += vec[i]
                 transferred_spheres.append(s)

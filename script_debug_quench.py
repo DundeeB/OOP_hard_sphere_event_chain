@@ -2,9 +2,11 @@ from EventChainActions import *
 from SnapShot import WriteOrLoad
 import numpy as np
 
-r, sig, l_x, l_y, l_z = 1.0, 2.0, 132.63770271305015, 159.65649400644926, 2.0 * (1 + 0.8)
+# r, sig, l_x, l_y, l_z = 1.0, 2.0, 132.63770271305015, 159.65649400644926, 2.0 * (1 + 0.8)
+r, sig, l_x, l_y, l_z = 1.0, 2.0, 150, 170, 2.0 * (1 + 0.8)
 edge = 2
 n_rows, n_columns = int(np.ceil(l_y / edge)), int(np.ceil(l_x / edge))
+l_x, l_y = n_columns * edge, n_rows * edge
 
 initial_arr = Event2DCells(edge, n_rows, n_columns)
 initial_arr.boundaries = CubeBoundaries([l_x, l_y], 2 * [BoundaryType.CYCLIC])

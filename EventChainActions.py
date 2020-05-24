@@ -150,7 +150,12 @@ class Event2DCells(ArrayOfCells):
         """
         p, v_hat, e, c, r = step.sphere.center, step.v_hat, self.edge, self.cells[i][j].site, step.sphere.rad
         xp, xm, yp, ym = c[0] + 2 * e, c[0] - e, c[1] + 2 * e, c[1] - e
-        # ip1, jp1, im1, jm1 = Event2DCells.cyclic_indices(i, j, self.n_rows, self.n_columns)
+        if c[0] + e > self.l_x:
+            dl = c[0] + e - self.l_x
+            xp -= dl
+        if c[1] + e > self.l_y:
+            dl = c[1] + e - self.l_y
+            yp -= dl
         if v_hat[0] >= 0:
             x = xp - 2 * r
         else:
@@ -192,12 +197,24 @@ class Event2DCells(ArrayOfCells):
                                              self, img_name, step)
                 draw.dump_spheres(self.all_centers, img_name)
 
-            sphere, total_step, v_hat, cell = step.sphere, step.total_step, step.v_hat, self.cells[i][j]
+            sphere, v_hat, cell = step.sphere, step.v_hat, self.cells[i][j]
             step.current_step = np.nan
             v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
             cell.remove_sphere(sphere)
 
             relevant_cells = [self.cells[i][j]] + self.neighbors(i, j)
+            x, y = cell.center[:2]
+            e = self.edge
+            ip1, jp1, im1, jm1 = self.cyclic_indices(i, j, self.n_rows, self.n_columns)
+            if (jp1 != 0 and x + 2 * e > self.l_x) or (ip1 != 0 and y + 2 * e > self.l_y):
+                if jp1 != 0 and x + 2 * e > self.l_x:
+                    for c in [self.cells[ip1][0], self.cells[i][0], self.cells[im1][0]]:
+                        if c not in relevant_cells:
+                            relevant_cells.append(c)
+                if ip1 != 0 and y + 2 * e > self.l_y:
+                    for c in [self.cells[0][jp1], self.cells[0][j], self.cells[0][jm1]]:
+                        if c not in relevant_cells:
+                            relevant_cells.append(c)
             other_spheres = []
             for c in relevant_cells:
                 for s in c.spheres: other_spheres.append(s)
@@ -325,10 +342,10 @@ class Event2DCells(ArrayOfCells):
             if new_lx < self.l_x or new_ly < self.l_y:  # we have some space to squizz
                 vec_to_zero = np.array([0, 0])
                 if new_lx < self.l_x:
-                    vec_to_zero[0] = min_x
+                    vec_to_zero[0] = -min_x
                     self.l_x = new_lx
                 if new_ly < self.l_y:
-                    vec_to_zero[1] = min_y
+                    vec_to_zero[1] = -min_y
                     self.l_y = new_lx
                 all_spheres = self.translate(vec_to_zero)  # emptied all spheres from self
                 self.boundaries = CubeBoundaries([self.l_x, self.l_y], [BoundaryType.CYCLIC, BoundaryType.CYCLIC])

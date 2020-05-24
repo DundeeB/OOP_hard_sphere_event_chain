@@ -573,7 +573,7 @@ class ArrayOfCells:
                           self.cells[ip1][jp1], self.cells[i][jp1],
                           self.cells[i][jm1], self.cells[im1][jm1],
                           self.cells[im1][j], self.cells[im1][jp1]]
-        # First for are top and to the right, then to the left and bottom.
+        # First four are top and to the right, then to the left and bottom ones.
         # For efficient legal_configuration implementation
         return neighbor_cells
 
@@ -715,9 +715,9 @@ class ArrayOfCells:
         transferred_spheres = []
         for c in self.all_cells:
             for s in c.spheres:
+                c.remove(s)
                 for i in range(min(len(s.center), len(vec))):
-                    c.remove(s)
-                    s.center += vec[i]
-                    transferred_spheres.append(s)
+                    s.center[i] += vec[i]
+                transferred_spheres.append(s)
         # self.append_sphere(transferred_spheres)
         return transferred_spheres

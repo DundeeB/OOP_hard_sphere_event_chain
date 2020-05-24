@@ -463,10 +463,7 @@ class ArrayOfCells:
         """
         :return: list of all the centers (d-dimension vectors) of all the Sphere objects in the simulation.
         """
-        centers = []
-        for sphere in self.all_spheres:
-            centers.append(sphere.center)
-        return centers
+        return [sphere.center for sphere in self.all_spheres]
 
     def overlap_2_cells(self, cell1: Cell, cell2: Cell):
         """
@@ -713,11 +710,12 @@ class ArrayOfCells:
         :return: transfered spheres, after removing all spheres from the array of cells
         """
         transferred_spheres = []
+        vec = np.array(vec)
         for c in self.all_cells:
             for s in c.spheres:
-                c.remove_sphere(s)
                 for i in range(min(len(s.center), len(vec))):
                     s.center[i] += vec[i]
                 transferred_spheres.append(s)
+                c.remove_sphere(s)
         # self.append_sphere(transferred_spheres)
         return transferred_spheres

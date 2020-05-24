@@ -340,13 +340,13 @@ class Event2DCells(ArrayOfCells):
             new_lx = max_x - min_x
             new_ly = max_y - min_y
             if new_lx < self.l_x or new_ly < self.l_y:  # we have some space to squizz
-                vec_to_zero = np.array([0, 0])
+                vec_to_zero = np.array([0.0, 0.0])
                 if new_lx < self.l_x:
                     vec_to_zero[0] = -min_x
                     self.l_x = new_lx
                 if new_ly < self.l_y:
                     vec_to_zero[1] = -min_y
-                    self.l_y = new_lx
+                    self.l_y = new_ly
                 all_spheres = self.translate(vec_to_zero)  # emptied all spheres from self
                 self.boundaries = CubeBoundaries([self.l_x, self.l_y], [BoundaryType.CYCLIC, BoundaryType.CYCLIC])
                 if not np.isnan(self.l_z):

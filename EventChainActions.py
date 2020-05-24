@@ -203,7 +203,7 @@ class Event2DCells(ArrayOfCells):
             cell.remove_sphere(sphere)
 
             relevant_cells = [self.cells[i][j]] + self.neighbors(i, j)
-            x, y = cell.center[:2]
+            x, y = cell.site[:2]
             e = self.edge
             ip1, jp1, im1, jm1 = self.cyclic_indices(i, j, self.n_rows, self.n_columns)
             if (jp1 != 0 and x + 2 * e > self.l_x) or (ip1 != 0 and y + 2 * e > self.l_y):

@@ -71,6 +71,7 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
 
         # save
         if (i + 1) % dn_save == 0 and i + 1 > equib_cycles:
+            assert arr.legal_configuration()
             files_interface.dump_spheres(arr.all_centers, str(i + 1))
         if (i + 1) % (N_iteration / 100) == 0:
             print(str(100 * (i + 1) / N_iteration) + "%", end=", ", file=sys.stdout)

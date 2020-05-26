@@ -249,6 +249,8 @@ class Event2DCells(ArrayOfCells):
                     if new_cell.center_in_cell(event.other_sphere):
                         flag = not None
                         break
+                if flag is None:
+                    print("Breakpoint!")
                 assert flag is not None, "Didn't find new cell for the collided sphere"
                 step.sphere = event.other_sphere
                 i, j = new_cell.ind[:2]
@@ -364,6 +366,7 @@ class Event2DCells(ArrayOfCells):
                     self.l_y = new_ly
                 all_spheres = self.translate(vec_to_zero)  # emptied all spheres from self
                 self.boundaries = CubeBoundaries([self.l_x, self.l_y], [BoundaryType.CYCLIC, BoundaryType.CYCLIC])
+                self.n_rows, self.n_columns = int(np.ceil(self.l_y / self.edge)), int(np.ceil(self.l_x / self.edge))
                 if not np.isnan(self.l_z):
                     self.add_third_dimension_for_sphere(self.l_z)
                 for i_sp in range(len(all_spheres)):

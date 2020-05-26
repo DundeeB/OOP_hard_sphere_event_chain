@@ -239,6 +239,8 @@ class Metric:
         :type boundaries: CubeBoundaries
         :return: distance for collision if the move is allowed, infty if move can not lead to collision
         """
+        if Metric.overlap(sphere1, sphere2, boundaries):
+            print("Breakpoint!")
         assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
             sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries.edges)
         d = sphere1.rad + sphere2.rad

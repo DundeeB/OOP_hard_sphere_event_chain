@@ -98,12 +98,13 @@ def run_honeycomb(h, n_row, n_col, rho_H):
     l_y = n_row_cells * e
     a = np.sqrt(l_x * l_y / N)
     rho_H_new = (sig ** 2) / ((a ** 2) * (h + 1))
-    total_step = a * n_row
+    total_step = a * n_col
 
     initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)
     initial_arr.add_third_dimension_for_sphere((h + 1) * sig)
     initial_arr.generate_spheres_in_AF_triangular_structure(n_row, n_col, r)
     initial_arr.scale_xy(np.sqrt(rho_H_new / rho_H))
+    assert initial_arr.edge > sig
     sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_triangle_ECMC'
     return run_sim(initial_arr, N, h, rho_H, total_step, sim_name)
 
@@ -119,7 +120,7 @@ def run_from_quench(other_sim_directory, desired_rho):
     other_sim_path = prefix + other_sim_directory
     files_interface = WriteOrLoad(other_sim_path, boundaries=[])
     l_x, l_y, l_z, rad, _ = files_interface.load_macroscopic_parameters()
-    edge = 2 * rad
+    edge = 3 * rad
     n_row = int(np.ceil(l_y / edge))
     n_col = int(np.ceil(l_x / edge))
 
@@ -130,6 +131,7 @@ def run_from_quench(other_sim_directory, desired_rho):
     initial_arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col)
     initial_arr.boundaries = CubeBoundaries([l_x, l_y], 2 * [BoundaryType.CYCLIC])
     initial_arr.add_third_dimension_for_sphere(l_z)
+    assert initial_arr.edge > 2*rad
     initial_arr.append_sphere([Sphere(c, rad) for c in centers])
     assert initial_arr.legal_configuration()
     try:
@@ -165,7 +167,7 @@ def run_square(h, n_row, n_col, rho_H):
     initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)
     initial_arr.add_third_dimension_for_sphere(H)
     initial_arr.generate_spheres_in_AF_square(n_row, n_col, r)
-
+    assert initial_arr.edge > sig
     sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_square_ECMC'
     return run_sim(initial_arr, N, h, rho_H, total_step, sim_name)
 

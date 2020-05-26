@@ -178,6 +178,33 @@ class Event2DCells(ArrayOfCells):
         t = min(tx, ty)
         return t
 
+    def relevant_cells_around(self, i, j, step):
+        relevant_cells = [self.cells[i][j]] + self.neighbors(i, j)
+        sphere, v_hat, cell = step.sphere, step.v_hat, self.cells[i][j]
+        x, y = cell.site[:2]
+        e = self.edge
+        ip1, jp1, im1, jm1 = self.cyclic_indices(i, j, self.n_rows, self.n_columns)
+        if (jp1 != 0 and x + 2 * e > self.l_x) or (ip1 != 0 and y + 2 * e > self.l_y):
+            if jp1 != 0 and x + 2 * e > self.l_x:
+                for c in [self.cells[ip1][0], self.cells[i][0], self.cells[im1][0]]:
+                    if c not in relevant_cells:
+                        relevant_cells.append(c)
+            if ip1 != 0 and y + 2 * e > self.l_y:
+                for c in [self.cells[0][jp1], self.cells[0][j], self.cells[0][jm1]]:
+                    if c not in relevant_cells:
+                        relevant_cells.append(c)
+        if e <= 2 * sphere.rad:
+            p_min = sphere.center - 2 * sphere.rad * np.array(v_hat)
+            p_max = sphere.center + 2 * sphere.rad * np.array(v_hat)
+            i1, j1 = self.closest_site_2d(p_min)
+            i2, j2 = self.closest_site_2d(p_max)
+            for i in range(min(i1, i2), max(i1, i2)):
+                for j in range(min(j1, j2), max(j1, j1)):
+                    c = self.cells[i][j]
+                    if c not in relevant_cells:
+                        relevant_cells.append(c)
+        return relevant_cells
+
     def perform_total_step(self, i, j, step: Step, draw=None):
         """
         Perform step for all the spheres, starting from sphere inside cell
@@ -202,19 +229,7 @@ class Event2DCells(ArrayOfCells):
             v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
             cell.remove_sphere(sphere)
 
-            relevant_cells = [self.cells[i][j]] + self.neighbors(i, j)
-            x, y = cell.site[:2]
-            e = self.edge
-            ip1, jp1, im1, jm1 = self.cyclic_indices(i, j, self.n_rows, self.n_columns)
-            if (jp1 != 0 and x + 2 * e > self.l_x) or (ip1 != 0 and y + 2 * e > self.l_y):
-                if jp1 != 0 and x + 2 * e > self.l_x:
-                    for c in [self.cells[ip1][0], self.cells[i][0], self.cells[im1][0]]:
-                        if c not in relevant_cells:
-                            relevant_cells.append(c)
-                if ip1 != 0 and y + 2 * e > self.l_y:
-                    for c in [self.cells[0][jp1], self.cells[0][j], self.cells[0][jm1]]:
-                        if c not in relevant_cells:
-                            relevant_cells.append(c)
+            relevant_cells = self.relevant_cells_around(i, j, step)
             other_spheres = []
             for c in relevant_cells:
                 for s in c.spheres: other_spheres.append(s)
@@ -253,21 +268,21 @@ class Event2DCells(ArrayOfCells):
         :param n_col: same, each triangular lattice has n_col columns
         :param rad: not a list, a single number of the same radius for all spheres
         """
-        assert (type(rad) != list, "list of different rads is not supported for initial condition AF triangular")
-        assert (self.dim == 3, "Anti Ferromagnetic inital conditions make no sense in 2D")
+        assert type(rad) != list, "list of different rads is not supported for initial condition AF triangular"
+        assert self.dim == 3, "Anti Ferromagnetic inital conditions make no sense in 2D"
         l_x, l_y, l_z = self.boundaries.edges
-        assert (n_row % 2 == 0, "n_row should be even for anti-ferromagnetic triangular Initial conditions")
+        assert n_row % 2 == 0, "n_row should be even for anti-ferromagnetic triangular Initial conditions"
         ay = 2 * l_y / n_row
         spheres_down = ArrayOfCells.spheres_in_triangular(int(n_row / 2), n_col, rad, l_x, l_y)
         spheres_up = ArrayOfCells.spheres_in_triangular(int(n_row / 2), n_col, rad, l_x, l_y)
         z_up = l_z - (1 + 10 * epsilon) * rad
         z_down = (1 + 10 * epsilon) * rad
         for s in spheres_down:
-            assert (type(s) == Sphere)
+            assert type(s) == Sphere
             cx, cy = s.center
             s.center = (cx, cy, z_down)
         for s in spheres_up:
-            assert (type(s) == Sphere)
+            assert type(s) == Sphere
             cx, cy = s.center
             s.center = (cx, cy + ay * 2 / 3, z_up)
             s.box_it(self.boundaries)
@@ -280,13 +295,13 @@ class Event2DCells(ArrayOfCells):
         :param n_spheres_per_cell: number of total sphere in each cell
         :param rad: not a list, a single number of the same radius for all spheres
         """
-        assert (type(rad) != list, "list of different rads is not supported for initial condition AF triangular")
-        assert (self.dim == 3, "Anti Ferromagnetic inital conditions make no sense in 2D")
+        assert type(rad) != list, "list of different rads is not supported for initial condition AF triangular"
+        assert self.dim == 3, "Anti Ferromagnetic inital conditions make no sense in 2D"
         sig = 2 * rad
         ax, ay = self.l_x / n_sp_col, self.l_y / n_sp_row
         a = min(ax, ay)
-        assert (a ** 2 + (self.l_z - sig) ** 2 > sig ** 2 and
-                4 * a ** 2 > sig ** 2, "Can not create so many spheres in the AF square lattice")
+        assert a ** 2 + (self.l_z - sig) ** 2 > sig ** 2 and 4 * a ** 2 > sig ** 2, \
+            "Can not create so many spheres in the AF square lattice"
         spheres = []
         for i in range(n_sp_row):
             for j in range(n_sp_col):
@@ -319,7 +334,7 @@ class Event2DCells(ArrayOfCells):
             cy = s.center[1] * factor
             # Not s.center[2]
             s.center = (cx, cy, s.center[2])
-        assert (self.legal_configuration(), "Scaling failed, illegal configuration")
+        assert self.legal_configuration(), "Scaling failed, illegal configuration"
 
     def quench(self, desired_rho):
         """

@@ -53,9 +53,9 @@ class CubeBoundaries:
         i'th unit vector. For example, boundary_type[0] = BoundaryType.CYCLIC means the plane perpendicular to x-hat,
         in 1D the two ends of the rope, in 2D the planes y=0,1 and in 3D the planes yz (x=0,1), are cyclic.
         """
-        assert (len(edges) == len(boundaries_type))
+        assert len(edges) == len(boundaries_type)
         for bound in boundaries_type:
-            assert (type(bound) == BoundaryType)
+            assert type(bound) == BoundaryType
         self.edges = edges
         self.boundaries_type = boundaries_type
         self.dim = len(edges)
@@ -117,7 +117,7 @@ class CubeBoundaries:
         :return: the smallest vector v s.t. v+point is on the plain of the wall
         """
         for w in plane:
-            assert (len(w) == len(point))
+            assert len(w) == len(point)
         d = len(point)
         p = np.array(point)
         v = [np.array(w) for w in plane]
@@ -128,7 +128,7 @@ class CubeBoundaries:
             return v[0] - p + t * (v[1] - v[0])
         if d == 3:
             # assume for now that edges are vertical so calculation is easier
-            assert (np.dot(v[2] - v[0], v[1] - v[0]) < epsilon)
+            assert np.dot(v[2] - v[0], v[1] - v[0]) < epsilon
             t = -np.dot(v[0] - p, v[1] - v[0]) / np.dot(v[1] - v[0], v[1] - v[0])
             s = -np.dot(v[0] - p, v[2] - v[0]) / np.dot(v[2] - v[0], v[2] - v[0])
             return v[0] - p + t * (v[1] - v[0]) + s * (v[2] - v[0])
@@ -239,10 +239,8 @@ class Metric:
         :type boundaries: CubeBoundaries
         :return: distance for collision if the move is allowed, infty if move can not lead to collision
         """
-        assert (
-            not Metric.overlap(sphere1, sphere2, boundaries),
-            "Overlap between:\nSphere1: " + str(sphere1.center) + "\nSphere2: " + str(
-                sphere2.center) + "\nBoundaries are: " + str(boundaries.edges))
+        assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
+            sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries.edges)
         d = sphere1.rad + sphere2.rad
         v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
         vectors = boundaries.boundary_transformed_vectors()
@@ -282,13 +280,13 @@ class Metric:
         """
         if sphere1 == sphere2: return False
         delta = Metric.cyclic_dist(boundaries, sphere1, sphere2) - (sphere1.rad + sphere2.rad)
-        if delta < -1e3 * epsilon:  # stabelize calculation by forgiving some penteration
+        if delta < -1e3 * epsilon:  # stabilizing calculation by forgiving some penetration
             return True
         else:
             if delta > 0:
                 return False
             else:
-                Warning("Spheres are epsilon close to each other, seperating them")
+                Warning("Spheres are epsilon close to each other, separating them")
                 dr_hat = sphere1.center - np.array(sphere2.center)
                 dr_hat = dr_hat / (np.linalg.norm(dr_hat))
                 sphere1.center = sphere1.center + np.abs(delta) * dr_hat
@@ -608,7 +606,7 @@ class ArrayOfCells:
                         r = sphere.rad
                         if c_y - r < -epsilon or c_y + r > self.boundaries.edges[1] + epsilon:
                             return False
-                for neighbor in self.neighbors(i, j)[0:4]:  # First four neighbors
+                for neighbor in self.neighbors(i, j):
                     if self.overlap_2_cells(cell, neighbor):
                         return False
         return True
@@ -687,11 +685,11 @@ class ArrayOfCells:
 
     @staticmethod
     def spheres_in_triangular(n_row, n_col, rad, l_x, l_y):
-        assert (type(rad) != list, "list of different rads is not supported for initial condition triangular")
+        assert type(rad) != list, "list of different rads is not supported for initial condition triangular"
         ax = l_x / (n_col + 1 / 2)
         ay = l_y / (n_row + 1)
-        assert (ax >= 2 * rad and ay / np.cos(np.pi / 6) >= 2 * rad,
-                "ferro triangle initial conditions are not defined for a<2*r, too many spheres")
+        assert ax >= 2 * rad and ay / np.cos(
+            np.pi / 6) >= 2 * rad, "ferro triangle initial conditions are not defined for a<2*r, too many spheres"
         spheres = []
         for i in range(n_row):
             for j in range(n_col):
@@ -716,6 +714,7 @@ class ArrayOfCells:
                 for i in range(min(len(s.center), len(vec))):
                     s.center[i] += vec[i]
                 transferred_spheres.append(s)
-                c.remove_sphere(s)
+        for c in self.all_cells:
+            c.spheres = []
         # self.append_sphere(transferred_spheres)
         return transferred_spheres

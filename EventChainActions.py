@@ -271,7 +271,7 @@ class Event2DCells(ArrayOfCells):
         :param rad: not a list, a single number of the same radius for all spheres
         """
         assert type(rad) != list, "list of different rads is not supported for initial condition AF triangular"
-        assert len(initial_arr.boundaries.boundaries_type)== 3, "Anti Ferromagnetic inital conditions make no sense in 2D"
+        assert len(self.boundaries.boundaries_type)== 3, "Anti Ferromagnetic inital conditions make no sense in 2D"
         l_x, l_y, l_z = self.boundaries.edges
         assert n_row % 2 == 0, "n_row should be even for anti-ferromagnetic triangular Initial conditions"
         ay = 2 * l_y / n_row
@@ -298,7 +298,7 @@ class Event2DCells(ArrayOfCells):
         :param rad: not a list, a single number of the same radius for all spheres
         """
         assert type(rad) != list, "list of different rads is not supported for initial condition AF triangular"
-        assert len(initial_arr.boundaries.boundaries_type) == 3, "Anti Ferromagnetic inital conditions make no sense in 2D"
+        assert len(self.boundaries.boundaries_type) == 3, "Anti Ferromagnetic inital conditions make no sense in 2D"
         sig = 2 * rad
         ax, ay = self.l_x / n_sp_col, self.l_y / n_sp_row
         a = min(ax, ay)

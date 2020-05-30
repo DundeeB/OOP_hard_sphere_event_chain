@@ -118,6 +118,7 @@ class Event2DCells(ArrayOfCells):
         self.l_z = l_z
         self.boundaries = CubeBoundaries(self.boundaries.edges + [l_z], \
                                          self.boundaries.boundaries_type + [BoundaryType.WALL])
+        self.dim = 3
         return
 
     def random_generate_spheres(self, n_spheres_per_cell, rad, extra_edges=[]):

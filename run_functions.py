@@ -14,6 +14,7 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
     equib_cycles = N * 100
     n_files_per_sim = 1000
     dn_save = int(round((N_iteration - equib_cycles) / n_files_per_sim))
+    rad = 1
 
     # Initialize View and folder, and add spheres
     code_dir = os.getcwd()
@@ -23,7 +24,7 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
     files_interface = WriteOrLoad(output_dir, initial_arr.boundaries)
     if os.path.exists(output_dir):
         last_centers, last_ind = files_interface.last_spheres()
-        sp = [Sphere(tuple(c), initial_arr.all_spheres[0].rad) for c in last_centers]
+        sp = [Sphere(tuple(c), rad) for c in last_centers]
         # construct array of cells and fill with spheres
         arr = Event2DCells(edge=initial_arr.edge, n_rows=initial_arr.n_rows, n_columns=initial_arr.n_columns)
         arr.add_third_dimension_for_sphere(initial_arr.l_z)
@@ -148,16 +149,14 @@ def run_from_quench(other_sim_directory, desired_rho):
     return run_sim(initial_arr, N, h, desired_rho, total_step, sim_name)
 
 
-def run_z_quench(other_sim_directory, desired_h):
+def run_z_quench(origin_sim, desired_h):
     # More physical properties calculated from Input
-    physical_info = re.split('[=_]', other_sim_directory)
+    physical_info = re.split('[=_]', origin_sim)
     N, h, rho_H = int(physical_info[1]), float(physical_info[3]), float(physical_info[5])
     desired_rho = rho_H * (h + 1) / (desired_h + 1)
     sim_name = 'N=' + str(N) + '_h=' + str(desired_h) + '_rhoH=' + str(desired_rho) + '_from_zquench_ECMC'
     prefix = '/storage/ph_daniel/danielab/ECMC_simulation_results/'
-    if os.path.exists(prefix + sim_name):
-        other_sim_directory = sim_name  # instead of re quenching, start from last file
-    other_sim_path = prefix + other_sim_directory
+    other_sim_path = prefix + origin_sim
     files_interface = WriteOrLoad(other_sim_path, boundaries=[])
     l_x, l_y, l_z, rad, _ = files_interface.load_macroscopic_parameters()
 
@@ -174,12 +173,15 @@ def run_z_quench(other_sim_directory, desired_h):
         + "edge=" + str(edge) + "\nn_row=" + str(n_row) + "\nn_col=" + str(
             n_col) + "\nWhile system size is:\nl_x=" + str(l_x) + "\nl_y=" + str(l_y)
 
-    centers, ind = files_interface.last_spheres()
     total_step = np.sqrt(l_x * l_y / N) * n_row
-
     initial_arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col)
     initial_arr.boundaries = CubeBoundaries([l_x, l_y], 2 * [BoundaryType.CYCLIC])
+    if os.path.exists(prefix + sim_name):
+        initial_arr.add_third_dimension_for_sphere((1+desired_h)*(2*rad))
+        return run_sim(initial_arr, N, desired_h, desired_rho, total_step, sim_name)
+
     initial_arr.add_third_dimension_for_sphere(l_z)
+    centers, ind = files_interface.last_spheres()
     assert initial_arr.edge > 2 * rad
     initial_arr.append_sphere([Sphere(c, rad) for c in centers])
     assert initial_arr.legal_configuration()
@@ -191,7 +193,7 @@ def run_z_quench(other_sim_directory, desired_h):
         files_interface.boundaries = initial_arr.boundaries
         files_interface.dump_spheres(initial_arr.all_centers, 'zQuench_failed_lz=' + str(initial_arr.l_z))
         raise
-    print('Taken from' + other_sim_directory + ', file ' + str(ind) + '. zQuenched successfully to rho=' +
+    print('Taken from' + origin_sim + ', file ' + str(ind) + '. zQuenched successfully to rho=' +
           str(desired_rho) + ', h=' + str(desired_h))
     return run_sim(initial_arr, N, desired_h, desired_rho, total_step, sim_name)
 

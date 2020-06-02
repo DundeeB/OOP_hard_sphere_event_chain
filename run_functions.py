@@ -132,7 +132,7 @@ def run_from_quench(other_sim_directory, desired_rho):
     initial_arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col)
     initial_arr.boundaries = CubeBoundaries([l_x, l_y], 2 * [BoundaryType.CYCLIC])
     initial_arr.add_third_dimension_for_sphere(l_z)
-    assert initial_arr.edge > 2*rad
+    assert initial_arr.edge > 2 * rad
     initial_arr.append_sphere([Sphere(c, rad) for c in centers])
     assert initial_arr.legal_configuration()
     try:
@@ -144,6 +144,45 @@ def run_from_quench(other_sim_directory, desired_rho):
     print('Taken from' + other_sim_directory + ', file ' + str(ind) + '. Quenched successfully to rho=' +
           str(desired_rho))
     return run_sim(initial_arr, N, h, desired_rho, total_step, sim_name)
+
+
+def run_z_quench(other_sim_directory, desired_h):
+    # More physical properties calculated from Input
+    physical_info = re.split('[=_]', other_sim_directory)
+    N, h, rho_H = int(physical_info[1]), float(physical_info[3]), float(physical_info[5])
+    desired_rho = rho_H * (h + 1) / (desired_h + 1)
+    sim_name = 'N=' + str(N) + '_h=' + str(desired_h) + '_rhoH=' + str(desired_rho) + '_from_zquench_ECMC'
+    prefix = '/storage/ph_daniel/danielab/ECMC_simulation_results/'
+    if os.path.exists(prefix + sim_name):
+        other_sim_directory = sim_name  # instead of re quenching, start from last file
+    other_sim_path = prefix + other_sim_directory
+    files_interface = WriteOrLoad(other_sim_path, boundaries=[])
+    l_x, l_y, l_z, rad, _ = files_interface.load_macroscopic_parameters()
+
+    n_factor = N / 900
+    n_row = 50 * n_factor
+    n_col = 18 * n_factor
+    edge = l_y / n_row
+    assert n_col == l_x / edge, "Only z quench from honeycomb with specific rows and colums is currently supported"
+
+    centers, ind = files_interface.last_spheres()
+    total_step = np.sqrt(l_x * l_y / N) * n_row
+
+    initial_arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col)
+    initial_arr.boundaries = CubeBoundaries([l_x, l_y], 2 * [BoundaryType.CYCLIC])
+    initial_arr.add_third_dimension_for_sphere(l_z)
+    assert initial_arr.edge > 2 * rad
+    initial_arr.append_sphere([Sphere(c, rad) for c in centers])
+    assert initial_arr.legal_configuration()
+    try:
+        initial_arr.z_quench((desired_h + 1) * (2 * rad))
+    except:
+        files_interface.boundaries = initial_arr.boundaries
+        files_interface.dump_spheres(initial_arr.all_centers, 'zQuench_failed_lz=' + str(initial_arr.l_z))
+        raise
+    print('Taken from' + other_sim_directory + ', file ' + str(ind) + '. zQuenched successfully to rho=' +
+          str(desired_rho) + ', h=' + str(desired_h))
+    return run_sim(initial_arr, N, desired_h, desired_rho, total_step, sim_name)
 
 
 def run_square(h, n_row, n_col, rho_H):
@@ -183,6 +222,9 @@ if len(args) == 5:
         if args[-1] == 'honeycomb':
             run_honeycomb(h, n_row, n_col, rho_H)
 else:
-    action, other_sim_dir, desired_rho = args[0], args[1], float(args[2])
-    assert action == 'quench'
-    run_from_quench(other_sim_dir, desired_rho)
+    action, other_sim_dir, desired_rho_or_h = args[0], args[1], float(args[2])
+    if action == 'quench':
+        run_from_quench(other_sim_dir, desired_rho_or_h)
+    else:
+        if action == 'zquench':
+            run_z_quench(other_sim_dir, desired_rho_or_h)

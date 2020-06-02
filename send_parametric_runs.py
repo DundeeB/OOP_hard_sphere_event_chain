@@ -24,9 +24,9 @@ def send_single_run_envelope(h, n_row, n_col, rhoH, initial_conditions):
     time.sleep(2.0)
 
 
-def quench_single_run_envelope(action, other_sim_dir, desired_rho):
-    params = "action=" + action + ",other_sim_dir=" + other_sim_dir + ",desired_rho=" + str(desired_rho)
-    sim_name = action + "_" + other_sim_dir + "_desired_rho=" + str(desired_rho)
+def quench_single_run_envelope(action, other_sim_dir, desired_rho_or_h):
+    params = "action=" + action + ",other_sim_dir=" + other_sim_dir + ",desired_rho_or_h=" + str(desired_rho_or_h)
+    sim_name = action + "_" + other_sim_dir + "_desired_rho_or_h=" + str(desired_rho_or_h)
     out_pwd = "/storage/ph_daniel/danielab/ECMC_simulation_results/out/" + sim_name + ".out"
     err_pwd = "/storage/ph_daniel/danielab/ECMC_simulation_results/out/" + sim_name + ".err"
     os.system("qsub -V -v " + params + " -N " + sim_name + " -o " + out_pwd + " -e " + err_pwd +
@@ -35,11 +35,12 @@ def quench_single_run_envelope(action, other_sim_dir, desired_rho):
     time.sleep(2.0)
 
 
-for desired_rho in [0.87, 0.88, 0.89, 0.90, 0.91]:
-    sim_for_quench = 'N=8100_h=0.8_rhoH=0.85_AF_triangle_ECMC'
-    action = 'quench'
-    quench_single_run_envelope(action, sim_for_quench, desired_rho)
-quench_single_run_envelope('quench', ' N=900_h=0.8_rhoH=0.65_AF_triangle_ECMC', 0.7)
+desired_h = 0.8
+for initial_rho in np.linspace(0.75, 0.85, 11):
+    sim_for_quench = 'N=8100_h=1.0_rhoH=' + str(initial_rho) + '_AF_triangle_ECMC'
+    action = 'zquench'
+    quench_single_run_envelope(action, sim_for_quench, desired_rho_or_h=desired_h)
+quench_single_run_envelope('zquench', ' N=900_h=1.0_rhoH=0.75_AF_triangle_ECMC', 0.8)
 
 rho_H_arr = [0.7, 0.85, 0.86, 0.87, 0.88, 0.89, 0.9, 0.91, 0.92, 0.93, 0.94, 0.95]
 for h in [1, 0.8]:  # , 0.7]:

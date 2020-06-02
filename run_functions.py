@@ -163,6 +163,7 @@ def run_z_quench(other_sim_directory, desired_h):
     n_col = 18 * n_factor
     edge = l_x / n_col
     n_row = int(l_y / edge)
+    if n_row*edge != l_y and (n_row+1)*edge == l_y: n_row += 1
     assert n_col * edge == l_x and n_row * edge == l_y, \
         "Only z quench from honeycomb with specific rows and colums is currently supported.\n Chosen parameters are:\n" \
         + "edge=" + str(edge) + "\nn_row=" + str(n_row) + "\nn_col=" + str(

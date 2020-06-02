@@ -5,6 +5,8 @@ from EventChainActions import *
 from SnapShot import WriteOrLoad
 import re
 
+epsilon = 1e-8
+
 
 def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
     # Numeric choices calibrated for fast convergence
@@ -163,7 +165,10 @@ def run_z_quench(other_sim_directory, desired_h):
     n_col = 18 * n_factor
     edge = l_x / n_col
     n_row = int(l_y / edge)
-    if n_row*edge != l_y and (n_row+1)*edge == l_y: n_row += 1
+    if np.abs(edge * n_row - l_y) > epsilon and np.abs(edge * (n_row + 1) - l_y) < epsilon: n_row += 1
+    if (edge * n_row != l_y or edge * n_col != l_x) and (
+            np.abs(edge * n_row - l_y) < epsilon and np.abs(edge * n_col - l_x) < epsilon):
+        l_x, l_y = edge * n_col, edge * n_row
     assert n_col * edge == l_x and n_row * edge == l_y, \
         "Only z quench from honeycomb with specific rows and colums is currently supported.\n Chosen parameters are:\n" \
         + "edge=" + str(edge) + "\nn_row=" + str(n_row) + "\nn_col=" + str(

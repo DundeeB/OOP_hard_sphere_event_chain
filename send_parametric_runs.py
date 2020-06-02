@@ -37,6 +37,7 @@ def quench_single_run_envelope(action, other_sim_dir, desired_rho_or_h):
 
 desired_h = 0.8
 for initial_rho in np.linspace(0.75, 0.85, 11):
+    initial_rho = round(initial_rho, 2)
     sim_for_quench = 'N=8100_h=1.0_rhoH=' + str(initial_rho) + '_AF_triangle_ECMC'
     action = 'zquench'
     quench_single_run_envelope(action, sim_for_quench, desired_rho_or_h=desired_h)

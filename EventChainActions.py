@@ -114,6 +114,39 @@ class Event2DCells(ArrayOfCells):
         self.l_y = l_y
         self.l_z = None
 
+    def append_sphere(self, spheres):
+        if type(spheres) != list:
+            assert type(spheres) == Sphere
+            spheres = [spheres]
+        cells = []
+        for sphere in spheres:
+            sp_added_to_cell = False
+            i_likely, j_likely = int(np.floor(sphere.center[1] / self.edge)), int(
+                np.floor(sphere.center[0] / self.edge))
+            if self.cells[i_likely][j_likely].center_in_cell(sphere):
+                self.cells[i_likely][j_likely].append(sphere)
+                cells.append(self.cells[i_likely][j_likely])
+                sp_added_to_cell = True
+            else:
+                for c in self.neighbors(i_likely, j_likely):
+                    if c.center_in_cell(sphere):
+                        c.append(sphere)
+                        cells.append(c)
+                        sp_added_to_cell = True
+                        break
+            if not sp_added_to_cell:
+                for c in self.all_cells:
+                    if c.center_in_cell(sphere):
+                        c.append(sphere)
+                        cells.append(c)
+                        sp_added_to_cell = True
+                        break
+            if not sp_added_to_cell:
+                raise ValueError("A sphere was not added to any of the cells")
+        if len(cells) == 1:
+            return cells[0]
+        return cells
+
     def add_third_dimension_for_sphere(self, l_z):
         self.l_z = l_z
         self.boundaries = CubeBoundaries(self.boundaries.edges + [l_z], \
@@ -271,7 +304,7 @@ class Event2DCells(ArrayOfCells):
         :param rad: not a list, a single number of the same radius for all spheres
         """
         assert type(rad) != list, "list of different rads is not supported for initial condition AF triangular"
-        assert len(self.boundaries.boundaries_type)== 3, "Anti Ferromagnetic inital conditions make no sense in 2D"
+        assert len(self.boundaries.boundaries_type) == 3, "Anti Ferromagnetic inital conditions make no sense in 2D"
         l_x, l_y, l_z = self.boundaries.edges
         assert n_row % 2 == 0, "n_row should be even for anti-ferromagnetic triangular Initial conditions"
         ay = 2 * l_y / n_row
@@ -391,3 +424,31 @@ class Event2DCells(ArrayOfCells):
         if rho > desired_rho:
             factor = np.sqrt(rho / desired_rho)  # >= 1
             self.scale_xy(factor)
+
+    def z_quench(self, desired_lz):
+        assert_exit = False
+        while self.l_z > desired_lz:
+            min_z, i_min_z = min((s.center[2] - s.rad, i_sp) for (i_sp, s) in enumerate(self.all_spheres))
+            for s in self.all_spheres:
+                s.center[2] -= min_z
+            max_z, i_max_z = max((s.center[2] + s.rad, i_sp) for (i_sp, s) in enumerate(self.all_spheres))
+            if max_z < desired_lz:
+                max_z = desired_lz
+                assert_exit = True
+            self.l_z = max_z
+            self.boundaries = CubeBoundaries([self.l_x, self.l_y], [BoundaryType.CYCLIC, BoundaryType.CYCLIC])
+            self.add_third_dimension_for_sphere(self.l_z)
+            txy = np.random.random() * 2 * np.pi
+            tz = np.random.random() * np.pi
+            v_hat = np.array([np.cos(txy) * np.cos(tz), np.sin(txy) * np.cos(tz), np.sin(tz)])
+            sp_down, sp_up = self.all_spheres[i_min_z], self.all_spheres[i_max_z]
+            # total_step = 10 * sp_up.rad
+            total_step = sp_up.rad / 2
+            step_down, step_up = Step(sp_down, total_step, v_hat, self.boundaries), Step(sp_up, total_step, -v_hat,
+                                                                                         self.boundaries)
+            cell_down, cell_up = self.append_sphere(sp_down), self.append_sphere(sp_up)
+            id, jd = cell_down.ind[:2]
+            self.perform_total_step(id, jd, step_down)
+            iu, ju = cell_up.ind[:2]
+            self.perform_total_step(iu, ju, step_up)
+            if assert_exit: return

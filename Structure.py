@@ -354,10 +354,13 @@ class Cell:
         :param new_spheres: list of Sphere objects to be added to the cell
         """
         if type(new_spheres) == list:
-            for sphere in new_spheres: self.spheres.append(sphere)
+            for sphere in new_spheres:
+                if sphere not in self.spheres:
+                    self.spheres.append(sphere)
         else:
             assert type(new_spheres) == Sphere
-            self.spheres.append(new_spheres)
+            if new_spheres not in self.spheres:
+                self.spheres.append(new_spheres)
 
     def remove_sphere(self, spheres_to_remove):
         """
@@ -659,26 +662,12 @@ class ArrayOfCells:
         cells = []
         for sphere in spheres:
             sp_added_to_cell = False
-            i_likely, j_likely = int(np.floor(sphere.center[1] / self.edge)), int(
-                np.floor(sphere.center[0] / self.edge))
-            if self.cells[i_likely][j_likely].center_in_cell(sphere):
-                self.cells[i_likely][j_likely].append(sphere)
-                cells.append(self.cells[i_likely][j_likely])
-                sp_added_to_cell = True
-            else:
-                for c in self.neighbors(i_likely, j_likely):
-                    if c.center_in_cell(sphere):
-                        c.append(sphere)
-                        cells.append(c)
-                        sp_added_to_cell = True
-                        break
-            if not sp_added_to_cell:
-                for c in self.all_cells:
-                    if c.center_in_cell(sphere):
-                        c.append(sphere)
-                        cells.append(c)
-                        sp_added_to_cell = True
-                        break
+            for c in self.all_cells:
+                if c.center_in_cell(sphere):
+                    c.append(sphere)
+                    cells.append(c)
+                    sp_added_to_cell = True
+                    break
             if not sp_added_to_cell:
                 raise ValueError("A sphere was not added to any of the cells")
         if len(cells) == 1:

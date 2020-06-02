@@ -164,7 +164,9 @@ def run_z_quench(other_sim_directory, desired_h):
     edge = l_x / n_col
     n_row = int(l_y / edge)
     assert n_col * edge == l_x and n_row * edge == l_y, \
-        "Only z quench from honeycomb with specific rows and colums is currently supported"
+        "Only z quench from honeycomb with specific rows and colums is currently supported.\n Chosen parameters are:\n" \
+        + "edge=" + str(edge) + "\nn_row=" + str(n_row) + "\nn_col=" + str(
+            n_col) + "\nWhile system size is:\nl_x=" + str(l_x) + "\nl_y=" + str(l_y)
 
     centers, ind = files_interface.last_spheres()
     total_step = np.sqrt(l_x * l_y / N) * n_row
@@ -175,6 +177,8 @@ def run_z_quench(other_sim_directory, desired_h):
     assert initial_arr.edge > 2 * rad
     initial_arr.append_sphere([Sphere(c, rad) for c in centers])
     assert initial_arr.legal_configuration()
+    assert len(initial_arr.all_spheres) == N, "Some spheres are missing. number of spheres added: " + str(
+        len(initial_arr.all_spheres))
     try:
         initial_arr.z_quench((desired_h + 1) * (2 * rad))
     except:

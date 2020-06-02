@@ -16,5 +16,7 @@ initial_arr.add_third_dimension_for_sphere(l_z)
 file_interface = WriteOrLoad('.', initial_arr.boundaries)
 initial_arr.append_sphere([Sphere(c, r) for c in file_interface.last_spheres()[0]])
 assert initial_arr.legal_configuration()
-desired_rho = 0.89
-initial_arr.quench(desired_rho)
+# desired_rho = 0.89
+# initial_arr.quench(desired_rho)
+desired_h = 0.75
+initial_arr.z_quench(desired_h)

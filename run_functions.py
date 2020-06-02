@@ -159,11 +159,12 @@ def run_z_quench(other_sim_directory, desired_h):
     files_interface = WriteOrLoad(other_sim_path, boundaries=[])
     l_x, l_y, l_z, rad, _ = files_interface.load_macroscopic_parameters()
 
-    n_factor = N / 900
-    n_row = 50 * n_factor
+    n_factor = int(np.sqrt(N / 900))
     n_col = 18 * n_factor
-    edge = l_y / n_row
-    assert n_col == l_x / edge, "Only z quench from honeycomb with specific rows and colums is currently supported"
+    edge = l_x / n_col
+    n_row = int(l_y / edge)
+    assert n_col * edge == l_x and n_row * edge == l_y, \
+        "Only z quench from honeycomb with specific rows and colums is currently supported"
 
     centers, ind = files_interface.last_spheres()
     total_step = np.sqrt(l_x * l_y / N) * n_row

@@ -267,7 +267,26 @@ class Event2DCells(ArrayOfCells):
             for c in relevant_cells:
                 for s in c.spheres: other_spheres.append(s)
             step.current_step = self.maximal_free_step(i, j, step)
-            event = step.next_event(other_spheres)  # updates step.current_step
+            try:
+                event = step.next_event(other_spheres)  # updates step.current_step
+            except AssertionError as error:  # sometimes I have overlap between spheres I might try to fix
+                exception_occurred = False
+                for sp in other_spheres:
+                    try:
+                        Metric.dist_to_collision(sphere, sp, step.total_step, v_hat, self.boundaries)
+                    except:
+                        exception_occurred = True
+                        dr_vec = sphere.center - np.array(sp.center)  # points from sp to sphere
+                        dr = np.linalg.norm(dr_vec)
+                        sig = sphere.rad + sp.rad
+                        assert dr <= sig, "handeling the wrong exception"
+                        displace = (sig - dr + epsilon) * dr_vec / dr
+                        sphere.center += displace
+                if exception_occurred:
+                    assert self.legal_configuration(), "Resolving overlap failed"
+                    event = step.next_event(other_spheres)  # updates step.current_step
+                else:
+                    raise
 
             assert event is not None and not np.isnan(step.current_step)
 

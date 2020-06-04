@@ -60,11 +60,12 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
 
         # Choose v_hat
         t = np.random.random() * np.pi
+        phi = np.pi / 6  # rotating v_hat by phi with respect to x_hat, y_hat - for square initial condition
         # TBD try converging faster with t = (0.5-np.random.random()) * np.arccos(H/total_step)
         if i % 2 == 0:
-            v_hat = (np.sin(t), 0, np.cos(t))
+            v_hat = (np.cos(phi) * np.sin(t), np.sin(phi) * np.sin(t), np.cos(t))
         else:
-            v_hat = (0, np.sin(t), np.cos(t))
+            v_hat = (np.cos(phi + np.pi / 2) * np.sin(t), np.sin(phi + np.pi / 2) * np.sin(t), np.cos(t))
         v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
 
         # perform step
@@ -177,7 +178,7 @@ def run_z_quench(origin_sim, desired_h):
     initial_arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col)
     initial_arr.boundaries = CubeBoundaries([l_x, l_y], 2 * [BoundaryType.CYCLIC])
     if os.path.exists(prefix + sim_name):
-        initial_arr.add_third_dimension_for_sphere((1+desired_h)*(2*rad))
+        initial_arr.add_third_dimension_for_sphere((1 + desired_h) * (2 * rad))
         return run_sim(initial_arr, N, desired_h, desired_rho, total_step, sim_name)
 
     initial_arr.add_third_dimension_for_sphere(l_z)
@@ -214,7 +215,7 @@ def run_square(h, n_row, n_col, rho_H):
     l_x = n_col_cells * e
     l_y = n_row_cells * e
     a_free = ((l_x * l_y * H - 4 * np.pi / 3 * (r ** 3)) / N) ** (1 / 3)
-    total_step = a_free * n_row  # avoid maximal depth recursion error by division over 10
+    total_step = a_free * n_row
 
     # construct array of cells and fill with spheres
     initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)

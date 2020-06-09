@@ -44,7 +44,7 @@ quench_single_run_envelope('zquench', ' N=900_h=1.0_rhoH=0.75_AF_triangle_ECMC',
 
 rho_H_arr = [0.7, 0.81, 0.82, 0.83, 0.85, 0.86, 0.87, 0.88, 0.89, 0.9, 0.91, 0.92, 0.93, 0.94, 0.95]
 for h in [1, 0.8]:  # , 0.7]:
-    for n_factor in [3, 4]:  # [1, 2, 3]:
+    for n_factor in [3, 4, 5]:  # [1, 2, 3]:
         for rho_H in rho_H_arr:
             n_row = 30 * n_factor
             n_col = 30 * n_factor

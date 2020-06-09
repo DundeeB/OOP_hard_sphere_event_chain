@@ -12,7 +12,7 @@ def run_sim(initial_arr, N, h, rho_H, total_step, sim_name):
     # Numeric choices calibrated for fast convergence
     N_iteration = int(N * 1e4) 
     equib_cycles = N * 10  # 100
-    n_files_per_sim = 2000  # 1000
+    n_files_per_sim = 4000  # 1000
     dn_save = int(round((N_iteration - equib_cycles) / n_files_per_sim))
     rad = 1
 

@@ -42,7 +42,7 @@ for initial_rho in [round(r,2) for r in np.linspace(0.75, 0.85, 11)]:
     quench_single_run_envelope(action, sim_for_quench, desired_rho_or_h=desired_h)
 quench_single_run_envelope('zquench', ' N=900_h=1.0_rhoH=0.75_AF_triangle_ECMC', 0.8)
 
-rho_H_arr = [0.7, 0.85, 0.86, 0.87, 0.88, 0.89, 0.9, 0.91, 0.92, 0.93, 0.94, 0.95]
+rho_H_arr = [0.7, 0.81, 0.82, 0.83, 0.85, 0.86, 0.87, 0.88, 0.89, 0.9, 0.91, 0.92, 0.93, 0.94, 0.95]
 for h in [1, 0.8]:  # , 0.7]:
     for n_factor in [3]:  # [1, 2, 3]:
         for rho_H in rho_H_arr:

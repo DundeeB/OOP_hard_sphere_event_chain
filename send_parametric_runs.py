@@ -38,31 +38,35 @@ def quench_single_run_envelope(action, other_sim_dir, desired_rho_or_h):
     return
 
 
-# desired_h = 0.8
-# for initial_rho in [round(r,2) for r in np.linspace(0.75, 0.85, 11)]:
-#     sim_for_quench = 'N=8100_h=1.0_rhoH=' + str(initial_rho) + '_AF_triangle_ECMC'
-#     action = 'zquench'
-#     quench_single_run_envelope(action, sim_for_quench, desired_rho_or_h=desired_h)
-# quench_single_run_envelope('zquench', ' N=900_h=1.0_rhoH=0.75_AF_triangle_ECMC', 0.8)
+def main():
+    # desired_h = 0.8
+    # for initial_rho in [round(r,2) for r in np.linspace(0.75, 0.85, 11)]:
+    #     sim_for_quench = 'N=8100_h=1.0_rhoH=' + str(initial_rho) + '_AF_triangle_ECMC'
+    #     action = 'zquench'
+    #     quench_single_run_envelope(action, sim_for_quench, desired_rho_or_h=desired_h)
+    # quench_single_run_envelope('zquench', ' N=900_h=1.0_rhoH=0.75_AF_triangle_ECMC', 0.8)
+    #
+    # rho_H_arr = [0.5, 0.6, 0.7] + [round(r, 2) for r in np.linspace(0.75, 1, (1 - 0.75) / 0.01 + 1)]
+    # for h in [1, 0.8]:
+    #     for n_factor in [1, 2, 3, 4]:
+    #         for rho_H in rho_H_arr:
+    #             n_row = 30 * n_factor
+    #             n_col = 30 * n_factor
+    #             send_single_run_envelope(h, n_row, n_col, rho_H, 'square')
+    #             n_row = 50 * n_factor
+    #             n_col = 18 * n_factor
+    #             send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')
 
-# rho_H_arr = [0.5, 0.6, 0.7] + [round(r, 2) for r in np.linspace(0.75, 1, (1 - 0.75) / 0.01 + 1)]
-# for h in [1, 0.8]:
-#     for n_factor in [1, 2, 3, 4]:
-#         for rho_H in rho_H_arr:
-#             n_row = 30 * n_factor
-#             n_col = 30 * n_factor
-#             send_single_run_envelope(h, n_row, n_col, rho_H, 'square')
-#             n_row = 50 * n_factor
-#             n_col = 18 * n_factor
-#             send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')
+    rho_H_arr = [0.5]
+    for h in [1]:
+        for n_factor in [1]:
+            for rho_H in rho_H_arr:
+                n_row = 30 * n_factor
+                n_col = 30 * n_factor
+                send_single_run_envelope(h, n_row, n_col, rho_H, 'square')
+                # n_row = 50 * n_factor
+                # n_col = 18 * n_factor
+                # send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')
 
-rho_H_arr = [0.5]
-for h in [1]:
-    for n_factor in [1]:
-        for rho_H in rho_H_arr:
-            n_row = 30 * n_factor
-            n_col = 30 * n_factor
-            send_single_run_envelope(h, n_row, n_col, rho_H, 'square')
-            # n_row = 50 * n_factor
-            # n_col = 18 * n_factor
-            # send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')
+if __name__ == "__main__":
+    main()

@@ -11,103 +11,6 @@ epsilon = 1e-8
 prefix = '/storage/ph_daniel/danielab/ECMC_simulation_results2.0/'
 
 
-def run_sim(initial_arr, N, h, rho_H, sim_name):
-    # N_iteration = int(N * 1e4)
-    N_iteration = int(N)
-    rad = 1
-    a_free = (1 / rho_H - np.pi / 6) * 2 * rad  # (V-N*4/3*pi*r^3)/N
-    total_step = a_free * np.sqrt(N)
-
-    # Initialize View and folder, add spheres
-    code_dir = os.getcwd()
-    output_dir = prefix + sim_name
-    # output_dir = r'C:\Users\Daniel Abutbul\OneDrive - Technion\simulation-results\\' + sim_name
-    batch = output_dir + '/batch'
-    sys.stdout = open(batch, "a")
-    if os.path.exists(output_dir):
-        files_interface = WriteOrLoad(output_dir, np.nan)
-        l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = files_interface.load_Input()
-        boundaries = CubeBoundaries([l_x, l_y], 2 * [BoundaryType.CYCLIC] + [BoundaryType.WALL])
-        files_interface.boundaries = boundaries
-        last_centers, last_ind = files_interface.last_spheres()
-        sp = [Sphere(tuple(c), rad) for c in last_centers]
-        # construct array of cells and fill with spheres
-        arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col)
-        arr.add_third_dimension_for_sphere(initial_arr.l_z)
-        arr.append_sphere(sp)
-        print("\n-----------\nSimulation with same parameters exist already, continuing from last file.\n",
-              file=sys.stdout)
-    else:
-        files_interface = WriteOrLoad(output_dir, initial_arr.boundaries)
-        os.mkdir(output_dir)
-        arr = initial_arr
-        files_interface.dump_spheres(arr.all_centers, 'Initial Conditions')
-        files_interface.save_Input(arr.all_spheres[0].rad, rho_H, arr.edge, arr.n_rows, arr.n_columns)
-        last_ind = 0  # count starts from 1 so 0 means non exist yet and the first one will be i+1=1
-        # Simulation description
-        print("\n\nSimulation: N=" + str(N) + ", rhoH=" + str(rho_H) + ", h=" + str(h), file=sys.stdout)
-        print("N_iterations=" + str(N_iteration) +
-              ", Lx=" + str(initial_arr.l_x) + ", Ly=" + str(initial_arr.l_y), file=sys.stdout)
-
-    os.chdir(output_dir)
-
-    # Run loops
-    initial_time = time()
-    day = 60 * 60 * 24  # sec=1
-    elapsed_time = 0
-    i = last_ind
-    # while elapsed_time < day and i < N_iteration:
-    while elapsed_time < 60 and i < N_iteration:
-        # Choose sphere
-        while True:
-            i_all_cells = random.randint(0, len(arr.all_cells) - 1)
-            cell = arr.all_cells[i_all_cells]
-            if len(cell.spheres) > 0:
-                break
-        i_sphere = random.randint(0, len(cell.spheres) - 1)
-        sphere = cell.spheres[i_sphere]
-
-        # Choose v_hat
-        t = np.random.random() * np.pi
-        phi = np.random.random() * 2 * np.pi
-        v_hat = (np.cos(phi) * np.sin(t), np.sin(phi) * np.sin(t), np.cos(t))
-        v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
-
-        # perform step
-        step = Step(sphere, total_step, v_hat, arr.boundaries)
-        i_cell, j_cell = cell.ind[:2]
-        arr.perform_total_step(i_cell, j_cell, step)
-        if (i + 1) % (N_iteration / 100) == 0:
-            print(str(100 * (i + 1) / N_iteration) + "%", end=", ", file=sys.stdout)
-        i += 1
-        elapsed_time = time() - initial_time
-
-    # save
-    assert arr.legal_configuration()
-    files_interface.dump_spheres(arr.all_centers, str(i + 1))
-
-    if i >= N_iteration:
-        os.system('echo \'Finished ' + str(N_iteration) + ' iterations\' > FINAL_MESSAGE')
-    else:  # resend the simulation
-        resend_flag = False
-        n_factor = int(np.sqrt(N / 900))
-        ic = re.split('_', sim_name)[4]
-        if ic == 'sqaure':
-            send_single_run_envelope(h, 30 * n_factor, 30 * n_factor, rho_H, ic)
-            resend_flag = True
-        if ic == 'triangle':
-            send_single_run_envelope(h, 50 * n_factor, 18 * n_factor, rho_H, 'honeycomb')
-            resend_flag = True
-        if ic == 'zquench':
-            quench_single_run_envelope('zquench', sim_name,
-                                       desired_rho_or_h=h)  # notice run sim is sent after z-quench has succeeded
-            resend_flag = True
-        assert resend_flag, "Simulation did not resend. Initial conditions: " + ic
-
-    os.chdir(code_dir)
-    return 0
-
-
 def run_honeycomb(h, n_row, n_col, rho_H):
     # More physical properties calculated from Input
     N = n_row * n_col
@@ -210,6 +113,105 @@ def run_z_quench(origin_sim, desired_h):
     print('Taken from' + origin_sim + ', file ' + str(ind) + '. zQuenched successfully to rho=' +
           str(desired_rho) + ', h=' + str(desired_h))
     return run_sim(initial_arr, N, desired_h, desired_rho, sim_name)
+
+
+def run_sim(initial_arr, N, h, rho_H, sim_name):
+    # N_iteration = int(N * 1e4)
+    N_iteration = int(N*100)
+    rad = 1
+    a_free = (1 / rho_H - np.pi / 6) * 2 * rad  # (V-N*4/3*pi*r^3)/N
+    total_step = a_free * np.sqrt(N)
+
+    # Initialize View and folder, add spheres
+    code_dir = os.getcwd()
+    output_dir = prefix + sim_name
+    # output_dir = r'C:\Users\Daniel Abutbul\OneDrive - Technion\simulation-results\\' + sim_name
+    batch = output_dir + '/batch'
+    if os.path.exists(output_dir):
+        files_interface = WriteOrLoad(output_dir, np.nan)
+        l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = files_interface.load_Input()
+        boundaries = CubeBoundaries([l_x, l_y], 2 * [BoundaryType.CYCLIC] + [BoundaryType.WALL])
+        files_interface.boundaries = boundaries
+        last_centers, last_ind = files_interface.last_spheres()
+        sp = [Sphere(tuple(c), rad) for c in last_centers]
+        # construct array of cells and fill with spheres
+        arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col)
+        arr.add_third_dimension_for_sphere(initial_arr.l_z)
+        arr.append_sphere(sp)
+        sys.stdout = open(batch, "a")
+        print("\n-----------\nSimulation with same parameters exist already, continuing from last file.\n",
+              file=sys.stdout)
+    else:
+        files_interface = WriteOrLoad(output_dir, initial_arr.boundaries)
+        os.mkdir(output_dir)
+        sys.stdout = open(batch, "a")
+        arr = initial_arr
+        files_interface.dump_spheres(arr.all_centers, 'Initial Conditions')
+        files_interface.save_Input(arr.all_spheres[0].rad, rho_H, arr.edge, arr.n_rows, arr.n_columns)
+        last_ind = 0  # count starts from 1 so 0 means non exist yet and the first one will be i+1=1
+        # Simulation description
+        print("\n\nSimulation: N=" + str(N) + ", rhoH=" + str(rho_H) + ", h=" + str(h), file=sys.stdout)
+        print("N_iterations=" + str(N_iteration) +
+              ", Lx=" + str(initial_arr.l_x) + ", Ly=" + str(initial_arr.l_y), file=sys.stdout)
+
+    os.chdir(output_dir)
+
+    # Run loops
+    initial_time = time()
+    day = 60 * 60 * 24  # sec=1
+    elapsed_time = 0
+    i = last_ind
+    # while elapsed_time < day and i < N_iteration:
+    while elapsed_time < 60 and i < N_iteration:
+        # Choose sphere
+        while True:
+            i_all_cells = random.randint(0, len(arr.all_cells) - 1)
+            cell = arr.all_cells[i_all_cells]
+            if len(cell.spheres) > 0:
+                break
+        i_sphere = random.randint(0, len(cell.spheres) - 1)
+        sphere = cell.spheres[i_sphere]
+
+        # Choose v_hat
+        t = np.random.random() * np.pi
+        phi = np.random.random() * 2 * np.pi
+        v_hat = (np.cos(phi) * np.sin(t), np.sin(phi) * np.sin(t), np.cos(t))
+        v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
+
+        # perform step
+        step = Step(sphere, total_step, v_hat, arr.boundaries)
+        i_cell, j_cell = cell.ind[:2]
+        arr.perform_total_step(i_cell, j_cell, step)
+        if (i + 1) % (N_iteration / 100) == 0:
+            print(str(100 * (i + 1) / N_iteration) + "%", end=", ", file=sys.stdout)
+        i += 1
+        elapsed_time = time() - initial_time
+
+    # save
+    assert arr.legal_configuration()
+    files_interface.dump_spheres(arr.all_centers, str(i + 1))
+
+    if i >= N_iteration:
+        os.system('echo \'Finished ' + str(N_iteration) + ' iterations\' > FINAL_MESSAGE')
+    else:  # resend the simulation
+        os.chdir(code_dir)
+        resend_flag = False
+        n_factor = int(np.sqrt(N / 900))
+        ic = re.split('_', sim_name)[4]
+        time.sleep(20.0)  # protect from recursion sending growing number of runs
+        if ic == 'sqaure':
+            send_single_run_envelope(h, 30 * n_factor, 30 * n_factor, rho_H, ic)
+            resend_flag = True
+        if ic == 'triangle':
+            send_single_run_envelope(h, 50 * n_factor, 18 * n_factor, rho_H, 'honeycomb')
+            resend_flag = True
+        if ic == 'zquench':
+            quench_single_run_envelope('zquench', sim_name,
+                                       desired_rho_or_h=h)  # notice run sim is sent after z-quench has succeeded
+            resend_flag = True
+        assert resend_flag, "Simulation did not resend. Initial conditions: " + ic
+
+    return 0
 
 
 args = sys.argv[1:]

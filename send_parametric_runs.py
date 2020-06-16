@@ -24,6 +24,7 @@ def send_single_run_envelope(h, n_row, n_col, rhoH, initial_conditions):
     time.sleep(2.0)
     os.system("qsub -V -v " + params + " -N " + sim_name + " -o " + out_pwd + " -e " + err_pwd +
               " -l nodes=1:ppn=1,mem=1gb,vmem=2gb -q N " + code_prefix + "py_env.sh")
+    return
 
 
 def quench_single_run_envelope(action, other_sim_dir, desired_rho_or_h):
@@ -34,6 +35,7 @@ def quench_single_run_envelope(action, other_sim_dir, desired_rho_or_h):
     time.sleep(2.0)
     os.system("qsub -V -v " + params + " -N " + sim_name + " -o " + out_pwd + " -e " + err_pwd +
               " -l nodes=1:ppn=1,mem=1gb,vmem=2gb -q N " + code_prefix + "py_quench_env.sh")
+    return
 
 
 # desired_h = 0.8
@@ -61,6 +63,6 @@ for h in [1]:
             n_row = 30 * n_factor
             n_col = 30 * n_factor
             send_single_run_envelope(h, n_row, n_col, rho_H, 'square')
-            n_row = 50 * n_factor
-            n_col = 18 * n_factor
-            send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')
+            # n_row = 50 * n_factor
+            # n_col = 18 * n_factor
+            # send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')

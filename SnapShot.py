@@ -104,11 +104,11 @@ class WriteOrLoad:
         cv2.destroyAllWindows()
         video.release()
 
-    def save_matlab_Input_parameters(self, rad, rho_H):
+    def save_Input(self, rad, rho_H, edge, n_row, n_col):
         file_name = os.path.join(self.output_dir, 'Input_parameters_from_python.mat')
         l_x, l_y, l_z = self.boundaries.edges
         sio.savemat(file_name, {'rad': float(rad), 'Lx': l_x, 'Ly': l_y,
-                                'H': float(l_z), 'rho_H': rho_H})
+                                'H': float(l_z), 'rho_H': rho_H, 'edge': edge, 'n_row': n_row, 'n_col': n_col})
 
     def last_spheres(self):
         if not os.path.exists(self.output_dir):
@@ -123,10 +123,10 @@ class WriteOrLoad:
             file_ind = 0
         return np.loadtxt(os.path.join(self.output_dir, sp_name)), file_ind
 
-    def load_macroscopic_parameters(self):
+    def load_Input(self):
         file_name = os.path.join(self.output_dir, 'Input_parameters_from_python.mat')
         dictionary = sio.loadmat(file_name)
-        l_x, l_y, l_z, rad, rho_H = dictionary['Lx'][0][0], dictionary['Ly'][0][0], dictionary['H'][0][0], \
-                                    dictionary['rad'][0][0], dictionary['rho_H'][0][0]
-        return l_x, l_y, l_z, rad, rho_H
-
+        l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = \
+            dictionary['Lx'][0][0], dictionary['Ly'][0][0], dictionary['H'][0][0], dictionary['rad'][0][0], \
+            dictionary['rho_H'][0][0], dictionary['edge'][0][0], dictionary['n_row'][0][0], dictionary['n_col'][0][0]
+        return l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col

@@ -114,8 +114,7 @@ def run_z_quench(origin_sim, desired_h):
 
 
 def run_sim(initial_arr, N, h, rho_H, sim_name):
-    # N_iteration = int(N * 1e4)
-    iterations = int(N)
+    iterations = int(N * 1e4)
     rad = 1
     a_free = (1 / rho_H - np.pi / 6) * 2 * rad  # (V-N*4/3*pi*r^3)/N
     total_step = a_free * np.sqrt(N)

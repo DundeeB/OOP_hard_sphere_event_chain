@@ -130,7 +130,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name):
     if os.path.exists(output_dir):
         files_interface = WriteOrLoad(output_dir, np.nan)
         l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = files_interface.load_Input()
-        boundaries = CubeBoundaries([l_x, l_y], 2 * [BoundaryType.CYCLIC] + [BoundaryType.WALL])
+        boundaries = CubeBoundaries([l_x, l_y, l_z], 2 * [BoundaryType.CYCLIC] + [BoundaryType.WALL])
         files_interface.boundaries = boundaries
         last_centers, last_ind = files_interface.last_spheres()
         sp = [Sphere(tuple(c), rad) for c in last_centers]
@@ -159,10 +159,9 @@ def run_sim(initial_arr, N, h, rho_H, sim_name):
     # Run loops
     initial_time = time()
     day = 60 * 60 * 24  # sec=1
-    elapsed_time = 0
     i = last_ind
     # while elapsed_time < day and i < N_iteration:
-    while elapsed_time < 60 and i < N_iteration:
+    while time() - initial_time < 60 and i < N_iteration:
         # Choose sphere
         while True:
             i_all_cells = random.randint(0, len(arr.all_cells) - 1)
@@ -185,7 +184,6 @@ def run_sim(initial_arr, N, h, rho_H, sim_name):
         if (i + 1) % (N_iteration / 100) == 0:
             print(str(100 * (i + 1) / N_iteration) + "%", end=", ", file=sys.stdout)
         i += 1
-        elapsed_time = time() - initial_time
 
     # save
     assert arr.legal_configuration()
@@ -200,7 +198,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name):
         ic = re.split('_', sim_name)[4]
         time.sleep(20.0)  # protect from recursion sending growing number of runs
         if ic == 'sqaure':
-            send_single_run_envelope(h, 30 * n_factor, 30 * n_factor, rho_H, ic)
+            send_single_run_envelope(h, 30 * n_factor, 30 * n_factor, rho_H, 'sqaure')
             resend_flag = True
         if ic == 'triangle':
             send_single_run_envelope(h, 50 * n_factor, 18 * n_factor, rho_H, 'honeycomb')

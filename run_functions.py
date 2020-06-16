@@ -52,8 +52,18 @@ def run_square(h, n_row, n_col, rho_H):
         # when continuing from restart there shouldn't be use of initial arr
     else:
         r, sig = 1, 2
-        e = max(sig * 2 * np.sqrt(1 / (rho_H * (1 + h))), 1.2 * sig)
-        initial_arr = Event2DCells(edge=e, n_rows=n_row, n_columns=n_col)
+        A = N * sig ** 2 / (rho_H * (1 + h))
+        e = np.sqrt(A / (n_col * n_row))
+        if e < sig:
+            if n_row % 2 == 0:
+                initial_arr = Event2DCells(edge=np.sqrt(2) * e, n_rows=int(n_row / 2), n_columns=n_col)
+            else:
+                if n_col % 2 == 0:
+                    initial_arr = Event2DCells(edge=np.sqrt(2) * e, n_rows=n_row, n_columns=int(n_col / 2))
+                else:
+                    raise Exception("Not implemented square initial condition with odd rows and columns")
+        else:
+            initial_arr = Event2DCells(edge=e, n_rows=n_row, n_columns=n_col)
         initial_arr.add_third_dimension_for_sphere((h + 1) * sig)
         initial_arr.generate_spheres_in_AF_square(n_row, n_col, r)
         assert initial_arr.edge > sig

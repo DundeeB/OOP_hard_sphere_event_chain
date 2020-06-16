@@ -125,7 +125,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name):
         sp = [Sphere(tuple(c), rad) for c in last_centers]
         # construct array of cells and fill with spheres
         arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col)
-        arr.add_third_dimension_for_sphere(initial_arr.l_z)
+        arr.add_third_dimension_for_sphere(l_z)
         arr.append_sphere(sp)
         sys.stdout = open(batch, "a")
         print("\n-----------\nSimulation with same parameters exist already, continuing from last file.\n",

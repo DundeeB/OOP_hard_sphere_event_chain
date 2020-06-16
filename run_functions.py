@@ -56,17 +56,17 @@ def run_square(h, n_row, n_col, rho_H):
         e = np.sqrt(A / (n_col * n_row))
         if e < sig:
             if n_row % 2 == 0:
-                initial_arr = Event2DCells(edge=np.sqrt(2) * e, n_rows=int(n_row / 2), n_columns=n_col)
+                initial_arr = Event2DCells(edge=(np.sqrt(2) * e), n_rows=int(n_row / 2), n_columns=n_col)
             else:
                 if n_col % 2 == 0:
-                    initial_arr = Event2DCells(edge=np.sqrt(2) * e, n_rows=n_row, n_columns=int(n_col / 2))
+                    initial_arr = Event2DCells(edge=(np.sqrt(2) * e), n_rows=n_row, n_columns=int(n_col / 2))
                 else:
                     raise Exception("Not implemented square initial condition with odd rows and columns")
         else:
             initial_arr = Event2DCells(edge=e, n_rows=n_row, n_columns=n_col)
         initial_arr.add_third_dimension_for_sphere((h + 1) * sig)
         initial_arr.generate_spheres_in_AF_square(n_row, n_col, r)
-        assert initial_arr.edge > sig
+        assert initial_arr.edge > sig, "Edge of cell is: " + str(initial_arr.edge) + ", which is smaller than sigma."
 
         return run_sim(initial_arr, N, h, rho_H, sim_name)
 

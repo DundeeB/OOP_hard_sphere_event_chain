@@ -51,12 +51,10 @@ def run_square(h, n_row, n_col, rho_H):
         return run_sim(np.nan, N, h, rho_H, sim_name)
         # when continuing from restart there shouldn't be use of initial arr
     else:
-        r = 1
-        sig = 2 * r
-        H = (h + 1) * sig
-        # construct array of cells and fill with spheres
+        r, sig = 1, 2
+        e = sig * np.sqrt(1 / (rho_H * (1 + h)))
         initial_arr = Event2DCells(edge=e, n_rows=n_row, n_columns=n_col)
-        initial_arr.add_third_dimension_for_sphere(H)
+        initial_arr.add_third_dimension_for_sphere((h + 1) * sig)
         initial_arr.generate_spheres_in_AF_square(n_row, n_col, r)
         assert initial_arr.edge > sig
 
@@ -188,13 +186,13 @@ def run_sim(initial_arr, N, h, rho_H, sim_name):
         n_factor = int(np.sqrt(N / 900))
         ic = re.split('_', sim_name)[4]
         time.sleep(20.0)  # protect from recursion sending growing number of runs
-        if ic == 'sqaure':
-            return send_single_run_envelope(h, 30 * n_factor, 30 * n_factor, rho_H, 'sqaure')
-        if ic == 'triangle':
-            return send_single_run_envelope(h, 50 * n_factor, 18 * n_factor, rho_H, 'honeycomb')
-        if ic == 'zquench':
-            return quench_single_run_envelope('zquench', sim_name,
-                                       desired_rho_or_h=h)  # notice run sim is sent after z-quench has succeeded
+        # if ic == 'sqaure':
+            # return send_single_run_envelope(h, 30 * n_factor, 30 * n_factor, rho_H, 'sqaure')
+        # if ic == 'triangle':
+            # return send_single_run_envelope(h, 50 * n_factor, 18 * n_factor, rho_H, 'honeycomb')
+        # if ic == 'zquench':
+            # return quench_single_run_envelope('zquench', sim_name,
+            #                            desired_rho_or_h=h)  # notice run sim is sent after z-quench has succeeded
         assert resend_flag, "Simulation did not resend. Initial conditions: " + ic
     return 0
 

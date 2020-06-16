@@ -184,8 +184,8 @@ def run_sim(initial_arr, N, h, rho_H, sim_name):
         resend_flag = False
         n_factor = int(np.sqrt(N / 900))
         ic = re.split('_', sim_name)[4]
-        if ic == 'sqaure':
-            return send_single_run_envelope(h, 30 * n_factor, 30 * n_factor, rho_H, 'sqaure')
+        if ic == 'square':
+            return send_single_run_envelope(h, 30 * n_factor, 30 * n_factor, rho_H, 'square')
         if ic == 'triangle':
             return send_single_run_envelope(h, 50 * n_factor, 18 * n_factor, rho_H, 'honeycomb')
         if ic == 'zquench':

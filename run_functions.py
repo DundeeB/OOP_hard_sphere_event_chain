@@ -54,7 +54,7 @@ def run_square(h, n_row, n_col, rho_H):
         r, sig = 1, 2
         A = N * sig ** 2 / (rho_H * (1 + h))
         e = np.sqrt(A / (n_col * n_row))
-        if e < sig:
+        if e <= sig:
             if n_row % 2 == 0:
                 initial_arr = Event2DCells(edge=(np.sqrt(2) * e), n_rows=int(n_row / 2), n_columns=n_col)
             else:

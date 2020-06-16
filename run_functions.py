@@ -157,8 +157,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name):
     initial_time = time.time()
     day = 60 * 60 * 24  # sec=1
     i = last_ind
-    # while time.time() - initial_time < day and i < N_iteration:
-    while time.time() - initial_time < 60 and i < iterations:
+    while time.time() - initial_time < day and i < iterations:
         # Choose sphere
         while True:
             i_all_cells = random.randint(0, len(arr.all_cells) - 1)
@@ -189,7 +188,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name):
     if i >= iterations:
         os.system('echo \'Finished ' + str(iterations) + ' iterations\' > FINAL_MESSAGE')
     else:  # resend the simulation
-        os.system('echo \'\nElapsed time is ' + str(time.time() - initial_time) + '\' > TIME_LOG')
+        os.system('echo \'\nElapsed time is ' + str(time.time() - initial_time) + '\' >> TIME_LOG')
         os.chdir(code_dir)
         resend_flag = False
         n_factor = int(np.sqrt(N / 900))

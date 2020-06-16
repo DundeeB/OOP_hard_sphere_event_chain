@@ -52,7 +52,7 @@ def run_square(h, n_row, n_col, rho_H):
         # when continuing from restart there shouldn't be use of initial arr
     else:
         r, sig = 1, 2
-        e = sig * np.sqrt(1 / (rho_H * (1 + h)))
+        e = max(sig * 2 * np.sqrt(1 / (rho_H * (1 + h))), 1.2 * sig)
         initial_arr = Event2DCells(edge=e, n_rows=n_row, n_columns=n_col)
         initial_arr.add_third_dimension_for_sphere((h + 1) * sig)
         initial_arr.generate_spheres_in_AF_square(n_row, n_col, r)
@@ -148,8 +148,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name):
     day = 60 * 60 * 24  # sec=1
     i = last_ind
     # while time() - initial_time < day and i < N_iteration:
-    # while time() - initial_time < 60 and i < iterations:
-    while i < iterations:
+    while time() - initial_time < 60 and i < iterations:
         # Choose sphere
         while True:
             i_all_cells = random.randint(0, len(arr.all_cells) - 1)
@@ -185,28 +184,32 @@ def run_sim(initial_arr, N, h, rho_H, sim_name):
         resend_flag = False
         n_factor = int(np.sqrt(N / 900))
         ic = re.split('_', sim_name)[4]
-        time.sleep(20.0)  # protect from recursion sending growing number of runs
-        # if ic == 'sqaure':
-            # return send_single_run_envelope(h, 30 * n_factor, 30 * n_factor, rho_H, 'sqaure')
-        # if ic == 'triangle':
-            # return send_single_run_envelope(h, 50 * n_factor, 18 * n_factor, rho_H, 'honeycomb')
-        # if ic == 'zquench':
-            # return quench_single_run_envelope('zquench', sim_name,
-            #                            desired_rho_or_h=h)  # notice run sim is sent after z-quench has succeeded
+        if ic == 'sqaure':
+            return send_single_run_envelope(h, 30 * n_factor, 30 * n_factor, rho_H, 'sqaure')
+        if ic == 'triangle':
+            return send_single_run_envelope(h, 50 * n_factor, 18 * n_factor, rho_H, 'honeycomb')
+        if ic == 'zquench':
+            return quench_single_run_envelope('zquench', sim_name,
+                                              desired_rho_or_h=h)  # notice run sim is sent after z-quench has succeeded
         assert resend_flag, "Simulation did not resend. Initial conditions: " + ic
     return 0
 
 
-args = sys.argv[1:]
-if len(args) == 5:
-    h, n_row, n_col, rho_H = [float(x) for x in args[0:4]]
-    n_col, n_row = int(n_col), int(n_row)
-    if args[-1] == 'square':
-        run_square(h, n_row, n_col, rho_H)
+def main():
+    args = sys.argv[1:]
+    if len(args) == 5:
+        h, n_row, n_col, rho_H = [float(x) for x in args[0:4]]
+        n_col, n_row = int(n_col), int(n_row)
+        if args[-1] == 'square':
+            run_square(h, n_row, n_col, rho_H)
+        else:
+            if args[-1] == 'honeycomb':
+                run_honeycomb(h, n_row, n_col, rho_H)
     else:
-        if args[-1] == 'honeycomb':
-            run_honeycomb(h, n_row, n_col, rho_H)
-else:
-    action, other_sim_dir, desired_h = args[0], args[1], float(args[2])
-    if action == 'zquench':
-        run_z_quench(other_sim_dir, desired_h)
+        action, other_sim_dir, desired_h = args[0], args[1], float(args[2])
+        if action == 'zquench':
+            run_z_quench(other_sim_dir, desired_h)
+
+
+if __name__ == "__main__":
+    main()

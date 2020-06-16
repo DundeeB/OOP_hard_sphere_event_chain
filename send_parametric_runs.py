@@ -64,9 +64,9 @@ def main():
                 n_row = 30 * n_factor
                 n_col = 30 * n_factor
                 send_single_run_envelope(h, n_row, n_col, rho_H, 'square')
-                # n_row = 50 * n_factor
-                # n_col = 18 * n_factor
-                # send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')
+                n_row = 50 * n_factor
+                n_col = 18 * n_factor
+                send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')
 
 if __name__ == "__main__":
     main()

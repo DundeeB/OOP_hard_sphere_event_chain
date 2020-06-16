@@ -107,7 +107,7 @@ def run_z_quench(origin_sim, desired_h):
 
 def run_sim(initial_arr, N, h, rho_H, sim_name):
     # N_iteration = int(N * 1e4)
-    iterations = int(N * 100)
+    iterations = int(N)
     rad = 1
     a_free = (1 / rho_H - np.pi / 6) * 2 * rad  # (V-N*4/3*pi*r^3)/N
     total_step = a_free * np.sqrt(N)
@@ -149,8 +149,9 @@ def run_sim(initial_arr, N, h, rho_H, sim_name):
     initial_time = time()
     day = 60 * 60 * 24  # sec=1
     i = last_ind
-    # while elapsed_time < day and i < N_iteration:
-    while time() - initial_time < 60 and i < iterations:
+    # while time() - initial_time < day and i < N_iteration:
+    # while time() - initial_time < 60 and i < iterations:
+    while i < iterations:
         # Choose sphere
         while True:
             i_all_cells = random.randint(0, len(arr.all_cells) - 1)

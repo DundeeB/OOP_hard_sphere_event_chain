@@ -21,7 +21,7 @@ def send_single_run_envelope(h, n_row, n_col, rhoH, initial_conditions):
                "_" + init_name_in_dir
     out_pwd = prefix + "out/" + sim_name + ".out"
     err_pwd = prefix + "out/" + sim_name + ".err"
-    time.sleep(2.0)
+    time.sleep(0.5)
     os.system("qsub -V -v " + params + " -N " + sim_name + " -o " + out_pwd + " -e " + err_pwd +
               " -l nodes=1:ppn=1,mem=1gb,vmem=2gb -q N " + code_prefix + "py_env.sh")
     return
@@ -32,7 +32,7 @@ def quench_single_run_envelope(action, other_sim_dir, desired_rho_or_h):
     sim_name = action + "_" + other_sim_dir + "_desired_rho_or_h=" + str(desired_rho_or_h)
     out_pwd = prefix + "out/" + sim_name + ".out"
     err_pwd = prefix + "out/" + sim_name + ".err"
-    time.sleep(2.0)
+    time.sleep(0.5)
     os.system("qsub -V -v " + params + " -N " + sim_name + " -o " + out_pwd + " -e " + err_pwd +
               " -l nodes=1:ppn=1,mem=1gb,vmem=2gb -q N " + code_prefix + "py_quench_env.sh")
     return

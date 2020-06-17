@@ -177,7 +177,11 @@ def run_sim(initial_arr, N, h, rho_H, sim_name):
         # perform step
         step = Step(sphere, total_step, v_hat, arr.boundaries)
         i_cell, j_cell = cell.ind[:2]
-        arr.perform_total_step(i_cell, j_cell, step)
+        try:
+            arr.perform_total_step(i_cell, j_cell, step)
+        except:
+            files_interface.dump_spheres(arr.all_centers, str(i + 1) + '_err')
+            raise
         if (i + 1) % (iterations / 100) == 0:
             print(str(100 * (i + 1) / iterations) + "%", end=", ", file=sys.stdout)
         i += 1

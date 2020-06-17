@@ -62,8 +62,7 @@ class Step:
         """
         sphere, total_step, v_hat = self.sphere, self.total_step, self.v_hat
         min_dist_to_wall, closest_wall = Metric.dist_to_boundary(sphere, total_step, v_hat, self.boundaries)
-        closest_sphere = []
-        closest_sphere_dist = float('inf')
+        closest_sphere, closest_sphere_dist = [], float('inf')
         for other_sphere in other_spheres:
             if other_sphere == sphere:
                 continue
@@ -72,17 +71,14 @@ class Step:
                 closest_sphere_dist = sphere_dist
                 closest_sphere = other_sphere
         if np.isnan(self.current_step): self.current_step = float('inf')
-        m = min(min_dist_to_wall, closest_sphere_dist, total_step, self.current_step)
-        # it hits a wall
-        if m == min_dist_to_wall:
+        case = np.argmin([min_dist_to_wall, closest_sphere_dist, total_step, self.current_step])
+        if case == 0:  # it hits a wall
             self.current_step = min_dist_to_wall
             return Event(EventType.WALL, [], closest_wall)
-        # it hits another sphere
-        if m == closest_sphere_dist:
+        if case == 1:  # it hits another sphere
             self.current_step = closest_sphere_dist
             return Event(EventType.COLLISION, closest_sphere, [])
-        # it hits nothing, both min_dist_to_wall and closest_sphere_dist are inf
-        if m == total_step:
+        if case == 2:  # it hits nothing, both min_dist_to_wall and closest_sphere_dist are inf
             self.current_step = total_step
             return Event(EventType.FREE, [], [])
         else:  # total_step > current_step
@@ -183,60 +179,11 @@ class Event2DCells(ArrayOfCells):
         """
         p, v_hat, e, c, r = step.sphere.center, step.v_hat, self.edge, self.cells[i][j].site, step.sphere.rad
         xp, xm, yp, ym = c[0] + 2 * e, c[0] - e, c[1] + 2 * e, c[1] - e
-        if c[0] + e > self.l_x:
-            dl = c[0] + e - self.l_x
-            xp -= dl
-        if c[1] + e > self.l_y:
-            dl = c[1] + e - self.l_y
-            yp -= dl
-        if v_hat[0] >= 0:
-            x = xp - 2 * r
-        else:
-            x = xm + 2 * r
-        if v_hat[1] >= 0:
-            y = yp - 2 * r
-        else:
-            y = ym + 2 * r
-
-        if v_hat[0] != 0:
-            tx = (float)(x - p[0]) / v_hat[0]
-        else:
-            tx = float('inf')
-
-        if v_hat[1] != 0:
-            ty = (float)(y - p[1]) / v_hat[1]
-        else:
-            ty = float('inf')
-
-        t = min(tx, ty)
-        return t
-
-    def relevant_cells_around(self, i, j, step):
-        relevant_cells = [self.cells[i][j]] + self.neighbors(i, j)
-        sphere, v_hat, cell = step.sphere, step.v_hat, self.cells[i][j]
-        x, y = cell.site[:2]
-        e = self.edge
-        ip1, jp1, im1, jm1 = self.cyclic_indices(i, j, self.n_rows, self.n_columns)
-        if (jp1 != 0 and x + 2 * e > self.l_x) or (ip1 != 0 and y + 2 * e > self.l_y):
-            if jp1 != 0 and x + 2 * e > self.l_x:
-                for c in [self.cells[ip1][0], self.cells[i][0], self.cells[im1][0]]:
-                    if c not in relevant_cells:
-                        relevant_cells.append(c)
-            if ip1 != 0 and y + 2 * e > self.l_y:
-                for c in [self.cells[0][jp1], self.cells[0][j], self.cells[0][jm1]]:
-                    if c not in relevant_cells:
-                        relevant_cells.append(c)
-        if e <= 2 * sphere.rad:
-            p_min = sphere.center - 2 * sphere.rad * np.array(v_hat)
-            p_max = sphere.center + 2 * sphere.rad * np.array(v_hat)
-            i1, j1 = self.closest_site_2d(p_min)
-            i2, j2 = self.closest_site_2d(p_max)
-            for i in range(min(i1, i2), max(i1, i2)):
-                for j in range(min(j1, j2), max(j1, j1)):
-                    c = self.cells[i][j]
-                    if c not in relevant_cells:
-                        relevant_cells.append(c)
-        return relevant_cells
+        x = xp - 2 * r if v_hat[0] >= 0 else xm + 2 * r
+        y = yp - 2 * r if v_hat[1] >= 0 else ym + 2 * r
+        tx = float(x - p[0]) / v_hat[0] if v_hat[0] != 0 else float('inf')
+        ty = float(y - p[1]) / v_hat[1] if v_hat[1] != 0 else float('inf')
+        return min(tx, ty)
 
     def perform_total_step(self, i, j, step: Step, draw=None):
         """
@@ -262,7 +209,7 @@ class Event2DCells(ArrayOfCells):
             v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
             cell.remove_sphere(sphere)
 
-            relevant_cells = self.relevant_cells_around(i, j, step)
+            relevant_cells = [self.cells[i][j]] + self.neighbors(i, j)
             other_spheres = []
             for c in relevant_cells:
                 for s in c.spheres: other_spheres.append(s)

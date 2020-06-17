@@ -301,8 +301,6 @@ class Event2DCells(ArrayOfCells):
                     if new_cell.center_in_cell(event.other_sphere):
                         flag = not None
                         break
-                if flag is None:
-                    print("Breakpoint!")
                 assert flag is not None, "Didn't find new cell for the collided sphere"
                 step.sphere = event.other_sphere
                 i, j = new_cell.ind[:2]

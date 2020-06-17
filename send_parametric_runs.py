@@ -46,9 +46,9 @@ def main():
     #     quench_single_run_envelope(action, sim_for_quench, desired_rho_or_h=desired_h)
     # quench_single_run_envelope('zquench', ' N=900_h=1.0_rhoH=0.75_AF_triangle_ECMC', 0.8)
     #
-    rho_H_arr = [0.5, 0.6, 0.7] + [round(r, 2) for r in np.linspace(0.75, 1, int((1 - 0.75) / 0.01) + 1)]
+    rho_H_arr = [0.5, 0.6, 0.7, 0.75] + [round(r, 2) for r in np.linspace(0.8, 1, int((1 - 0.8) / 0.01) + 1)]
     for h in [1, 0.8]:
-        for n_factor in [1, 2, 3, 4]:
+        for n_factor in [1, 3, 5, 11]:
             for rho_H in rho_H_arr:
                 n_row = 30 * n_factor
                 n_col = 30 * n_factor

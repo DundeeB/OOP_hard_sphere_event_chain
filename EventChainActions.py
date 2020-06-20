@@ -223,7 +223,7 @@ class Event2DCells(ArrayOfCells):
                         Metric.dist_to_collision(sphere, sp, step.total_step, v_hat, self.boundaries)
                     except:
                         exception_occurred = True
-                        dr_vec = sphere.center - np.array(sp.center)  # points from sp to sphere
+                        dr_vec = Metric.cyclic_vec(self.boundaries, sp, sphere)  # points from sp to sphere "sphere-sp"
                         dr = np.linalg.norm(dr_vec)
                         sig = sphere.rad + sp.rad
                         assert dr <= sig, "handeling the wrong exception"

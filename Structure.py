@@ -258,6 +258,22 @@ class Metric:
         return float('inf')
 
     @staticmethod
+    def cyclic_vec(boundaries, sphere1, sphere2):
+        """
+        :return: vector pointing from sphere2 to sphere1 ("sphere2-sphere1") shortest through cyclic boundaries
+        """
+        dx = np.array(sphere1.center) - sphere2.center  # direct vector
+        vec = np.zeros(len(dx))
+        for i, b in enumerate(boundaries.boundaries_type):
+            if b != BoundaryType.CYCLIC:
+                vec[i] = dx[i]
+                continue
+            l = boundaries.edges[i]
+            dxs = [dx[i], dx[i] + l, dx[i] - l]
+            vec[i] = dxs[np.argmin(dxs ** 2)]  # find shorter path through B.D.
+        return vec
+
+    @staticmethod
     def cyclic_dist(boundaries, sphere1, sphere2):
         dx = np.array(sphere1.center) - sphere2.center  # direct vector
         dsq = 0

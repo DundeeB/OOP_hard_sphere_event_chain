@@ -48,7 +48,7 @@ def main():
     #
     rho_H_arr = [0.5, 0.6, 0.7, 0.75] + [round(r, 2) for r in np.linspace(0.8, 1, int((1 - 0.8) / 0.01) + 1)]
     for h in [1, 0.8]:
-        for n_factor in [1, 3, 5, 11]:
+        for n_factor in [1, 3, 5, 11, 20]:
             for rho_H in rho_H_arr:
                 n_row = 30 * n_factor
                 n_col = 30 * n_factor

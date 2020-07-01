@@ -11,7 +11,7 @@ from Structure import Sphere, CubeBoundaries, ArrayOfCells
 
 class WriteOrLoad:
 
-    def __init__(self, output_dir, boundaries, counter=None):
+    def __init__(self, output_dir, boundaries=[], counter=None):
         """
         Create new View instance, saving pictures to directory output_dir and having simulation boundary
         boundaries

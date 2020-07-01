@@ -69,9 +69,10 @@ class PsiMN(OrderParameter):
     def calc_order_parameter(self):
         centers = self.event_2d_cells.all_centers
         sp = self.event_2d_cells.all_spheres
-        cyc = lambda p1, p2: Metric.cyclic_dist(self.event_2d_cells.boundaries, p1, p2)
+        cyc_bound = CubeBoundaries(self.event_2d_cells.boundaries.edges[:2], 2 * [BoundaryType.CYCLIC])
+        cyc = lambda p1, p2: Metric.cyclic_dist(cyc_bound, Sphere(p1, 1), Sphere(p2, 1))
         self.graph = kneighbors_graph([p[:2] for p in centers], n_neighbors=self.n, metric=cyc)
-        psimn_vec = np.zeros(self.N)
+        psimn_vec = np.zeros(self.N)*1j
         for i in range(self.N):
             sp[i].nearest_neighbors = [sp[j] for j in self.graph.getrow(i).indices]
             dr = [np.array(centers[i]) - s.center for s in sp[i].nearest_neighbors]

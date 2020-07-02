@@ -28,15 +28,7 @@ class OrderParameter:
         pass
 
     def correlation(self, bin_width=0.1):
-        sp = self.event_2d_cells.all_spheres
         if self.op_vec is None: self.calc_order_parameter()
-
-        # pairs = [(i, j) for j in range(self.N) for i in range(j)]
-        # random.shuffle(pairs)
-        # pairs = pairs[:int(n_pairs)]
-        # pairs_dr = [Metric.cyclic_dist(self.event_2d_cells.boundaries, sp[j], sp[k]) for (j, k) in pairs]
-        # pairs_dr = [np.linalg.norm(np.array(sp[j].center) - sp[k].center) for (j, k) in pairs]
-        # phiphi_vec = [self.op_vec[j] * np.conj(self.op_vec[k]) for (j, k) in pairs]
 
         phiphi_vec = (np.conj(np.transpose(np.matrix(self.op_vec))) *
                       np.matrix(self.op_vec)).reshape((len(self.op_vec) ** 2,))
@@ -44,24 +36,24 @@ class OrderParameter:
         y = np.array([r[1] for r in self.event_2d_cells.all_centers])
         dx = (x.reshape((len(x), 1)) - x.reshape((1, len(x)))).reshape(len(x) ** 2, )
         dy = (y.reshape((len(y), 1)) - y.reshape((1, len(y)))).reshape(len(y) ** 2, )
-        # lx, ly = self.event_2d_cells.boundaries.edges[:2]
-        # for i in range(len(dx)):
-        #     v = [dx[i], dx[i]+lx, dx[i]-lx]
-        #     dx[i] = v[np.argmin(np.abs(v))]
-        #     v = [dy[i], dy[i] + ly, dy[i] - ly]
-        #     dy[i] = v[np.argmin(np.abs(v))]
+        lx, ly = self.event_2d_cells.boundaries.edges[:2]
+        dx = np.minimum(np.abs(dx), np.minimum(np.abs(dx + lx), np.abs(dx - lx)))
+        dy = np.minimum(np.abs(dy), np.minimum(np.abs(dy + ly), np.abs(dy - ly)))
         pairs_dr = np.sqrt(dx ** 2 + dy ** 2)
-        # I = np.argsort(pairs_dr)
-        # pairs_dr = pairs_dr[I]
-        # phiphi_vec = phiphi_vec[I]
+
+        I = np.argsort(pairs_dr)
+        pairs_dr = pairs_dr[I]
+        phiphi_vec = phiphi_vec[0, I]
 
         centers = np.linspace(0, np.max(pairs_dr), int(np.max(pairs_dr) / bin_width) + 1) + bin_width / 2
         counts = np.zeros(len(centers))
         phiphi_hist = np.zeros(len(centers), dtype=np.complex)
-        for i, c in enumerate(centers):
-            I = np.where(np.logical_and(pairs_dr > c - bin_width / 2, pairs_dr < c + bin_width / 2))[0]
-            phiphi_hist[i] = np.sum(phiphi_vec[0, I])
-            counts[i] = len(I)
+        i = 0
+        for j in range(len(pairs_dr)):
+            if pairs_dr[j] > centers[i] + bin_width / 2:
+                i += 1
+            phiphi_hist[i] += phiphi_vec[0, j]
+            counts[i] += 1
         I = np.where(np.logical_and(counts != 0, phiphi_hist != np.nan))
         counts = counts[I]
         phiphi_hist = np.real(phiphi_hist[I]) / counts + 1j * np.imag(phiphi_hist[I]) / counts

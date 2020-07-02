@@ -62,9 +62,9 @@ class OrderParameter:
             I = np.where(np.logical_and(pairs_dr > c - bin_width / 2, pairs_dr < c + bin_width / 2))[0]
             phiphi_hist[i] = np.sum(phiphi_vec[0, I])
             counts[i] = len(I)
-        I = np.where(np.logical_or(counts != 0, phiphi_hist != np.nan))
+        I = np.where(np.logical_and(counts != 0, phiphi_hist != np.nan))
         counts = counts[I]
-        phiphi_hist = np.real(phiphi_hist[I]) / counts[I] + 1j * np.imag(phiphi_hist[I]) / counts[I]
+        phiphi_hist = np.real(phiphi_hist[I]) / counts + 1j * np.imag(phiphi_hist[I]) / counts
         centers = centers[I]
         return phiphi_hist, centers, counts, phiphi_vec, pairs_dr
 

@@ -22,6 +22,9 @@ class OrderParameter:
         self.write_or_load = WriteOrLoad(sim_path, self.event_2d_cells.boundaries)
         self.N = len(centers)
         self.op_vec = None
+        self.op_corr = None
+        self.corr_centers = None
+        self.counts = None
 
     def calc_order_parameter(self):
         """to be override by child class"""
@@ -57,10 +60,9 @@ class OrderParameter:
             phiphi_hist[i] += phiphi_vec[0, j]
             counts[i] += 1
         I = np.where(np.logical_and(counts != 0, phiphi_hist != np.nan))
-        counts = counts[I]
-        phiphi_hist = np.real(phiphi_hist[I]) / counts + 1j * np.imag(phiphi_hist[I]) / counts
-        centers = centers[I]
-        return phiphi_hist, centers, counts, phiphi_vec, pairs_dr
+        self.counts = counts[I]
+        self.op_corr = np.real(phiphi_hist[I]) / counts + 1j * np.imag(phiphi_hist[I]) / counts
+        self.corr_centers = centers[I]
 
     def calc_write(self, calc_correlation=True, bin_width=0.1):
         if self.op_vec is None: self.calc_order_parameter()
@@ -70,8 +72,8 @@ class OrderParameter:
             f(f(self.sim_path, "OP"), self.op_name + "_" + name + "_" + str(self.spheres_ind)) + ".txt", mat)
         g("vec", self.op_vec)
         if calc_correlation:
-            phi_hist, centers, counts, _, _ = self.correlation(bin_width=bin_width)
-            g("correlation", np.transpose([centers, np.abs(phi_hist), counts]))
+            self.correlation(bin_width=bin_width)
+            g("correlation", np.transpose([self.corr_centers, np.abs(self.op_corr), self.counts]))
 
 
 class PsiMN(OrderParameter):
@@ -119,3 +121,47 @@ class PsiMN(OrderParameter):
                    self.lower.event_2d_cells.all_centers)
         np.savetxt(os.path.join(os.path.join(self.sim_path, "OP"), "upper_" + str(self.spheres_ind) + ".txt"),
                    self.upper.event_2d_cells.all_centers)
+
+
+class PositionalCorrelationFunction(OrderParameter):
+
+    def __init__(self, sim_path, centers=None, spheres_ind=None, theta=0, rect_width=0.1):
+        super().__init__(sim_path, centers, spheres_ind)
+        self.theta = theta
+        self.rect_width = rect_width
+
+    def correlation(self, bin_width=0.1):
+        theta, rect_width = self.theta, self.rect_width
+        v_hat = np.transpose(np.matrix([np.cos(theta), np.sin(theta)]))
+
+        x = np.array([r[0] for r in self.event_2d_cells.all_centers])
+        y = np.array([r[1] for r in self.event_2d_cells.all_centers])
+        dx = (x.reshape((len(x), 1)) - x.reshape((1, len(x)))).reshape(len(x) ** 2, )
+        dy = (y.reshape((len(y), 1)) - y.reshape((1, len(y)))).reshape(len(y) ** 2, )
+        lx, ly = self.event_2d_cells.boundaries.edges[:2]
+        A = np.transpose([dx, dx + lx, dx - lx])
+        I = np.argmin(np.abs(A), axis=1)
+        J = [i for i in range(len(I))]
+        dx = A[J, I]
+        A = np.transpose([dy, dy + ly, dy - ly])
+        I = np.argmin(np.abs(A), axis=1)
+        dy = A[J, I]
+
+        pairs_dr = np.transpose([dx, dy])
+
+        dist_vec = np.transpose(v_hat * np.transpose(pairs_dr * v_hat) - np.transpose(pairs_dr))
+        dist_to_line = np.linalg.norm(dist_vec, axis=1)
+        I = np.where(dist_to_line <= rect_width)[0]
+        pairs_dr = pairs_dr[I]
+        J = np.where(pairs_dr * v_hat > 0)[0]
+        pairs_dr = pairs_dr[J]
+        rs = pairs_dr * v_hat
+        l = np.sqrt(lx ** 2 + ly ** 2)
+        self.op_name = "positional_theta=" + str(theta)
+
+        binds_edges = np.linspace(0, int(l / bin_width) * bin_width, int(l / bin_width) + 1)
+        self.counts, _ = np.histogram(rs, binds_edges)
+        I = np.where(self.counts > 0)
+        self.counts = self.counts[I]
+        self.corr_centers = binds_edges[I] + bin_width / 2
+        self.op_corr = self.counts / np.mean(self.counts)

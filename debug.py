@@ -9,6 +9,6 @@ psi23 = PsiMN(output, 2, 3)
 psi23.calc_write(calc_correlation=False)
 theta = np.angle(np.sum(psi23.op_vec))
 # theta = -1.7225563044616816
-G = PositionalCorrelationFunction(output, theta=theta, rect_width=0.2)
-G.calc_write(bin_width=0.2)
+pos_args = (output, theta, 0.4)
+G = RealizationsAveragedOP(17, PositionalCorrelationFunction, pos_args)
 print("Elapsed time: " + str(time() - initial_time))

@@ -50,8 +50,8 @@ class OrderParameter:
         I = np.argsort(pairs_dr)
         pairs_dr = pairs_dr[I]
         phiphi_vec = phiphi_vec[0, I]
-
-        centers = np.linspace(0, np.max(pairs_dr), int(np.max(pairs_dr) / bin_width) + 1) + bin_width / 2
+        l = np.sqrt(lx ** 2 + ly ** 2)
+        centers = np.linspace(0, l, int(l / bin_width) + 1) + bin_width / 2
         counts = np.zeros(len(centers))
         phiphi_hist = np.zeros(len(centers), dtype=np.complex)
         i = 0
@@ -61,9 +61,9 @@ class OrderParameter:
             phiphi_hist[i] += phiphi_vec[0, j]
             counts[i] += 1
         I = np.where(np.logical_and(counts != 0, phiphi_hist != np.nan))
-        self.counts = counts[I]
-        self.op_corr = np.real(phiphi_hist[I]) / counts + 1j * np.imag(phiphi_hist[I]) / counts
-        self.corr_centers = centers[I]
+        self.counts = counts
+        self.op_corr = np.real(phiphi_hist) / counts + 1j * np.imag(phiphi_hist) / counts
+        self.corr_centers = centers
 
     def calc_write(self, calc_correlation=True, bin_width=0.1, write_vec=True):
         f = lambda a, b: os.path.join(a, b)
@@ -115,10 +115,10 @@ class PsiMN(OrderParameter):
         self.lower.op_vec, _ = PsiMN.psi_m_n(self.lower.event_2d_cells, 1, self.m * self.n)
         self.upper.op_vec, _ = PsiMN.psi_m_n(self.upper.event_2d_cells, 1, self.m * self.n)
 
-    def calc_write(self, calc_correlation=True, bin_width=0.1):
-        super().calc_write(calc_correlation, bin_width)
-        self.lower.calc_write(calc_correlation, bin_width)
-        self.upper.calc_write(calc_correlation, bin_width)
+    def calc_write(self, calc_correlation=True, bin_width=0.1, write_vec=True):
+        super().calc_write(calc_correlation, bin_width, write_vec)
+        self.lower.calc_write(calc_correlation, bin_width, write_vec)
+        self.upper.calc_write(calc_correlation, bin_width, write_vec)
         np.savetxt(os.path.join(os.path.join(self.sim_path, "OP"), "lower_" + str(self.spheres_ind) + ".txt"),
                    self.lower.event_2d_cells.all_centers)
         np.savetxt(os.path.join(os.path.join(self.sim_path, "OP"), "upper_" + str(self.spheres_ind) + ".txt"),
@@ -166,8 +166,8 @@ class PositionalCorrelationFunction(OrderParameter):
         self.corr_centers = binds_edges[:-1] + bin_width / 2
         self.op_corr = self.counts / np.nanmean(self.counts[np.where(self.counts > 0)])
 
-    def calc_write(self, calc_correlation=True, bin_width=0.1, write_vec=True):
-        super().calc_write(calc_correlation, bin_width, write_vec=False)
+    def calc_write(self, calc_correlation=True, bin_width=0.1, write_vec=False):
+        super().calc_write(calc_correlation, bin_width, write_vec)
 
 
 class RealizationsAveragedOP:
@@ -187,13 +187,15 @@ class RealizationsAveragedOP:
         op = op_type(*op_args)  # starts with the last realization by default
         op.calc_write(bin_width=bin_width)
         counts, op_corr = op.counts, op.op_corr * op.counts
+        op_corr[counts == 0] = 0  # remove nans
         for i in numbered_files:
             op = op_type(*op_args, centers=np.loadtxt(os.path.join(self.sim_path, str(i))), spheres_ind=i)
-            op.calc_write()
+            op.calc_write(bin_width=bin_width)
             counts += op.counts
-            op_corr += op.op_corr * op.counts
-        op.op_corr = op_corr / op.counts if op_type is not PositionalCorrelationFunction else op.counts / np.nanmean(
-            op.counts[np.where(op.counts > 0)])
+            I = np.where(op.counts > 0)
+            op_corr[I] += op.op_corr[I] * op.counts[I]  # add psi where it is not nan
+        op.op_corr = op_corr / counts if op_type is not PositionalCorrelationFunction else counts / np.nanmean(
+            counts[np.where(counts > 0)])
         op.counts = counts
         op.op_name = op.op_name + "_" + str(num_realizations) + "_averaged"
-        op.calc_write(bin_width)
+        op.calc_write(bin_width=bin_width, write_vec=False)

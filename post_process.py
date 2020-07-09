@@ -4,6 +4,7 @@ from Structure import *
 from EventChainActions import *
 from sklearn.neighbors import *
 import os
+import sys
 
 
 class OrderParameter:
@@ -41,7 +42,7 @@ class OrderParameter:
         """to be override by child class"""
         pass
 
-    def correlation(self, bin_width=0.1, calc_upper_lower=True):
+    def correlation(self, bin_width=0.2, calc_upper_lower=True):
         if self.op_vec is None: self.calc_order_parameter()
 
         phiphi_vec = (np.conj(np.transpose(np.matrix(self.op_vec))) *
@@ -77,7 +78,7 @@ class OrderParameter:
             self.lower.correlation(bin_width, calc_upper_lower=False)
             self.upper.correlation(bin_width, calc_upper_lower=False)
 
-    def calc_write(self, calc_correlation=True, bin_width=0.1, write_vec=False, calc_upper_lower=True):
+    def calc_write(self, calc_correlation=True, bin_width=0.2, write_vec=False, calc_upper_lower=True):
         f = lambda a, b: os.path.join(a, b)
         g = lambda name, mat: np.savetxt(
             f(f(self.sim_path, "OP"), self.op_name + "_" + name + "_" + str(self.spheres_ind)) + ".txt", mat)
@@ -130,14 +131,14 @@ class PsiMN(OrderParameter):
             self.lower.calc_order_parameter(calc_upper_lower=False)
             self.upper.calc_order_parameter(calc_upper_lower=False)
 
-    def calc_write(self, calc_correlation=True, bin_width=0.1, write_vec=True, calc_upper_lower=True):
+    def calc_write(self, calc_correlation=True, bin_width=0.2, write_vec=True, calc_upper_lower=True):
         self.calc_order_parameter(calc_upper_lower=calc_upper_lower)
         super().calc_write(calc_correlation, bin_width, write_vec, calc_upper_lower)
 
 
 class PositionalCorrelationFunction(OrderParameter):
 
-    def __init__(self, sim_path, theta=0, rect_width=0.1, centers=None, spheres_ind=None, calc_upper_lower=True):
+    def __init__(self, sim_path, theta=0, rect_width=0.2, centers=None, spheres_ind=None, calc_upper_lower=True):
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, theta=theta, rect_width=rect_width)
         self.theta = theta
         self.rect_width = rect_width
@@ -146,7 +147,7 @@ class PositionalCorrelationFunction(OrderParameter):
             self.upper.op_name = "upper_" + self.op_name
             self.lower.op_name = "lower_" + self.op_name
 
-    def correlation(self, bin_width=0.1, calc_upper_lower=True):
+    def correlation(self, bin_width=0.2, calc_upper_lower=True):
         theta, rect_width = self.theta, self.rect_width
         v_hat = np.transpose(np.matrix([np.cos(theta), np.sin(theta)]))
 
@@ -204,14 +205,14 @@ class RealizationsAveragedOP:
         self.op_type, self.op_args = op_type, op_args
         self.numbered_files = numbered_files[:num_realizations]
 
-    def calc_write(self, bin_width=0.1, calc_upper_lower=True):
+    def calc_write(self, bin_width=0.2, calc_upper_lower=True):
         op_type, op_args, numbered_files = self.op_type, self.op_args, self.numbered_files
         op = op_type(*op_args)  # starts with the last realization by default
         op.calc_write(bin_width=bin_width)
         counts, op_corr = op.counts, op.op_corr * op.counts
         if calc_upper_lower:
             lower_counts, upper_counts, lower_op_corr, upper_op_corr = \
-                op.lower.counts, op.upper.counts, op.lower.op_corr*op.lower.counts, op.upper.op_corr*op.upper.counts
+                op.lower.counts, op.upper.counts, op.lower.op_corr * op.lower.counts, op.upper.op_corr * op.upper.counts
         op_corr[counts == 0] = 0  # remove nans
         for i in numbered_files[1:]:  # from one before last forward
             op = op_type(*op_args, centers=np.loadtxt(os.path.join(self.sim_path, str(i))), spheres_ind=i)
@@ -244,3 +245,19 @@ class RealizationsAveragedOP:
             op.upper.counts = upper_counts
             op.upper.op_name = op.upper.op_name + "_" + str(len(numbered_files) + 1) + "_averaged"
         op.calc_write(bin_width=bin_width, write_vec=False, calc_upper_lower=calc_upper_lower)
+
+
+def main():
+    sim_path = sys.argv[1]
+    psi23 = PsiMN(sim_path, 2, 3)
+    psi23.calc_write()
+    psi14 = PsiMN(sim_path, 1, 4)
+    psi14.calc_write()
+    correct_psi = [psi14.op_vec, psi23.op_vec][np.argmax(np.abs(np.sum([psi14.op_vec, psi23.op_vec])))]
+    theta = np.angle(np.sum(correct_psi))
+    pos = PositionalCorrelationFunction(sim_path, theta)
+    pos.calc_write()
+
+
+if __name__ == "__main__":
+    main()

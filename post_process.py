@@ -249,7 +249,8 @@ class RealizationsAveragedOP:
 
 
 def main():
-    sim_path = sys.argv[1]
+    prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results2.0/"
+    sim_path = os.path.join(prefix, sys.argv[1])
     psi23 = PsiMN(sim_path, 2, 3)
     psi23.calc_write()
     psi14 = PsiMN(sim_path, 1, 4)

@@ -11,8 +11,9 @@ def main():
         out_pwd = prefix + 'out/post_process_' + d + '.out'
         err_pwd = prefix + 'out/post_process_' + d + '.err'
         time.sleep(0.5)
+        os.chdir(os.path.join(prefix, d))
         os.system(
-            "qsub -V -v sim_path=" + os.path.join(prefix, d) + " -N post_process_" + d + " -o " + out_pwd + " -e " + err_pwd +
+            "qsub -V -N post_process_" + d + " -o " + out_pwd + " -e " + err_pwd +
             " -l nodes=1:ppn=1,mem=1gb,vmem=2gb -q N " + code_prefix + "post_process_env.sh")
 
 

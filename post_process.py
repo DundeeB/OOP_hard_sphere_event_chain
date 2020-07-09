@@ -1,3 +1,4 @@
+#!/Local/cmp/anaconda3/bin/python -u
 import numpy as np
 from SnapShot import *
 from Structure import *

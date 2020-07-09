@@ -249,13 +249,14 @@ class RealizationsAveragedOP:
 
 
 def main():
-    psi23 = PsiMN('.', 2, 3)
+    sim_path = sys.argv[1]
+    psi23 = PsiMN(sim_path, 2, 3)
     psi23.calc_write()
-    psi14 = PsiMN('.', 1, 4)
+    psi14 = PsiMN(sim_path, 1, 4)
     psi14.calc_write()
     correct_psi = [psi14.op_vec, psi23.op_vec][np.argmax(np.abs(np.sum([psi14.op_vec, psi23.op_vec])))]
     theta = np.angle(np.sum(correct_psi))
-    pos = PositionalCorrelationFunction('.', theta)
+    pos = PositionalCorrelationFunction(sim_path, theta)
     pos.calc_write()
 
 

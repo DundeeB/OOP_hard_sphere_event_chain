@@ -7,7 +7,7 @@ code_prefix = "/srv01/technion/danielab/OOP_hard_sphere_event_chain/"
 
 
 def main():
-    sims = [d for d in os.listdir('prefix') if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
+    sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
     for d in sims:
         out_pwd = prefix + 'out/post_process_' + d + '.out'
         err_pwd = prefix + 'out/post_process_' + d + '.err'

@@ -43,34 +43,44 @@ class OrderParameter:
         """to be override by child class"""
         pass
 
-    def correlation(self, bin_width=0.2, calc_upper_lower=True):
+    def correlation(self, bin_width=0.2, calc_upper_lower=True, low_memory=False):
         if self.op_vec is None: self.calc_order_parameter()
-
-        phiphi_vec = (np.conj(np.transpose(np.matrix(self.op_vec))) *
-                      np.matrix(self.op_vec)).reshape((len(self.op_vec) ** 2,))
-        x = np.array([r[0] for r in self.event_2d_cells.all_centers])
-        y = np.array([r[1] for r in self.event_2d_cells.all_centers])
-        dx = (x.reshape((len(x), 1)) - x.reshape((1, len(x)))).reshape(len(x) ** 2, )
-        dy = (y.reshape((len(y), 1)) - y.reshape((1, len(y)))).reshape(len(y) ** 2, )
         lx, ly = self.event_2d_cells.boundaries.edges[:2]
-        dx = np.minimum(np.abs(dx), np.minimum(np.abs(dx + lx), np.abs(dx - lx)))
-        dy = np.minimum(np.abs(dy), np.minimum(np.abs(dy + ly), np.abs(dy - ly)))
-        pairs_dr = np.sqrt(dx ** 2 + dy ** 2)
-
-        I = np.argsort(pairs_dr)
-        pairs_dr = pairs_dr[I]
-        phiphi_vec = phiphi_vec[0, I]
         l = np.sqrt(lx ** 2 + ly ** 2)
-        centers = np.linspace(0, l, int(l / bin_width) + 1) + bin_width / 2
+        centers = np.linspace(0, np.ceil(l / bin_width) * bin_width, np.ceil(l / bin_width) + 1) + bin_width / 2
         counts = np.zeros(len(centers))
         phiphi_hist = np.zeros(len(centers), dtype=np.complex)
-        i = 0
-        for j in range(len(pairs_dr)):
-            if pairs_dr[j] > centers[i] + bin_width / 2:
-                i += 1
-            phiphi_hist[i] += phiphi_vec[0, j]
-            counts[i] += 1
-        I = np.where(np.logical_and(counts != 0, phiphi_hist != np.nan))
+        if not low_memory:
+            phiphi_vec = (np.conj(np.transpose(np.matrix(self.op_vec))) *
+                          np.matrix(self.op_vec)).reshape((len(self.op_vec) ** 2,))
+            x = np.array([r[0] for r in self.event_2d_cells.all_centers])
+            y = np.array([r[1] for r in self.event_2d_cells.all_centers])
+            dx = (x.reshape((len(x), 1)) - x.reshape((1, len(x)))).reshape(len(x) ** 2, )
+            dy = (y.reshape((len(y), 1)) - y.reshape((1, len(y)))).reshape(len(y) ** 2, )
+            dx = np.minimum(np.abs(dx), np.minimum(np.abs(dx + lx), np.abs(dx - lx)))
+            dy = np.minimum(np.abs(dy), np.minimum(np.abs(dy + ly), np.abs(dy - ly)))
+            pairs_dr = np.sqrt(dx ** 2 + dy ** 2)
+
+            I = np.argsort(pairs_dr)
+            pairs_dr = pairs_dr[I]
+            phiphi_vec = phiphi_vec[0, I]
+            i = 0
+            for j in range(len(pairs_dr)):
+                if pairs_dr[j] > centers[i] + bin_width / 2:
+                    i += 1
+                phiphi_hist[i] += phiphi_vec[0, j]
+                counts[i] += 1
+        else:
+            for i, r in enumerate(self.event_2d_cells.all_centers):
+                for j, r_ in enumerate(self.event_2d_cells.all_centers):
+                    dr_vec = np.array(r) - r_
+                    dx = np.min(np.abs([dr_vec[0], dr_vec[0] + lx, dr_vec[0] - lx]))
+                    dy = np.min(np.abs([dr_vec[1], dr_vec[1] + ly, dr_vec[1] - ly]))
+                    dr = np.sqrt(dx ** 2 + dy ** 2)
+                    k = \
+                        np.where(np.logical_and(centers - bin_width / 2 <= dr, centers + bin_width / 2 > dr))[0][0]
+                    counts[k] += 1
+                    phiphi_hist[k] += self.op_vec[i] * np.conjugate(self.op_vec[j])
         self.counts = counts
         self.op_corr = np.real(phiphi_hist) / counts + 1j * np.imag(phiphi_hist) / counts
         self.corr_centers = centers
@@ -148,37 +158,53 @@ class PositionalCorrelationFunction(OrderParameter):
             self.upper.op_name = "upper_" + self.op_name
             self.lower.op_name = "lower_" + self.op_name
 
-    def correlation(self, bin_width=0.2, calc_upper_lower=True):
+    def correlation(self, bin_width=0.2, calc_upper_lower=True, low_memory=False):
         theta, rect_width = self.theta, self.rect_width
         v_hat = np.transpose(np.matrix([np.cos(theta), np.sin(theta)]))
-
-        x = np.array([r[0] for r in self.event_2d_cells.all_centers])
-        y = np.array([r[1] for r in self.event_2d_cells.all_centers])
-        dx = (x.reshape((len(x), 1)) - x.reshape((1, len(x)))).reshape(len(x) ** 2, )
-        dy = (y.reshape((len(y), 1)) - y.reshape((1, len(y)))).reshape(len(y) ** 2, )
         lx, ly = self.event_2d_cells.boundaries.edges[:2]
-        A = np.transpose([dx, dx + lx, dx - lx])
-        I = np.argmin(np.abs(A), axis=1)
-        J = [i for i in range(len(I))]
-        dx = A[J, I]
-        A = np.transpose([dy, dy + ly, dy - ly])
-        I = np.argmin(np.abs(A), axis=1)
-        dy = A[J, I]
-
-        pairs_dr = np.transpose([dx, dy])
-
-        dist_vec = np.transpose(v_hat * np.transpose(pairs_dr * v_hat) - np.transpose(pairs_dr))
-        dist_to_line = np.linalg.norm(dist_vec, axis=1)
-        I = np.where(dist_to_line <= rect_width)[0]
-        pairs_dr = pairs_dr[I]
-        J = np.where(pairs_dr * v_hat > 0)[0]
-        pairs_dr = pairs_dr[J]
-        rs = pairs_dr * v_hat
         l = np.sqrt(lx ** 2 + ly ** 2)
-
-        binds_edges = np.linspace(0, int(l / bin_width) * bin_width, int(l / bin_width) + 1)
-        self.counts, _ = np.histogram(rs, binds_edges)
+        binds_edges = np.linspace(0, np.ceil(l / bin_width) * bin_width, np.ceil(l / bin_width) + 1)
         self.corr_centers = binds_edges[:-1] + bin_width / 2
+        if not low_memory:
+            x = np.array([r[0] for r in self.event_2d_cells.all_centers])
+            y = np.array([r[1] for r in self.event_2d_cells.all_centers])
+            dx = (x.reshape((len(x), 1)) - x.reshape((1, len(x)))).reshape(len(x) ** 2, )
+            dy = (y.reshape((len(y), 1)) - y.reshape((1, len(y)))).reshape(len(y) ** 2, )
+            A = np.transpose([dx, dx + lx, dx - lx])
+            I = np.argmin(np.abs(A), axis=1)
+            J = [i for i in range(len(I))]
+            dx = A[J, I]
+            A = np.transpose([dy, dy + ly, dy - ly])
+            I = np.argmin(np.abs(A), axis=1)
+            dy = A[J, I]
+
+            pairs_dr = np.transpose([dx, dy])
+
+            dist_vec = np.transpose(v_hat * np.transpose(pairs_dr * v_hat) - np.transpose(pairs_dr))
+            dist_to_line = np.linalg.norm(dist_vec, axis=1)
+            I = np.where(dist_to_line <= rect_width)[0]
+            pairs_dr = pairs_dr[I]
+            J = np.where(pairs_dr * v_hat > 0)[0]
+            pairs_dr = pairs_dr[J]
+            rs = pairs_dr * v_hat
+            self.counts, _ = np.histogram(rs, binds_edges)
+        else:
+            for i, r in enumerate(self.event_2d_cells.all_centers):
+                for j, r_ in enumerate(self.event_2d_cells.all_centers):
+                    dr = np.array(r) - r_
+                    dxs = [dr[0], dr[0] + lx, dr[0] - lx]
+                    dx = dxs[np.argmin(np.abs(dxs))]
+                    dys = [dr[1], dr[1] + ly, dr[1] - ly]
+                    dy = dys[np.argmin(np.abs(dys))]
+                    dr = np.array([dx, dy])
+                    dist_on_line = np.dot(dr, v_hat)
+                    dist_vec = v_hat * dist_on_line - np.transpose(np.matrix(dr))
+                    dist_to_line = np.linalg.norm(dist_vec)
+                    if dist_to_line <= rect_width:
+                        k = \
+                            np.where(np.logical_and(binds_edges[:-1] < dist_on_line, binds_edges[1:] > dist_on_line))[
+                                0][0]
+                        self.counts[k] += 1
         self.op_corr = self.counts / np.nanmean(self.counts[np.where(self.counts > 0)])
 
         if calc_upper_lower:
@@ -252,8 +278,12 @@ def main():
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results2.0/"
     sim_path = os.path.join(prefix, sys.argv[1])
     psi23 = PsiMN(sim_path, 2, 3)
+    psi23.calc_order_parameter()
+    psi23.correlation(low_memory=True)
     psi23.calc_write()
     psi14 = PsiMN(sim_path, 1, 4)
+    psi14.calc_order_parameter()
+    psi14.correlation(low_memory=True)
     psi14.calc_write()
     correct_psi = [psi14.op_vec, psi23.op_vec][np.argmax(np.abs(np.sum([psi14.op_vec, psi23.op_vec])))]
     theta = np.angle(np.sum(correct_psi))

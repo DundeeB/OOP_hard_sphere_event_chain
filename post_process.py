@@ -47,7 +47,7 @@ class OrderParameter:
         if self.op_vec is None: self.calc_order_parameter()
         lx, ly = self.event_2d_cells.boundaries.edges[:2]
         l = np.sqrt(lx ** 2 + ly ** 2)
-        centers = np.linspace(0, np.ceil(l / bin_width) * bin_width, np.ceil(l / bin_width) + 1) + bin_width / 2
+        centers = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1) + bin_width / 2
         counts = np.zeros(len(centers))
         phiphi_hist = np.zeros(len(centers), dtype=np.complex)
         if not low_memory:
@@ -163,7 +163,7 @@ class PositionalCorrelationFunction(OrderParameter):
         v_hat = np.transpose(np.matrix([np.cos(theta), np.sin(theta)]))
         lx, ly = self.event_2d_cells.boundaries.edges[:2]
         l = np.sqrt(lx ** 2 + ly ** 2)
-        binds_edges = np.linspace(0, np.ceil(l / bin_width) * bin_width, np.ceil(l / bin_width) + 1)
+        binds_edges = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1)
         self.corr_centers = binds_edges[:-1] + bin_width / 2
         self.counts = np.zeros(len(self.corr_centers))
         if not low_memory:

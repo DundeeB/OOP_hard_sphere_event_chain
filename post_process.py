@@ -86,8 +86,8 @@ class OrderParameter:
         self.corr_centers = centers
 
         if calc_upper_lower:
-            self.lower.correlation(bin_width, calc_upper_lower=False)
-            self.upper.correlation(bin_width, calc_upper_lower=False)
+            self.lower.correlation(bin_width, calc_upper_lower=False, low_memory=low_memory)
+            self.upper.correlation(bin_width, calc_upper_lower=False, low_memory=low_memory)
 
     def calc_write(self, calc_correlation=True, bin_width=0.2, write_vec=False, calc_upper_lower=True):
         f = lambda a, b: os.path.join(a, b)
@@ -165,6 +165,7 @@ class PositionalCorrelationFunction(OrderParameter):
         l = np.sqrt(lx ** 2 + ly ** 2)
         binds_edges = np.linspace(0, np.ceil(l / bin_width) * bin_width, np.ceil(l / bin_width) + 1)
         self.corr_centers = binds_edges[:-1] + bin_width / 2
+        self.counts = np.zeros(len(self.corr_centers))
         if not low_memory:
             x = np.array([r[0] for r in self.event_2d_cells.all_centers])
             y = np.array([r[1] for r in self.event_2d_cells.all_centers])
@@ -182,28 +183,27 @@ class PositionalCorrelationFunction(OrderParameter):
 
             dist_vec = np.transpose(v_hat * np.transpose(pairs_dr * v_hat) - np.transpose(pairs_dr))
             dist_to_line = np.linalg.norm(dist_vec, axis=1)
-            I = np.where(dist_to_line <= rect_width)[0]
+            I = np.where(dist_to_line <= rect_width/2)[0]
             pairs_dr = pairs_dr[I]
             J = np.where(pairs_dr * v_hat > 0)[0]
             pairs_dr = pairs_dr[J]
             rs = pairs_dr * v_hat
             self.counts, _ = np.histogram(rs, binds_edges)
         else:
-            for i, r in enumerate(self.event_2d_cells.all_centers):
-                for j, r_ in enumerate(self.event_2d_cells.all_centers):
+            for r in self.event_2d_cells.all_centers:
+                for r_ in self.event_2d_cells.all_centers:
                     dr = np.array(r) - r_
                     dxs = [dr[0], dr[0] + lx, dr[0] - lx]
                     dx = dxs[np.argmin(np.abs(dxs))]
                     dys = [dr[1], dr[1] + ly, dr[1] - ly]
                     dy = dys[np.argmin(np.abs(dys))]
                     dr = np.array([dx, dy])
-                    dist_on_line = np.dot(dr, v_hat)
+                    dist_on_line = float(np.dot(dr, v_hat))
                     dist_vec = v_hat * dist_on_line - np.transpose(np.matrix(dr))
                     dist_to_line = np.linalg.norm(dist_vec)
-                    if dist_to_line <= rect_width:
-                        k = \
-                            np.where(np.logical_and(binds_edges[:-1] < dist_on_line, binds_edges[1:] > dist_on_line))[
-                                0][0]
+                    if dist_to_line <= rect_width/2 and dist_on_line > 0:
+                        k = np.where(
+                            np.logical_and(binds_edges[:-1] <= dist_on_line, binds_edges[1:] > dist_on_line))[0][0]
                         self.counts[k] += 1
         self.op_corr = self.counts / np.nanmean(self.counts[np.where(self.counts > 0)])
 

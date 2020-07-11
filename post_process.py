@@ -277,17 +277,22 @@ class RealizationsAveragedOP:
 def main():
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results2.0/"
     sim_path = os.path.join(prefix, sys.argv[1])
+
     psi23 = PsiMN(sim_path, 2, 3)
     psi23.calc_order_parameter()
     psi23.correlation(low_memory=True)
     psi23.calc_write()
+
     psi14 = PsiMN(sim_path, 1, 4)
     psi14.calc_order_parameter()
     psi14.correlation(low_memory=True)
     psi14.calc_write()
-    correct_psi = [psi14.op_vec, psi23.op_vec][np.argmax(np.abs(np.sum([psi14.op_vec, psi23.op_vec])))]
+
+    correct_psi = [psi14.op_vec, psi23.op_vec][np.argmax(np.abs([np.sum(psi14.op_vec), np.sum(psi23.op_vec)]))]
     theta = np.angle(np.sum(correct_psi))
     pos = PositionalCorrelationFunction(sim_path, theta)
+    pos.calc_order_parameter()
+    pos.correlation(low_memory=True)
     pos.calc_write()
 
 

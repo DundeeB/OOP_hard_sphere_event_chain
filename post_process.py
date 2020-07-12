@@ -210,10 +210,10 @@ class PositionalCorrelationFunction(OrderParameter):
         if calc_upper_lower:
             assert (self.upper is not None,
                     "Failed calculating upper positional correlation because it was not initialized")
-            self.upper.correlation(bin_width=bin_width, calc_upper_lower=False)
+            self.upper.correlation(bin_width=bin_width, calc_upper_lower=False, low_memory=low_memory)
             assert (self.upper is not None,
                     "Failed calculating lower positional correlation because it was not initialized")
-            self.lower.correlation(bin_width=bin_width, calc_upper_lower=False)
+            self.lower.correlation(bin_width=bin_width, calc_upper_lower=False, low_memory=low_memory)
 
 
 class RealizationsAveragedOP:

@@ -162,7 +162,7 @@ class PositionalCorrelationFunction(OrderParameter):
         theta, rect_width = self.theta, self.rect_width
         v_hat = np.transpose(np.matrix([np.cos(theta), np.sin(theta)]))
         lx, ly = self.event_2d_cells.boundaries.edges[:2]
-        l = np.sqrt(lx ** 2 + ly ** 2)
+        l = np.sqrt(lx ** 2 + ly ** 2)/2
         binds_edges = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1)
         self.corr_centers = binds_edges[:-1] + bin_width / 2
         self.counts = np.zeros(len(self.corr_centers))

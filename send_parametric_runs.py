@@ -58,18 +58,21 @@ def main():
     #             send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')
 
     # const eta=pi/4*(N/2)*sig^2/A=pi/8*H/sig*rhoH
-    for rho_H_h1 in [0.89, 0.9, 0.91]:
-        h1 = 1
-        eta = np.pi / 8 * (1 + h1) * rho_H_h1
-        for h in [1.1, 1.2, 1.3, 1.4]:
-            rho_H = 8 * eta / np.pi / (1 + h)
-            for n_factor in [1, 3, 5, 11]:
-                n_row = 30 * n_factor
-                n_col = 30 * n_factor
-                send_single_run_envelope(h, n_row, n_col, rho_H, 'square')
-                n_row = 50 * n_factor
-                n_col = 18 * n_factor
-                send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')
+    # for rho_H_h1 in [0.89, 0.9, 0.91]:
+    #     h1 = 1
+    #     eta = np.pi / 8 * (1 + h1) * rho_H_h1
+    #     for h in [1.1, 1.2, 1.3, 1.4]:
+    #         rho_H = 8 * eta / np.pi / (1 + h)
+
+    for rho_H in [0.775, 0.78, 0.785, 0.79, 0.795]:
+        h = 1.4
+        for n_factor in [1, 3, 5, 11]:
+            n_row = 30 * n_factor
+            n_col = 30 * n_factor
+            send_single_run_envelope(h, n_row, n_col, rho_H, 'square')
+            n_row = 50 * n_factor
+            n_col = 18 * n_factor
+            send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')
 
 
 if __name__ == "__main__":

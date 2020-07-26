@@ -304,7 +304,7 @@ class RealizationsAveragedOP:
 def main():
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results2.0/"
     sim_path = os.path.join(prefix, sys.argv[1])
-    N = int(re.split('_h=', re.split('N=', sys.argvp[1])[1])[0])
+    N = int(re.split('_h=', re.split('N=', sys.argv[1])[1])[0])
     randomize = N > 30e3
 
     psi23 = PsiMN(sim_path, 2, 3)

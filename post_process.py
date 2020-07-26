@@ -7,6 +7,7 @@ from sklearn.neighbors import *
 import os
 import sys
 import random
+import re
 
 
 class OrderParameter:
@@ -45,10 +46,10 @@ class OrderParameter:
         pass
 
     def correlation(self, bin_width=0.2, calc_upper_lower=True, low_memory=False, randomize=False,
-                    realizations=int(1e5)):
+                    realizations=int(1e7)):
         if self.op_vec is None: self.calc_order_parameter()
         lx, ly = self.event_2d_cells.boundaries.edges[:2]
-        l = np.sqrt(lx ** 2 + ly ** 2)
+        l = np.sqrt(lx ** 2 + ly ** 2) / 2
         centers = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1) + bin_width / 2
         counts = np.zeros(len(centers))
         phiphi_hist = np.zeros(len(centers), dtype=np.complex)
@@ -74,51 +75,52 @@ class OrderParameter:
                 counts[i] += 1
         else:
             if not randomize:
-                for i, r in enumerate(self.event_2d_cells.all_centers):
-                    for j, r_ in enumerate(self.event_2d_cells.all_centers):
-                        dr_vec = np.array(r) - r_
-                        dx = np.min(np.abs([dr_vec[0], dr_vec[0] + lx, dr_vec[0] - lx]))
-                        dy = np.min(np.abs([dr_vec[1], dr_vec[1] + ly, dr_vec[1] - ly]))
-                        dr = np.sqrt(dx ** 2 + dy ** 2)
-                        k = \
-                            np.where(np.logical_and(centers - bin_width / 2 <= dr, centers + bin_width / 2 > dr))[0][0]
+                for i in range(len(self.event_2d_cells.all_centers)):
+                    for j in range(len(self.event_2d_cells.all_centers)):
+                        phi_phi, k = self.__pair_corr__(i, j, centers, bin_width)
                         counts[k] += 1
-                        phiphi_hist[k] += self.op_vec[i] * np.conjugate(self.op_vec[j])
+                        phiphi_hist[k] += phi_phi
             else:
                 for real in range(realizations):
-                    i, j = 2 * [random.randint(0, len(self.op_vec) - 1)]
-                    r, r_ = self.event_2d_cells.all_centers[i], self.event_2d_cells.all_centers[j]
-                    dr_vec = np.array(r) - r_
-                    dx = np.min(np.abs([dr_vec[0], dr_vec[0] + lx, dr_vec[0] - lx]))
-                    dy = np.min(np.abs([dr_vec[1], dr_vec[1] + ly, dr_vec[1] - ly]))
-                    dr = np.sqrt(dx ** 2 + dy ** 2)
-                    k = \
-                        np.where(np.logical_and(centers - bin_width / 2 <= dr, centers + bin_width / 2 > dr))[0][0]
+                    i, j = random.randint(0, len(self.op_vec) - 1), random.randint(0, len(self.op_vec) - 1)
+                    phi_phi, k = self.__pair_corr__(i, j, centers, bin_width)
                     counts[k] += 1
-                    phiphi_hist[k] += self.op_vec[i] * np.conjugate(self.op_vec[j])
+                    phiphi_hist[k] += phi_phi
         self.counts = counts
         self.op_corr = np.real(phiphi_hist) / counts + 1j * np.imag(phiphi_hist) / counts
         self.corr_centers = centers
 
         if calc_upper_lower:
-            self.lower.correlation(bin_width, calc_upper_lower=False, low_memory=low_memory)
-            self.upper.correlation(bin_width, calc_upper_lower=False, low_memory=low_memory)
+            self.lower.correlation(bin_width, calc_upper_lower=False, low_memory=low_memory, randomize=randomize,
+                                   realizations=realizations)
+            self.upper.correlation(bin_width, calc_upper_lower=False, low_memory=low_memory, randomize=randomize,
+                                   realizations=realizations)
 
-    def calc_write(self, calc_correlation=True, bin_width=0.2, write_vec=False, write_upper_lower=True, randomize=False,
-                   realizations=int(1e5)):
+    def __pair_corr__(self, i, j, centers, bin_width):
+        lx, ly = self.event_2d_cells.boundaries.edges[:2]
+        r, r_ = self.event_2d_cells.all_centers[i], self.event_2d_cells.all_centers[j]
+        dr_vec = np.array(r) - r_
+        dx = np.min(np.abs([dr_vec[0], dr_vec[0] + lx, dr_vec[0] - lx]))
+        dy = np.min(np.abs([dr_vec[1], dr_vec[1] + ly, dr_vec[1] - ly]))
+        dr = np.sqrt(dx ** 2 + dy ** 2)
+        k = \
+            np.where(np.logical_and(centers - bin_width / 2 <= dr, centers + bin_width / 2 > dr))[0][0]
+        return self.op_vec[i] * np.conjugate(self.op_vec[j]), k
+
+    def calc_write(self, write_correlation=True, write_vec=False, write_upper_lower=True):
         f = lambda a, b: os.path.join(a, b)
         g = lambda name, mat: np.savetxt(
             f(f(self.sim_path, "OP"), self.op_name + "_" + name + "_" + str(self.spheres_ind)) + ".txt", mat)
         if not os.path.exists(f(self.sim_path, "OP")): os.mkdir(f(self.sim_path, "OP"))
         if write_vec:
-            if self.op_vec is None: raise(Exception("Should calculate correlation before writing"))
+            if self.op_vec is None: raise (Exception("Should calculate correlation before writing"))
             g("vec", self.op_vec)
-        if calc_correlation:
-            if self.op_corr is None: raise(Exception("Should calculate correlation before writing"))
+        if write_correlation:
+            if self.op_corr is None: raise (Exception("Should calculate correlation before writing"))
             g("correlation", np.transpose([self.corr_centers, np.abs(self.op_corr), self.counts]))
         if write_upper_lower:
-            self.lower.calc_write(calc_correlation, bin_width, write_vec, write_upper_lower=False)
-            self.upper.calc_write(calc_correlation, bin_width, write_vec, write_upper_lower=False)
+            self.lower.calc_write(write_correlation, write_vec, write_upper_lower=False)
+            self.upper.calc_write(write_correlation, write_vec, write_upper_lower=False)
             np.savetxt(os.path.join(os.path.join(self.sim_path, "OP"), "lower_" + str(self.spheres_ind) + ".txt"),
                        self.lower.event_2d_cells.all_centers)
             np.savetxt(os.path.join(os.path.join(self.sim_path, "OP"), "upper_" + str(self.spheres_ind) + ".txt"),
@@ -158,10 +160,6 @@ class PsiMN(OrderParameter):
             self.lower.calc_order_parameter(calc_upper_lower=False)
             self.upper.calc_order_parameter(calc_upper_lower=False)
 
-    def calc_write(self, calc_correlation=True, bin_width=0.2, write_vec=True, write_upper_lower=True):
-        self.calc_order_parameter(calc_upper_lower=write_upper_lower)
-        super().calc_write(calc_correlation, bin_width, write_vec, write_upper_lower)
-
 
 class PositionalCorrelationFunction(OrderParameter):
 
@@ -174,13 +172,14 @@ class PositionalCorrelationFunction(OrderParameter):
             self.upper.op_name = "upper_" + self.op_name
             self.lower.op_name = "lower_" + self.op_name
 
-    def correlation(self, bin_width=0.2, calc_upper_lower=True, low_memory=False):
+    def correlation(self, bin_width=0.2, calc_upper_lower=True, low_memory=False, randomize=False,
+                    realizations=int(1e7)):
         theta, rect_width = self.theta, self.rect_width
         v_hat = np.transpose(np.matrix([np.cos(theta), np.sin(theta)]))
         lx, ly = self.event_2d_cells.boundaries.edges[:2]
         l = np.sqrt(lx ** 2 + ly ** 2) / 2
-        binds_edges = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1)
-        self.corr_centers = binds_edges[:-1] + bin_width / 2
+        bins_edges = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1)
+        self.corr_centers = bins_edges[:-1] + bin_width / 2
         self.counts = np.zeros(len(self.corr_centers))
         if not low_memory:
             x = np.array([r[0] for r in self.event_2d_cells.all_centers])
@@ -204,32 +203,43 @@ class PositionalCorrelationFunction(OrderParameter):
             J = np.where(pairs_dr * v_hat > 0)[0]
             pairs_dr = pairs_dr[J]
             rs = pairs_dr * v_hat
-            self.counts, _ = np.histogram(rs, binds_edges)
+            self.counts, _ = np.histogram(rs, bins_edges)
         else:
-            for r in self.event_2d_cells.all_centers:
-                for r_ in self.event_2d_cells.all_centers:
-                    dr = np.array(r) - r_
-                    dxs = [dr[0], dr[0] + lx, dr[0] - lx]
-                    dx = dxs[np.argmin(np.abs(dxs))]
-                    dys = [dr[1], dr[1] + ly, dr[1] - ly]
-                    dy = dys[np.argmin(np.abs(dys))]
-                    dr = np.array([dx, dy])
-                    dist_on_line = float(np.dot(dr, v_hat))
-                    dist_vec = v_hat * dist_on_line - np.transpose(np.matrix(dr))
-                    dist_to_line = np.linalg.norm(dist_vec)
-                    if dist_to_line <= rect_width / 2 and dist_on_line > 0:
-                        k = np.where(
-                            np.logical_and(binds_edges[:-1] <= dist_on_line, binds_edges[1:] > dist_on_line))[0][0]
-                        self.counts[k] += 1
+            if not randomize:
+                for r in self.event_2d_cells.all_centers:
+                    for r_ in self.event_2d_cells.all_centers:
+                        self.__pair_dist__(r, r_, v_hat, rect_width, bins_edges)
+            else:
+                for realization in range(realizations):
+                    i, j = random.randint(0, len(self.op_vec) - 1), random.randint(0, len(self.op_vec) - 1)
+                    self.__pair_dist__(self.event_2d_cells[i], self.event_2d_cells[j])
         self.op_corr = self.counts / np.nanmean(self.counts[np.where(self.counts > 0)])
 
         if calc_upper_lower:
             assert (self.upper is not None,
                     "Failed calculating upper positional correlation because it was not initialized")
-            self.upper.correlation(bin_width=bin_width, calc_upper_lower=False, low_memory=low_memory)
+            self.upper.correlation(bin_width=bin_width, calc_upper_lower=False, low_memory=low_memory,
+                                   randomize=randomize, realizations=realizations)
             assert (self.upper is not None,
                     "Failed calculating lower positional correlation because it was not initialized")
-            self.lower.correlation(bin_width=bin_width, calc_upper_lower=False, low_memory=low_memory)
+            self.lower.correlation(bin_width=bin_width, calc_upper_lower=False, low_memory=low_memory,
+                                   randomize=randomize, realizations=realizations)
+
+    def __pair_dist__(self, r, r_, v_hat, rect_width, bins_edges):
+        lx, ly = self.event_2d_cells.boundaries.edges[:2]
+        dr = np.array(r) - r_
+        dxs = [dr[0], dr[0] + lx, dr[0] - lx]
+        dx = dxs[np.argmin(np.abs(dxs))]
+        dys = [dr[1], dr[1] + ly, dr[1] - ly]
+        dy = dys[np.argmin(np.abs(dys))]
+        dr = np.array([dx, dy])
+        dist_on_line = float(np.dot(dr, v_hat))
+        dist_vec = v_hat * dist_on_line - np.transpose(np.matrix(dr))
+        dist_to_line = np.linalg.norm(dist_vec)
+        if dist_to_line <= rect_width / 2 and dist_on_line > 0:
+            k = np.where(
+                np.logical_and(bins_edges[:-1] <= dist_on_line, bins_edges[1:] > dist_on_line))[0][0]
+            self.counts[k] += 1
 
 
 class RealizationsAveragedOP:
@@ -294,22 +304,26 @@ class RealizationsAveragedOP:
 def main():
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results2.0/"
     sim_path = os.path.join(prefix, sys.argv[1])
+    N = int(re.split('_h=', re.split('N=', sys.argvp[1])[1])[0])
+    randomize = N > 30e3
 
     psi23 = PsiMN(sim_path, 2, 3)
     psi23.calc_order_parameter()
-    psi23.correlation(low_memory=True)
+    psi23.calc_write(write_correlation=False, write_vec=True)
+    psi23.correlation(low_memory=True, randomize=randomize)
     psi23.calc_write()
 
     psi14 = PsiMN(sim_path, 1, 4)
     psi14.calc_order_parameter()
-    psi14.correlation(low_memory=True)
+    psi14.calc_write(write_correlation=False, write_vec=True)
+    psi14.correlation(low_memory=True, randomize=randomize)
     psi14.calc_write()
 
     correct_psi = [psi14.op_vec, psi23.op_vec][np.argmax(np.abs([np.sum(psi14.op_vec), np.sum(psi23.op_vec)]))]
     theta = np.angle(np.sum(correct_psi))
     pos = PositionalCorrelationFunction(sim_path, theta)
     pos.calc_order_parameter()
-    pos.correlation(low_memory=True)
+    pos.correlation(low_memory=True, randomize=randomize)
     pos.calc_write()
 
 

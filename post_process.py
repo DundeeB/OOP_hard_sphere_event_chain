@@ -304,26 +304,28 @@ class RealizationsAveragedOP:
 def main():
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results2.0/"
     sim_path = os.path.join(prefix, sys.argv[1])
-    N = int(re.split('_h=', re.split('N=', sys.argv[1])[1])[0])
-    randomize = N > 30e3
+    # N = int(re.split('_h=', re.split('N=', sys.argv[1])[1])[0])
+    randomize = True  # N>30000
+    correlation_couples = int(1e5)
 
     psi23 = PsiMN(sim_path, 2, 3)
     psi23.calc_order_parameter()
     psi23.calc_write(write_correlation=False, write_vec=True)
-    psi23.correlation(low_memory=True, randomize=randomize)
-    psi23.calc_write()
 
     psi14 = PsiMN(sim_path, 1, 4)
     psi14.calc_order_parameter()
     psi14.calc_write(write_correlation=False, write_vec=True)
-    psi14.correlation(low_memory=True, randomize=randomize)
+
+    psi23.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
+    psi23.calc_write()
+
+    psi14.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
     psi14.calc_write()
 
     correct_psi = [psi14.op_vec, psi23.op_vec][np.argmax(np.abs([np.sum(psi14.op_vec), np.sum(psi23.op_vec)]))]
     theta = np.angle(np.sum(correct_psi))
     pos = PositionalCorrelationFunction(sim_path, theta)
-    pos.calc_order_parameter()
-    pos.correlation(low_memory=True, randomize=randomize)
+    pos.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
     pos.calc_write()
 
 

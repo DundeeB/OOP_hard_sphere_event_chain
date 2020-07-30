@@ -111,7 +111,7 @@ def run_z_quench(origin_sim, desired_h):
 def run_sim(initial_arr, N, h, rho_H, sim_name):
     iterations = int(N * 1e4)
     rad = 1
-    a_free = (1 / rho_H - np.pi / 6) * 2 * rad  # (V-N*4/3*pi*r^3)/N
+    a_free = (1 / rho_H - np.pi / 6) * 2 * rad  # (V-N*4/3*pi*r^3)/N i made a mistake it should be ^(1/3)
     total_step = a_free * np.sqrt(N)
 
     # Initialize View and folder, add spheres

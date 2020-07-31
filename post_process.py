@@ -318,7 +318,7 @@ def main():
     sim_path = os.path.join(prefix, sys.argv[1])
     # N = int(re.split('_h=', re.split('N=', sys.argv[1])[1])[0])
     randomize = True  # N>30000
-    correlation_couples = int(1e5)
+    correlation_couples = int(1e6)
 
     psi23 = PsiMN(sim_path, 2, 3)
     psi23.calc_order_parameter()

@@ -211,7 +211,8 @@ class PositionalCorrelationFunction(OrderParameter):
                         self.__pair_dist__(r, r_, v_hat, rect_width, bins_edges)
             else:
                 for realization in range(realizations):
-                    i, j = random.randint(0, len(self.op_vec) - 1), random.randint(0, len(self.op_vec) - 1)
+                    i, j = random.randint(0, len(self.event_2d_cells) - 1), random.randint(0,
+                                                                                           len(self.event_2d_cells) - 1)
                     self.__pair_dist__(self.event_2d_cells[i], self.event_2d_cells[j])
         self.op_corr = self.counts / np.nanmean(self.counts[np.where(self.counts > 0)])
 
@@ -240,6 +241,17 @@ class PositionalCorrelationFunction(OrderParameter):
             k = np.where(
                 np.logical_and(bins_edges[:-1] <= dist_on_line, bins_edges[1:] > dist_on_line))[0][0]
             self.counts[k] += 1
+
+
+class PsiUpPsiDown(PsiMN):
+    def __init__(self, sim_path, m, n, centers=None, spheres_ind=None):
+        super().__init__(sim_path, m, n, centers, spheres_ind, calc_upper_lower=True)
+        self.op_orig = self.op_name
+        self.op_name = "psiup_psidown_" + str(m) + str(n)
+
+    def calc_order_parameter(self):
+        super().calc_order_parameter(calc_upper_lower=True)
+        self.op_orig = self.op_vec
 
 
 class RealizationsAveragedOP:

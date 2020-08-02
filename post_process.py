@@ -316,29 +316,37 @@ class RealizationsAveragedOP:
 def main():
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results2.0/"
     sim_path = os.path.join(prefix, sys.argv[1])
+    calc_type = sys.argv[2]
     # N = int(re.split('_h=', re.split('N=', sys.argv[1])[1])[0])
     randomize = True  # N>30000
     correlation_couples = int(1e6)
-
-    psi23 = PsiMN(sim_path, 2, 3)
-    psi23.calc_order_parameter()
-    psi23.calc_write(write_correlation=False, write_vec=True)
-
-    psi14 = PsiMN(sim_path, 1, 4)
-    psi14.calc_order_parameter()
-    psi14.calc_write(write_correlation=False, write_vec=True)
-
-    psi23.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
-    psi23.calc_write()
-
-    psi14.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
-    psi14.calc_write()
-
-    correct_psi = [psi14.op_vec, psi23.op_vec][np.argmax(np.abs([np.sum(psi14.op_vec), np.sum(psi23.op_vec)]))]
-    theta = np.angle(np.sum(correct_psi))
-    pos = PositionalCorrelationFunction(sim_path, theta)
-    pos.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
-    pos.calc_write()
+    if calc_type == "psi23":
+        psi23 = PsiMN(sim_path, 2, 3)
+        psi23.calc_order_parameter()
+        psi23.calc_write(write_correlation=False, write_vec=True)
+        psi23.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
+        psi23.calc_write()
+    if calc_type == "psi14":
+        psi14 = PsiMN(sim_path, 1, 4)
+        psi14.calc_order_parameter()
+        psi14.calc_write(write_correlation=False, write_vec=True)
+        psi14.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
+        psi14.calc_write()
+    if calc_type == "psi16":
+        psi16 = PsiMN(sim_path, 1, 6)
+        psi16.calc_order_parameter()
+        psi16.calc_write(write_correlation=False, write_vec=True)
+        psi16.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
+        psi16.calc_write()
+    if calc_type == "pos":
+        psi23, psi14, psi16 = PsiMN(sim_path, 2, 3), PsiMN(sim_path, 1, 4), PsiMN(sim_path, 1, 6)
+        psi23.calc_order_parameter(), psi14.calc_order_parameter(), psi16.calc_order_parameter()
+        psis = [psi14.op_vec, psi23.op_vec, psi16.op_vec]
+        correct_psi = psis[np.argmax(np.abs([np.sum(p) for p in psis]))]
+        theta = np.angle(np.sum(correct_psi))
+        pos = PositionalCorrelationFunction(sim_path, theta)
+        pos.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
+        pos.calc_write()
 
 
 if __name__ == "__main__":

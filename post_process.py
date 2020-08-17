@@ -317,9 +317,9 @@ def main():
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results2.0/"
     sim_path = os.path.join(prefix, sys.argv[1])
     calc_type = sys.argv[2]
-    # N = int(re.split('_h=', re.split('N=', sys.argv[1])[1])[0])
-    randomize = True  # N>30000
-    correlation_couples = int(1e6)
+    N = int(re.split('_h=', re.split('N=', sys.argv[1])[1])[0])
+    randomize = N > 30000
+    correlation_couples = int(5e6)
     if calc_type == "psi23":
         psi23 = PsiMN(sim_path, 2, 3)
         psi23.calc_order_parameter()

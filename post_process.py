@@ -107,7 +107,7 @@ class OrderParameter:
             np.where(np.logical_and(centers - bin_width / 2 <= dr, centers + bin_width / 2 > dr))[0][0]
         return self.op_vec[i] * np.conjugate(self.op_vec[j]), k
 
-    def calc_write(self, write_correlation=True, write_vec=False, write_upper_lower=True):
+    def write(self, write_correlation=True, write_vec=False, write_upper_lower=True):
         f = lambda a, b: os.path.join(a, b)
         g = lambda name, mat: np.savetxt(
             f(f(self.sim_path, "OP"), self.op_name + "_" + name + "_" + str(self.spheres_ind)) + ".txt", mat)
@@ -119,8 +119,8 @@ class OrderParameter:
             if self.op_corr is None: raise (Exception("Should calculate correlation before writing"))
             g("correlation", np.transpose([self.corr_centers, np.abs(self.op_corr), self.counts]))
         if write_upper_lower:
-            self.lower.calc_write(write_correlation, write_vec, write_upper_lower=False)
-            self.upper.calc_write(write_correlation, write_vec, write_upper_lower=False)
+            self.lower.write(write_correlation, write_vec, write_upper_lower=False)
+            self.upper.write(write_correlation, write_vec, write_upper_lower=False)
             np.savetxt(os.path.join(os.path.join(self.sim_path, "OP"), "lower_" + str(self.spheres_ind) + ".txt"),
                        self.lower.event_2d_cells.all_centers)
             np.savetxt(os.path.join(os.path.join(self.sim_path, "OP"), "upper_" + str(self.spheres_ind) + ".txt"),
@@ -274,7 +274,7 @@ class RealizationsAveragedOP:
     def calc_write(self, bin_width=0.2, calc_upper_lower=True):
         op_type, op_args, numbered_files = self.op_type, self.op_args, self.numbered_files
         op = op_type(*op_args)  # starts with the last realization by default
-        op.calc_write(bin_width=bin_width)
+        op.write(bin_width=bin_width)
         counts, op_corr = op.counts, op.op_corr * op.counts
         if calc_upper_lower:
             lower_counts, upper_counts, lower_op_corr, upper_op_corr = \
@@ -282,7 +282,7 @@ class RealizationsAveragedOP:
         op_corr[counts == 0] = 0  # remove nans
         for i in numbered_files[1:]:  # from one before last forward
             op = op_type(*op_args, centers=np.loadtxt(os.path.join(self.sim_path, str(i))), spheres_ind=i)
-            op.calc_write(bin_width=bin_width, write_upper_lower=calc_upper_lower)
+            op.write(bin_width=bin_width, write_upper_lower=calc_upper_lower)
             counts += op.counts
             if op_type is not PositionalCorrelationFunction:
                 I = np.where(op.counts > 0)
@@ -310,7 +310,7 @@ class RealizationsAveragedOP:
                 upper_counts / np.nanmean(upper_counts[np.where(upper_counts > 0)])
             op.upper.counts = upper_counts
             op.upper.op_name = op.upper.op_name + "_" + str(len(numbered_files) + 1) + "_averaged"
-        op.calc_write(bin_width=bin_width, write_vec=False, write_upper_lower=calc_upper_lower)
+        op.write(bin_width=bin_width, write_vec=False, write_upper_lower=calc_upper_lower)
 
 
 def main():
@@ -323,21 +323,21 @@ def main():
     if calc_type == "psi23":
         psi23 = PsiMN(sim_path, 2, 3)
         psi23.calc_order_parameter()
-        psi23.calc_write(write_correlation=False, write_vec=True)
+        psi23.write(write_correlation=False, write_vec=True)
         psi23.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
-        psi23.calc_write()
+        psi23.write()
     if calc_type == "psi14":
         psi14 = PsiMN(sim_path, 1, 4)
         psi14.calc_order_parameter()
-        psi14.calc_write(write_correlation=False, write_vec=True)
+        psi14.write(write_correlation=False, write_vec=True)
         psi14.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
-        psi14.calc_write()
+        psi14.write()
     if calc_type == "psi16":
         psi16 = PsiMN(sim_path, 1, 6)
         psi16.calc_order_parameter()
-        psi16.calc_write(write_correlation=False, write_vec=True)
+        psi16.write(write_correlation=False, write_vec=True)
         psi16.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
-        psi16.calc_write()
+        psi16.write()
     if calc_type == "pos":
         psi23, psi14, psi16 = PsiMN(sim_path, 2, 3), PsiMN(sim_path, 1, 4), PsiMN(sim_path, 1, 6)
         psi23.calc_order_parameter(), psi14.calc_order_parameter(), psi16.calc_order_parameter()
@@ -346,7 +346,7 @@ def main():
         theta = np.angle(np.sum(correct_psi))
         pos = PositionalCorrelationFunction(sim_path, theta)
         pos.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
-        pos.calc_write()
+        pos.write()
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ output = "../post_process/from_ATLAS2.0/N=8100_h=1.0_rhoH=0.88_AF_square_ECMC"
 psi23 = PsiMN(output, 2, 3)
 psi23.calc_order_parameter(calc_upper_lower=True)
 psi23.correlation(bin_width=0.2, calc_upper_lower=True, randomize=True, realizations=int(1e6))
-psi23.calc_write(write_correlation=True)
+psi23.write(write_correlation=True)
 
 # theta = np.angle(np.sum(psi23.op_vec))
 # theta = -1.73

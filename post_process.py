@@ -321,7 +321,9 @@ def main():
     N = int(re.split('_h=', re.split('N=', sys.argv[1])[1])[0])
     correlation_couples = int(1e6)
     randomize = N ** 2 > correlation_couples
-    log = os.path.join(sim_path, 'OP/log')
+    op_dir = os.path.join(sim_path, "OP")
+    if not os.path.exists(op_dir): os.mkdir(op_dir)
+    log = os.path.join(op_dir, "log")
     sys.stdout = open(log, "a")
     print("\n\n\n-----------\nDate: " + str(date.today()) + "\nType: " + calc_type + "\nCorrelation couples: " + str(
         correlation_couples), file=sys.stdout)

@@ -8,6 +8,7 @@ import os
 import sys
 import random
 import re
+from datetime import date
 
 
 class OrderParameter:
@@ -318,8 +319,12 @@ def main():
     sim_path = os.path.join(prefix, sys.argv[1])
     calc_type = sys.argv[2]
     N = int(re.split('_h=', re.split('N=', sys.argv[1])[1])[0])
-    randomize = N > 30000
-    correlation_couples = int(5e6)
+    correlation_couples = int(1e6)
+    randomize = N ** 2 > correlation_couples
+    log = os.path.join(sim_path, 'OP/log')
+    sys.stdout = open(log, "a")
+    print("\n\n\n-----------\nDate: " + str(date.today()) + "\nType: " + calc_type + "\nCorrelation couples: " + str(
+        correlation_couples), file=sys.stdout)
     if calc_type == "psi23":
         psi23 = PsiMN(sim_path, 2, 3)
         psi23.calc_order_parameter()

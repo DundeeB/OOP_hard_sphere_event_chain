@@ -57,7 +57,7 @@ def main():
     #             n_row = 50 * n_factor
     #             n_col = 18 * n_factor
     #             send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')
-    send_single_run_envelope(h=0.8, n_row=90, n_col=90, rho_H=0.78, initial_conditions='square')
+    send_single_run_envelope(h=0.8, n_row=90, n_col=90, rhoH=0.78, initial_conditions='square')
     # const eta=pi/4*(N/2)*sig^2/A=pi/8*H/sig*rhoH
     # for rho_H_h1 in [0.89, 0.9, 0.91]:
     #     h1 = 1

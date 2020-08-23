@@ -269,7 +269,7 @@ class Metric:
                 vec[i] = dx[i]
                 continue
             l = boundaries.edges[i]
-            dxs = [dx[i], dx[i] + l, dx[i] - l]
+            dxs = np.array([dx[i], dx[i] + l, dx[i] - l])
             vec[i] = dxs[np.argmin(dxs ** 2)]  # find shorter path through B.D.
         return vec
 

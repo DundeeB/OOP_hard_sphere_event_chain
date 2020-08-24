@@ -17,7 +17,8 @@ def send_single_run_envelope(h, n_row, n_col, rhoH, initial_conditions):
         if initial_conditions == 'square':
             init_name_in_dir = 'AF_square_ECMC'
         else:
-            raise NotImplementedError("Implemented initial conditions are: square, honeycomb")
+            raise NotImplementedError(
+                "Implemented initial conditions are: square, honeycomb. No " + initial_conditions + " implemented")
     sim_name = "N=" + str(n_row * n_col) + "_h=" + str(h) + "_rhoH=" + str(rhoH) + \
                "_" + init_name_in_dir
     out_pwd = prefix + "out/" + sim_name + ".out"

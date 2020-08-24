@@ -19,27 +19,27 @@ def run_honeycomb(h, n_row, n_col, rho_H):
     if os.path.exists(output_dir):
         return run_sim(np.nan, N, h, rho_H, sim_name)
         # when continuing from restart there shouldn't be use of initial arr
+    else:
+        r = 1
+        sig = 2 * r
+        # build input parameters for cells
+        a_dest = sig * np.sqrt(2 / (rho_H * (1 + h) * np.sin(np.pi / 3)))
+        l_y_dest = a_dest * n_row / 2 * np.sin(np.pi / 3)
+        e = a_dest
+        n_col_cells = n_col
+        n_row_cells = int(round(l_y_dest / e))
+        l_x = n_col_cells * e
+        l_y = n_row_cells * e
+        a = np.sqrt(l_x * l_y / N)
+        rho_H_new = (sig ** 2) / ((a ** 2) * (h + 1))
 
-    r = 1
-    sig = 2 * r
-    # build input parameters for cells
-    a_dest = sig * np.sqrt(2 / (rho_H * (1 + h) * np.sin(np.pi / 3)))
-    l_y_dest = a_dest * n_row / 2 * np.sin(np.pi / 3)
-    e = a_dest
-    n_col_cells = n_col
-    n_row_cells = int(round(l_y_dest / e))
-    l_x = n_col_cells * e
-    l_y = n_row_cells * e
-    a = np.sqrt(l_x * l_y / N)
-    rho_H_new = (sig ** 2) / ((a ** 2) * (h + 1))
+        initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)
+        initial_arr.add_third_dimension_for_sphere((h + 1) * sig)
+        initial_arr.generate_spheres_in_AF_triangular_structure(n_row, n_col, r)
+        initial_arr.scale_xy(np.sqrt(rho_H_new / rho_H))
+        assert initial_arr.edge > sig
 
-    initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)
-    initial_arr.add_third_dimension_for_sphere((h + 1) * sig)
-    initial_arr.generate_spheres_in_AF_triangular_structure(n_row, n_col, r)
-    initial_arr.scale_xy(np.sqrt(rho_H_new / rho_H))
-    assert initial_arr.edge > sig
-
-    return run_sim(initial_arr, N, h, rho_H, sim_name)
+        return run_sim(initial_arr, N, h, rho_H, sim_name)
 
 
 def run_square(h, n_row, n_col, rho_H):

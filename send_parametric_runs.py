@@ -2,6 +2,7 @@
 import os
 import numpy as np
 import time
+import re
 
 prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results2.0/"
 code_prefix = "/srv01/technion/danielab/OOP_hard_sphere_event_chain/"
@@ -38,6 +39,30 @@ def quench_single_run_envelope(action, other_sim_dir, desired_rho_or_h):
     return
 
 
+def params_from_name(name):
+    ss = re.split("[_=]", name)
+    for i, s in enumerate(ss):
+        if s == 'N':
+            N = int(ss[i + 1])
+        if s == 'h':
+            h = float(ss[i + 1])
+        if s == 'rhoH':
+            rhoH = float(ss[i + 1])
+        if s == 'AF':
+            ic = ss[i + 1]
+    return N, h, rhoH, ic
+
+
+def resend_all_runs():
+    sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
+    for d in sims:
+        N, h, rhoH, ic = params_from_name(d)
+        send_single_run_envelope(h, int(np.sqrt(N)), int(np.sqrt(N)), rhoH, ic)
+        # n_row and n_col are used only when a new simulation is sent, otherwise only N=n_row*n_col is calculated,
+        # and the rest is read from the input file. Therefor, even if n_row and n_col are wrong here, the simulation
+        # will continue from last restart with the correct values.
+
+
 def main():
     # desired_h = 0.8
     # for initial_rho in [round(r,2) for r in np.linspace(0.75, 0.85, 11)]:
@@ -57,8 +82,8 @@ def main():
     #             n_row = 50 * n_factor
     #             n_col = 18 * n_factor
     #             send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')
-    send_single_run_envelope(h=0.8, n_row=150, n_col=150, rhoH=0.8, initial_conditions='square')
-    send_single_run_envelope(h=0.8, n_row=150, n_col=150, rhoH=0.8, initial_conditions='honeycomb')
+    # send_single_run_envelope(h=0.8, n_row=150, n_col=150, rhoH=0.8, initial_conditions='square')
+    # send_single_run_envelope(h=0.8, n_row=150, n_col=150, rhoH=0.8, initial_conditions='honeycomb')
     # const eta=pi/4*(N/2)*sig^2/A=pi/8*H/sig*rhoH
     # for rho_H_h1 in [0.89, 0.9, 0.91]:
     #     h1 = 1
@@ -75,6 +100,7 @@ def main():
     #         n_row = 50 * n_factor
     #         n_col = 18 * n_factor
     #         send_single_run_envelope(h, n_row, n_col, rho_H, 'honeycomb')
+    resend_all_runs()
 
 
 if __name__ == "__main__":

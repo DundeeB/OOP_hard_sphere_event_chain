@@ -9,6 +9,7 @@ import sys
 import random
 import re
 from datetime import date
+from scipy.spatial import Delaunay
 
 
 class OrderParameter:
@@ -142,14 +143,12 @@ class PsiMN(OrderParameter):
     @staticmethod
     def psi_m_n(event_2d_cells, m, n):
         centers = event_2d_cells.all_centers
-        sp = event_2d_cells.all_spheres
         cyc_bound = CubeBoundaries(event_2d_cells.boundaries.edges[:2], 2 * [BoundaryType.CYCLIC])
         cyc = lambda p1, p2: Metric.cyclic_dist(cyc_bound, Sphere(p1, 1), Sphere(p2, 1))
         graph = kneighbors_graph([p[:2] for p in centers], n_neighbors=n, metric=cyc)
         psimn_vec = np.zeros(len(centers), dtype=np.complex)
         for i in range(len(centers)):
-            sp[i].nearest_neighbors = [sp[j] for j in graph.getrow(i).indices]
-            dr = [np.array(centers[i]) - s.center for s in sp[i].nearest_neighbors]
+            dr = [np.array(centers[i]) - centers[j] for j in graph.getrow(i).indices]
             t = np.arctan2([r[1] for r in dr], [r[0] for r in dr])
             psi_n = np.mean(np.exp(1j * n * t))
             psimn_vec[i] = np.abs(psi_n) * np.exp(1j * m * np.angle(psi_n))
@@ -312,6 +311,67 @@ class RealizationsAveragedOP:
             op.upper.counts = upper_counts
             op.upper.op_name = op.upper.op_name + "_" + str(len(numbered_files) + 1) + "_averaged"
         op.write(bin_width=bin_width, write_vec=False, write_upper_lower=calc_upper_lower)
+
+
+class BurgerVector(OrderParameter):
+    def __init__(self):
+        return
+
+    @staticmethod
+    def calc_burger_vector(event_2d_cells, psi, perfect_lattice_vectors, n_orientation):
+        """
+        Calculate the burger vector on each plaquette of the Delaunay triangulation using methods in:
+            [1]	https://link.springer.com/content/pdf/10.1007%2F978-3-319-42913-7_20-1.pdf
+            [2]	https://www.sciencedirect.com/science/article/pii/S0022509614001331?via%3Dihub
+        :param event_2d_cells: Structure containing spheres centers, boundaries ext.
+        :param psi: orientational order parameter for local orientation. psi(i) correspond to the i'th sphere
+        :param perfect_lattice_vectors: list of vectors of the perfect lattice. Their magnitude is no important.
+        :return: The positions (r) and burger vector at each position b. The position of a dislocation is take as the
+                center of the plaquette.
+        """
+        wraped_centers = BurgerVector.wrap_with_boundaries(event_2d_cells, w=5)
+        # all spheres within w distance from cyclic boundary will be mirrored
+        tri = Delaunay(wraped_centers)
+        b = []
+        r = []
+        for i, simplex in enumerate(tri.simplices):
+            rc = np.mean(tri.points[simplex], 0)
+            if rc[0] < 0 or rc[0] > event_2d_cells.boundaries.edges[0] or rc[1] < 0 or rc[1] > \
+                    event_2d_cells.boundaries.edges[1]:
+                continue
+            neighbor_points = []
+            for neighbor_simplex in tri.neighbors[i]:
+                neighbor_points.append([tri.points[k] for k in neighbor_simplex if k not in simplex][0])
+            psi_avg = np.mean(psi[simplex])
+            orientation = np.imag(np.log(psi_avg)) / n_orientation
+            b_i = BurgerVector.burger_calculation(tri.points[simplex], neighbor_points, perfect_lattice_vectors,
+                                                  orientation)
+            if np.linalg.norm(b_i) > 0:
+                r.append(rc)
+                b.append(b_i)
+        return
+
+    @staticmethod
+    def burger_calculation(simplex_points, neighbors_points, perfect_lattice_vectors, orientation):
+        return 7
+
+    @staticmethod
+    def wrap_with_boundaries(event_2d_cells, w):
+        centers = np.array(event_2d_cells.all_centers)[:, :2]
+        Lx, Ly = event_2d_cells.boundaries.edges[:2]
+        x = centers[:, 0]
+        y = centers[:, 1]
+        sp1 = centers[np.logical_and(x - Lx > -w, y < w), :] + [-Lx, Ly]
+        sp2 = centers[y < w, :] + [0, Ly]
+        sp3 = centers[np.logical_and(x < w, y < w), :] + [Lx, Ly]
+        sp4 = centers[x - Lx > -w, :] + [-Lx, 0]
+        sp5 = centers[:, :] + [0, 0]
+        sp6 = centers[x < w, :] + [Lx, 0]
+        sp7 = centers[np.logical_and(x - Lx > -w, y - Ly > -w), :] + [-Lx, -Ly]
+        sp8 = centers[y - Ly > -w, :] + [0, -Ly]
+        sp9 = centers[np.logical_and(x < w, y - Ly > -w), :] + [Lx, -Ly]
+        wraped_centers = np.concatenate((sp1, sp2, sp3, sp4, sp5, sp6, sp7, sp8, sp9))
+        return wraped_centers
 
 
 def main():

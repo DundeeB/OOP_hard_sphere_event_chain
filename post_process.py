@@ -353,7 +353,30 @@ class BurgerVector(OrderParameter):
 
     @staticmethod
     def burger_calculation(simplex_points, neighbors_points, perfect_lattice_vectors, orientation):
-        return 7
+        R = np.array([[np.cos(-orientation), -np.sin(-orientation)], [np.sin(-orientation), np.cos(-orientation)]])
+        rotate = lambda ps: np.matmul(R, np.array(ps).T).T
+        simplex_points = rotate(simplex_points)
+        neighbors_points = rotate(neighbors_points)
+
+        ts = []
+        rc = np.mean(simplex_points, 0)
+        for p in simplex_points:
+            ts.append(np.arctan2(p[0] - rc[0], p[1] - rc[1]))
+        I = np.argsort(ts)
+        simplex_points = simplex_points[I]  # calculate burger circuit always anti-clockwise
+        neighbors_points = neighbors_points[I]  # keep it connected to the k'th bond opposite to the k'th point
+        which_L = lambda x_ab: np.argmin([np.abs(x_ab - L_) for L_ in perfect_lattice_vectors])
+        L_ab = lambda x_ab: perfect_lattice_vectors[which_L(x_ab)]
+        Ls = []
+        for (a, b), k in zip([(0, 1), (1, 2), (2, 0)], [2, 0, 1]):
+            x_c1, x_c2 = simplex_points[k], neighbors_points[k]
+            x_a, x_b = simplex_points[a], simplex_points[b]
+            L1 = L_ab(x_b - x_a)
+            L2 = L_ab(x_b - x_c1) + L_ab(x_c1 - x_a)
+            L3 = L_ab(x_b - x_c2) + L_ab(x_c2 - x_a)
+            i_L = [which_L(L) for L in [L1, L2, L3]]
+            Ls.append(perfect_lattice_vectors[np.argmax(np.bincount(i_L))])
+        return np.sum(Ls)
 
     @staticmethod
     def wrap_with_boundaries(event_2d_cells, w):

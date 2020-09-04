@@ -313,9 +313,34 @@ class RealizationsAveragedOP:
         op.write(bin_width=bin_width, write_vec=False, write_upper_lower=calc_upper_lower)
 
 
-class BurgerVector(OrderParameter):
-    def __init__(self):
-        return
+class BurgerField(OrderParameter):
+    def __init__(self, sim_path, a1, a2, psi_op, psi_up=None, psi_down=None, centers=None, spheres_ind=None,
+                 calc_upper_lower=True):
+        super().__init__(sim_path, centers, spheres_ind, calc_upper_lower=False)
+        self.op_name = "burger_vectors"
+        self.psi = psi_op.op_vec
+        self.a1, self.a2 = a1, a2
+        if calc_upper_lower:
+            upper_centers = [c for c in self.event_2d_cells.all_centers if
+                             c[2] >= self.event_2d_cells.boundaries.edges[2] / 2]
+            lower_centers = [c for c in self.event_2d_cells.all_centers if
+                             c[2] < self.event_2d_cells.boundaries.edges[2] / 2]
+            self.upper = BurgerField(sim_path, centers=upper_centers, spheres_ind=spheres_ind, calc_upper_lower=False,
+                                     a1=a1 + a2, a2=a1 - a2, psi_op=psi_up)
+            self.lower = BurgerField(sim_path, centers=lower_centers, spheres_ind=spheres_ind, calc_upper_lower=False,
+                                     a1=a1 + a2, a2=a1 - a2, psi_op=psi_down)
+            self.upper.op_name = "upper_burger_vectors"
+            self.lower.op_name = "lower_burger_vectors"
+
+    def calc_order_parameter(self, calc_upper_lower=True):
+        perfect_lattice_vectors = np.array([[n * self.a1 + m * self.a2 for n in range(-2, 2) for m in range(-2, 2)]])
+        disloc_burger, disloc_location = BurgerField.calc_burger_vector(self.event_2d_cells, self.psi,
+                                                      perfect_lattice_vectors,
+                                                      n_orientation=self.psi_op.m * self.psi_op.n)
+        self.op_vec = np.concatenate((disloc_location.T, disloc_burger.T)).T  # x, y, bx, by field
+        if calc_upper_lower:
+            self.lower.calc_order_parameter(calc_upper_lower=False)
+            self.upper.calc_order_parameter(calc_upper_lower=False)
 
     @staticmethod
     def calc_burger_vector(event_2d_cells, psi, perfect_lattice_vectors, n_orientation):
@@ -329,11 +354,11 @@ class BurgerVector(OrderParameter):
         :return: The positions (r) and burger vector at each position b. The position of a dislocation is take as the
                 center of the plaquette.
         """
-        wraped_centers = BurgerVector.wrap_with_boundaries(event_2d_cells, w=5)
+        wraped_centers = BurgerField.wrap_with_boundaries(event_2d_cells, w=5)
         # all spheres within w distance from cyclic boundary will be mirrored
         tri = Delaunay(wraped_centers)
-        b = []
-        r = []
+        dislocation_burger = []
+        dislocation_location = []
         for i, simplex in enumerate(tri.simplices):
             rc = np.mean(tri.points[simplex], 0)
             if rc[0] < 0 or rc[0] > event_2d_cells.boundaries.edges[0] or rc[1] < 0 or rc[1] > \
@@ -344,12 +369,12 @@ class BurgerVector(OrderParameter):
                 neighbor_points.append([tri.points[k] for k in neighbor_simplex if k not in simplex][0])
             psi_avg = np.mean(psi[simplex])
             orientation = np.imag(np.log(psi_avg)) / n_orientation
-            b_i = BurgerVector.burger_calculation(tri.points[simplex], neighbor_points, perfect_lattice_vectors,
-                                                  orientation)
+            b_i = BurgerField.burger_calculation(tri.points[simplex], neighbor_points, perfect_lattice_vectors,
+                                                 orientation)
             if np.linalg.norm(b_i) > 0:
-                r.append(rc)
-                b.append(b_i)
-        return
+                dislocation_location.append(rc)
+                dislocation_burger.append(b_i)
+        return dislocation_burger, dislocation_location
 
     @staticmethod
     def burger_calculation(simplex_points, neighbors_points, perfect_lattice_vectors, orientation):

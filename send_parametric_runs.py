@@ -67,7 +67,8 @@ def resend_all_runs():
 
 
 def main():
-    resend_all_runs()
+    # resend_all_runs()
+    send_single_run_envelope(0.8, 150, 150, 0.79, 'honeycomb')  # N=22500_h=0.8_rhoH=0.79_AF_triangle_ECMC
 
 
 if __name__ == "__main__":

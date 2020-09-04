@@ -1,7 +1,6 @@
 #!/Local/cmp/anaconda3/bin/python -u
 import os
 import time
-import re
 from send_parametric_runs import params_from_name
 
 prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results2.0/"
@@ -24,11 +23,11 @@ def main():
         N, h, rhoH, ic = params_from_name(sim_name)
         # ["psi23", "psi14", "psi16", "pos"]
         if h >= 1.0:
-            send_specific_run(["psi23"])
+            send_specific_run(sim_name, ["psi23"])
         if h == 0.8:
-            send_specific_run(["psi23"])
+            send_specific_run(sim_name, ["psi14"])
         if h <= 0.4:
-            send_specific_run(["psi16"])
+            send_specific_run(sim_name, ["psi16"])
 
 
 if __name__ == "__main__":

@@ -21,9 +21,9 @@ def main():
     sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
     for sim_name in sims:
         if re.match('.*h=1.0.*', sim_name):
-            send_specific_run(["psi23"])  # "psi14", "psi16", "pos"])
+            send_specific_run(sim_name, ["psi23"])  # "psi14", "psi16", "pos"])
         if re.match('.*h=0.8.*', sim_name):
-            send_specific_run(["psi14"])  # "psi14", "psi16", "pos"])
+            send_specific_run(sim_name, ["psi14"])  # "psi23", "psi16", "pos"])
 
 
 if __name__ == "__main__":

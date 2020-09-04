@@ -67,7 +67,8 @@ def resend_all_runs():
 
 
 def main():
-    resend_all_runs()
+    # resend_all_runs()
+    send_single_run_envelope(0.8, 90, 90, 0.8, 'square')
 
 
 if __name__ == "__main__":

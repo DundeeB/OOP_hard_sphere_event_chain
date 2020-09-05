@@ -38,10 +38,10 @@ class OrderParameter:
                              c[2] >= self.event_2d_cells.boundaries.edges[2] / 2]
             lower_centers = [c for c in self.event_2d_cells.all_centers if
                              c[2] < self.event_2d_cells.boundaries.edges[2] / 2]
-            self.upper = type(self)(sim_path, centers=upper_centers, spheres_ind=spheres_ind, calc_upper_lower=False,
-                                    **kwargs)
-            self.lower = type(self)(sim_path, centers=lower_centers, spheres_ind=spheres_ind, calc_upper_lower=False,
-                                    **kwargs)
+            self.upper = type(self)(sim_path, centers=upper_centers, spheres_ind=self.spheres_ind,
+                                    calc_upper_lower=False, **kwargs)
+            self.lower = type(self)(sim_path, centers=lower_centers, spheres_ind=self.spheres_ind,
+                                    calc_upper_lower=False, **kwargs)
 
     def calc_order_parameter(self, calc_upper_lower=True):
         """to be override by child class"""
@@ -314,30 +314,31 @@ class RealizationsAveragedOP:
 
 
 class BurgerField(OrderParameter):
-    def __init__(self, sim_path, a1, a2, psi_op, psi_up=None, psi_down=None, centers=None, spheres_ind=None,
-                 calc_upper_lower=True):
+    def __init__(self, sim_path, a1, a2, psi_op, centers=None, spheres_ind=None, calc_upper_lower=True):
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower=False)
         self.op_name = "burger_vectors"
         self.psi = psi_op.op_vec
+        self.n_orientation = psi_op.m * psi_op.n
         self.a1, self.a2 = a1, a2
         if calc_upper_lower:
             upper_centers = [c for c in self.event_2d_cells.all_centers if
                              c[2] >= self.event_2d_cells.boundaries.edges[2] / 2]
             lower_centers = [c for c in self.event_2d_cells.all_centers if
                              c[2] < self.event_2d_cells.boundaries.edges[2] / 2]
-            self.upper = BurgerField(sim_path, centers=upper_centers, spheres_ind=spheres_ind, calc_upper_lower=False,
-                                     a1=a1 + a2, a2=a1 - a2, psi_op=psi_up)
-            self.lower = BurgerField(sim_path, centers=lower_centers, spheres_ind=spheres_ind, calc_upper_lower=False,
-                                     a1=a1 + a2, a2=a1 - a2, psi_op=psi_down)
+            self.upper = BurgerField(sim_path, centers=upper_centers, spheres_ind=self.spheres_ind,
+                                     calc_upper_lower=False,
+                                     a1=a1 + a2, a2=a1 - a2, psi_op=psi_op.upper)
+            self.lower = BurgerField(sim_path, centers=lower_centers, spheres_ind=self.spheres_ind,
+                                     calc_upper_lower=False,
+                                     a1=a1 + a2, a2=a1 - a2, psi_op=psi_op.lower)
             self.upper.op_name = "upper_burger_vectors"
             self.lower.op_name = "lower_burger_vectors"
 
     def calc_order_parameter(self, calc_upper_lower=True):
-        perfect_lattice_vectors = np.array([[n * self.a1 + m * self.a2 for n in range(-2, 2) for m in range(-2, 2)]])
-        disloc_burger, disloc_location = BurgerField.calc_burger_vector(self.event_2d_cells, self.psi,
-                                                      perfect_lattice_vectors,
-                                                      n_orientation=self.psi_op.m * self.psi_op.n)
-        self.op_vec = np.concatenate((disloc_location.T, disloc_burger.T)).T  # x, y, bx, by field
+        perfect_lattice_vectors = np.array([n * self.a1 + m * self.a2 for n in range(-2, 2) for m in range(-2, 2)])
+        disloc_burger, disloc_location = BurgerField.calc_burger_vector(
+            self.event_2d_cells, self.psi, perfect_lattice_vectors, n_orientation=self.n_orientation)
+        self.op_vec = np.concatenate((np.array(disloc_location).T, np.array(disloc_burger).T)).T  # x, y, bx, by field
         if calc_upper_lower:
             self.lower.calc_order_parameter(calc_upper_lower=False)
             self.upper.calc_order_parameter(calc_upper_lower=False)
@@ -349,12 +350,12 @@ class BurgerField(OrderParameter):
             [1]	https://link.springer.com/content/pdf/10.1007%2F978-3-319-42913-7_20-1.pdf
             [2]	https://www.sciencedirect.com/science/article/pii/S0022509614001331?via%3Dihub
         :param event_2d_cells: Structure containing spheres centers, boundaries ext.
-        :param psi: orientational order parameter for local orientation. psi(i) correspond to the i'th sphere
+        :param wraped_psi: orientational order parameter for local orientation. psi(i) correspond to the i'th sphere
         :param perfect_lattice_vectors: list of vectors of the perfect lattice. Their magnitude is no important.
         :return: The positions (r) and burger vector at each position b. The position of a dislocation is take as the
                 center of the plaquette.
         """
-        wraped_centers = BurgerField.wrap_with_boundaries(event_2d_cells, w=5)
+        wraped_centers, wraped_psi = BurgerField.wrap_with_boundaries(event_2d_cells, w=5, psi=psi)
         # all spheres within w distance from cyclic boundary will be mirrored
         tri = Delaunay(wraped_centers)
         dislocation_burger = []
@@ -365,9 +366,10 @@ class BurgerField(OrderParameter):
                     event_2d_cells.boundaries.edges[1]:
                 continue
             neighbor_points = []
-            for neighbor_simplex in tri.neighbors[i]:
-                neighbor_points.append([tri.points[k] for k in neighbor_simplex if k not in simplex][0])
-            psi_avg = np.mean(psi[simplex])
+            for neighbor_simplex_ind in tri.neighbors[i]:
+                neighbor_points.append(
+                    [tri.points[k] for k in tri.simplices[neighbor_simplex_ind] if k not in simplex][0])
+            psi_avg = np.mean(wraped_psi[simplex])
             orientation = np.imag(np.log(psi_avg)) / n_orientation
             b_i = BurgerField.burger_calculation(tri.points[simplex], neighbor_points, perfect_lattice_vectors,
                                                  orientation)
@@ -390,7 +392,7 @@ class BurgerField(OrderParameter):
         I = np.argsort(ts)
         simplex_points = simplex_points[I]  # calculate burger circuit always anti-clockwise
         neighbors_points = neighbors_points[I]  # keep it connected to the k'th bond opposite to the k'th point
-        which_L = lambda x_ab: np.argmin([np.abs(x_ab - L_) for L_ in perfect_lattice_vectors])
+        which_L = lambda x_ab: np.argmin([np.linalg.norm(x_ab - L_) for L_ in perfect_lattice_vectors])
         L_ab = lambda x_ab: perfect_lattice_vectors[which_L(x_ab)]
         Ls = []
         for (a, b), k in zip([(0, 1), (1, 2), (2, 0)], [2, 0, 1]):
@@ -401,14 +403,15 @@ class BurgerField(OrderParameter):
             L3 = L_ab(x_b - x_c2) + L_ab(x_c2 - x_a)
             i_L = [which_L(L) for L in [L1, L2, L3]]
             Ls.append(perfect_lattice_vectors[np.argmax(np.bincount(i_L))])
-        return np.sum(Ls)
+        return np.sum(Ls, 0)
 
     @staticmethod
-    def wrap_with_boundaries(event_2d_cells, w):
+    def wrap_with_boundaries(event_2d_cells, w, psi):
         centers = np.array(event_2d_cells.all_centers)[:, :2]
         Lx, Ly = event_2d_cells.boundaries.edges[:2]
         x = centers[:, 0]
         y = centers[:, 1]
+
         sp1 = centers[np.logical_and(x - Lx > -w, y < w), :] + [-Lx, Ly]
         sp2 = centers[y < w, :] + [0, Ly]
         sp3 = centers[np.logical_and(x < w, y < w), :] + [Lx, Ly]
@@ -418,8 +421,30 @@ class BurgerField(OrderParameter):
         sp7 = centers[np.logical_and(x - Lx > -w, y - Ly > -w), :] + [-Lx, -Ly]
         sp8 = centers[y - Ly > -w, :] + [0, -Ly]
         sp9 = centers[np.logical_and(x < w, y - Ly > -w), :] + [Lx, -Ly]
+
+        psi1 = psi[np.logical_and(x - Lx > -w, y < w)]
+        psi2 = psi[y < w]
+        psi3 = psi[np.logical_and(x < w, y < w)]
+        psi4 = psi[x - Lx > -w]
+        psi5 = psi[:]
+        psi6 = psi[x < w]
+        psi7 = psi[np.logical_and(x - Lx > -w, y - Ly > -w)]
+        psi8 = psi[y - Ly > -w]
+        psi9 = psi[np.logical_and(x < w, y - Ly > -w)]
+
         wraped_centers = np.concatenate((sp1, sp2, sp3, sp4, sp5, sp6, sp7, sp8, sp9))
-        return wraped_centers
+        wraped_psi = np.concatenate((psi1, psi2, psi3, psi4, psi5, psi6, psi7, psi8, psi9))
+        return wraped_centers, wraped_psi
+
+    def write(self, write_upper_lower=True):
+        super().write(write_correlation=False, write_vec=True, write_upper_lower=False)
+        if write_upper_lower:
+            self.lower.write(write_upper_lower=False)
+            self.upper.write(write_upper_lower=False)
+            np.savetxt(os.path.join(os.path.join(self.sim_path, "OP"), "lower_" + str(self.spheres_ind) + ".txt"),
+                       self.lower.event_2d_cells.all_centers)
+            np.savetxt(os.path.join(os.path.join(self.sim_path, "OP"), "upper_" + str(self.spheres_ind) + ".txt"),
+                       self.upper.event_2d_cells.all_centers)
 
 
 def main():

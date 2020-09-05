@@ -487,6 +487,19 @@ def main():
         pos = PositionalCorrelationFunction(sim_path, theta)
         pos.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
         pos.write()
+    if calc_type == "burger_square":
+        psi14 = PsiMN(sim_path, 1, 4)
+        psi14.calc_order_parameter()
+
+        load = WriteOrLoad(output_dir=sim_path)
+        l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = load.load_Input()
+        a = np.sqrt(l_x * l_y / N)
+        a1 = np.array([a, 0])
+        a2 = np.array([0, a])
+
+        burger = BurgerField(sim_path, a1, a2, psi14)
+        burger.calc_order_parameter()
+        burger.write()
 
 
 if __name__ == "__main__":

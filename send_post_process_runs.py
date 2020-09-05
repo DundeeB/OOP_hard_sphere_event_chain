@@ -21,13 +21,14 @@ def main():
     sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
     for sim_name in sims:
         N, h, rhoH, ic = params_from_name(sim_name)
-        # ["psi23", "psi14", "psi16", "pos"]
+        # ["psi23", "psi14", "psi16", "pos","burger_square"]
         if h >= 1.0:
-            send_specific_run(sim_name, ["psi23"])
+            # send_specific_run(sim_name, ["psi23"])
         if h == 0.8:
-            send_specific_run(sim_name, ["psi14"])
+            # send_specific_run(sim_name, ["psi14", "burger_square"])
+            send_specific_run(sim_name, ["burger_square"])
         if h <= 0.4:
-            send_specific_run(sim_name, ["psi16"])
+            # send_specific_run(sim_name, ["psi16"])
 
 
 if __name__ == "__main__":

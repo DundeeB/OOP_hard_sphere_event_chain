@@ -11,6 +11,8 @@ import re
 from datetime import date
 from scipy.spatial import Delaunay
 
+epsilon = 1e-8
+
 
 class OrderParameter:
 
@@ -336,6 +338,11 @@ class BurgerField(OrderParameter):
 
     def calc_order_parameter(self, calc_upper_lower=True):
         perfect_lattice_vectors = np.array([n * self.a1 + m * self.a2 for n in range(-3, 3) for m in range(-3, 3)])
+        psi_avg = np.mean(self.psi)
+        orientation = np.imag(np.log(psi_avg)) / self.n_orientation
+        R = np.array([[np.cos(orientation), -np.sin(orientation)], [np.sin(orientation), np.cos(orientation)]])
+        perfect_lattice_vectors = np.array([np.matmul(R, p.T) for p in perfect_lattice_vectors])
+        # rotate = lambda ps: np.matmul(R(-orientation), np.array(ps).T).T
         disloc_burger, disloc_location = BurgerField.calc_burger_vector(self.event_2d_cells, perfect_lattice_vectors)
         self.op_vec = np.concatenate((np.array(disloc_location).T, np.array(disloc_burger).T)).T  # x, y, bx, by field
         if calc_upper_lower:
@@ -369,7 +376,7 @@ class BurgerField(OrderParameter):
                 neighbor_ind.append(
                     [k for k in tri.simplices[neighbor_simplex_ind] if k not in simplex][0])
             b_i = BurgerField.burger_calculation(tri.points[simplex], tri.points[neighbor_ind], perfect_lattice_vectors)
-            if np.linalg.norm(b_i) > 0:
+            if np.linalg.norm(b_i) > epsilon:
                 dislocation_location.append(rc)
                 dislocation_burger.append(b_i)
         return dislocation_burger, dislocation_location

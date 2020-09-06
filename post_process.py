@@ -336,15 +336,14 @@ class BurgerField(OrderParameter):
 
     def calc_order_parameter(self, calc_upper_lower=True):
         perfect_lattice_vectors = np.array([n * self.a1 + m * self.a2 for n in range(-3, 3) for m in range(-3, 3)])
-        disloc_burger, disloc_location = BurgerField.calc_burger_vector(
-            self.event_2d_cells, self.psi, perfect_lattice_vectors, n_orientation=self.n_orientation)
+        disloc_burger, disloc_location = BurgerField.calc_burger_vector(self.event_2d_cells, perfect_lattice_vectors)
         self.op_vec = np.concatenate((np.array(disloc_location).T, np.array(disloc_burger).T)).T  # x, y, bx, by field
         if calc_upper_lower:
             self.lower.calc_order_parameter(calc_upper_lower=False)
             self.upper.calc_order_parameter(calc_upper_lower=False)
 
     @staticmethod
-    def calc_burger_vector(event_2d_cells, psi, perfect_lattice_vectors, n_orientation):
+    def calc_burger_vector(event_2d_cells, perfect_lattice_vectors):
         """
         Calculate the burger vector on each plaquette of the Delaunay triangulation using methods in:
             [1]	https://link.springer.com/content/pdf/10.1007%2F978-3-319-42913-7_20-1.pdf
@@ -355,7 +354,7 @@ class BurgerField(OrderParameter):
         :return: The positions (r) and burger vector at each position b. The position of a dislocation is take as the
                 center of the plaquette.
         """
-        wraped_centers, wraped_psi = BurgerField.wrap_with_boundaries(event_2d_cells, w=5, psi=psi)
+        wraped_centers = BurgerField.wrap_with_boundaries(event_2d_cells, w=5)
         # all spheres within w distance from cyclic boundary will be mirrored
         tri = Delaunay(wraped_centers)
         dislocation_burger = []
@@ -369,18 +368,14 @@ class BurgerField(OrderParameter):
             for neighbor_simplex_ind in tri.neighbors[i]:
                 neighbor_ind.append(
                     [k for k in tri.simplices[neighbor_simplex_ind] if k not in simplex][0])
-            # psi_avg = np.mean(wraped_psi[simplex])
-            psi_avg = np.mean(wraped_psi[neighbor_ind + [k for k in simplex]])
-            orientation = np.imag(np.log(psi_avg)) / n_orientation
-            b_i = BurgerField.burger_calculation(tri.points[simplex], tri.points[neighbor_ind], perfect_lattice_vectors,
-                                                 orientation)
+            b_i = BurgerField.burger_calculation(tri.points[simplex], tri.points[neighbor_ind], perfect_lattice_vectors)
             if np.linalg.norm(b_i) > 0:
                 dislocation_location.append(rc)
                 dislocation_burger.append(b_i)
         return dislocation_burger, dislocation_location
 
     @staticmethod
-    def burger_calculation(simplex_points, neighbors_points, perfect_lattice_vectors, orientation):
+    def burger_calculation(simplex_points, neighbors_points, perfect_lattice_vectors):
         simplex_points = np.array(simplex_points)
         neighbors_points = np.array(neighbors_points)
 
@@ -405,7 +400,7 @@ class BurgerField(OrderParameter):
         return np.sum(Ls, 0)
 
     @staticmethod
-    def wrap_with_boundaries(event_2d_cells, w, psi):
+    def wrap_with_boundaries(event_2d_cells, w):
         centers = np.array(event_2d_cells.all_centers)[:, :2]
         Lx, Ly = event_2d_cells.boundaries.edges[:2]
         x = centers[:, 0]
@@ -421,19 +416,8 @@ class BurgerField(OrderParameter):
         sp8 = centers[y - Ly > -w, :] + [0, -Ly]
         sp9 = centers[np.logical_and(x < w, y - Ly > -w), :] + [Lx, -Ly]
 
-        psi1 = psi[np.logical_and(x - Lx > -w, y < w)]
-        psi2 = psi[y < w]
-        psi3 = psi[np.logical_and(x < w, y < w)]
-        psi4 = psi[x - Lx > -w]
-        psi5 = psi[:]
-        psi6 = psi[x < w]
-        psi7 = psi[np.logical_and(x - Lx > -w, y - Ly > -w)]
-        psi8 = psi[y - Ly > -w]
-        psi9 = psi[np.logical_and(x < w, y - Ly > -w)]
-
         wraped_centers = np.concatenate((sp1, sp2, sp3, sp4, sp5, sp6, sp7, sp8, sp9))
-        wraped_psi = np.concatenate((psi1, psi2, psi3, psi4, psi5, psi6, psi7, psi8, psi9))
-        return wraped_centers, wraped_psi
+        return wraped_centers
 
     def write(self, write_upper_lower=True):
         super().write(write_correlation=False, write_vec=True, write_upper_lower=False)

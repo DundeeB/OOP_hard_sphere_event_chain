@@ -335,7 +335,7 @@ class BurgerField(OrderParameter):
             self.lower.op_name = "lower_burger_vectors"
 
     def calc_order_parameter(self, calc_upper_lower=True):
-        perfect_lattice_vectors = np.array([n * self.a1 + m * self.a2 for n in range(-2, 2) for m in range(-2, 2)])
+        perfect_lattice_vectors = np.array([n * self.a1 + m * self.a2 for n in range(-3, 3) for m in range(-3, 3)])
         disloc_burger, disloc_location = BurgerField.calc_burger_vector(
             self.event_2d_cells, self.psi, perfect_lattice_vectors, n_orientation=self.n_orientation)
         self.op_vec = np.concatenate((np.array(disloc_location).T, np.array(disloc_burger).T)).T  # x, y, bx, by field
@@ -365,13 +365,14 @@ class BurgerField(OrderParameter):
             if rc[0] < 0 or rc[0] > event_2d_cells.boundaries.edges[0] or rc[1] < 0 or rc[1] > \
                     event_2d_cells.boundaries.edges[1]:
                 continue
-            neighbor_points = []
+            neighbor_ind = []
             for neighbor_simplex_ind in tri.neighbors[i]:
-                neighbor_points.append(
-                    [tri.points[k] for k in tri.simplices[neighbor_simplex_ind] if k not in simplex][0])
-            psi_avg = np.mean(wraped_psi[simplex])
+                neighbor_ind.append(
+                    [k for k in tri.simplices[neighbor_simplex_ind] if k not in simplex][0])
+            # psi_avg = np.mean(wraped_psi[simplex])
+            psi_avg = np.mean(wraped_psi[neighbor_ind + [k for k in simplex]])
             orientation = np.imag(np.log(psi_avg)) / n_orientation
-            b_i = BurgerField.burger_calculation(tri.points[simplex], neighbor_points, perfect_lattice_vectors,
+            b_i = BurgerField.burger_calculation(tri.points[simplex], tri.points[neighbor_ind], perfect_lattice_vectors,
                                                  orientation)
             if np.linalg.norm(b_i) > 0:
                 dislocation_location.append(rc)
@@ -380,10 +381,8 @@ class BurgerField(OrderParameter):
 
     @staticmethod
     def burger_calculation(simplex_points, neighbors_points, perfect_lattice_vectors, orientation):
-        R = np.array([[np.cos(-orientation), -np.sin(-orientation)], [np.sin(-orientation), np.cos(-orientation)]])
-        rotate = lambda ps: np.matmul(R, np.array(ps).T).T
-        simplex_points = rotate(simplex_points)
-        neighbors_points = rotate(neighbors_points)
+        simplex_points = np.array(simplex_points)
+        neighbors_points = np.array(neighbors_points)
 
         ts = []
         rc = np.mean(simplex_points, 0)

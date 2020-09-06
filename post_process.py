@@ -371,20 +371,15 @@ class BurgerField(OrderParameter):
             if rc[0] < 0 or rc[0] > event_2d_cells.boundaries.edges[0] or rc[1] < 0 or rc[1] > \
                     event_2d_cells.boundaries.edges[1]:
                 continue
-            neighbor_ind = []
-            for neighbor_simplex_ind in tri.neighbors[i]:
-                neighbor_ind.append(
-                    [k for k in tri.simplices[neighbor_simplex_ind] if k not in simplex][0])
-            b_i = BurgerField.burger_calculation(tri.points[simplex], tri.points[neighbor_ind], perfect_lattice_vectors)
+            b_i = BurgerField.burger_calculation(tri.points[simplex], perfect_lattice_vectors)
             if np.linalg.norm(b_i) > epsilon:
                 dislocation_location.append(rc)
                 dislocation_burger.append(b_i)
         return dislocation_burger, dislocation_location
 
     @staticmethod
-    def burger_calculation(simplex_points, neighbors_points, perfect_lattice_vectors):
+    def burger_calculation(simplex_points, perfect_lattice_vectors):
         simplex_points = np.array(simplex_points)
-        neighbors_points = np.array(neighbors_points)
 
         ts = []
         rc = np.mean(simplex_points, 0)
@@ -392,18 +387,9 @@ class BurgerField(OrderParameter):
             ts.append(np.arctan2(p[0] - rc[0], p[1] - rc[1]))
         I = np.argsort(ts)
         simplex_points = simplex_points[I]  # calculate burger circuit always anti-clockwise
-        neighbors_points = neighbors_points[I]  # keep it connected to the k'th bond opposite to the k'th point
         which_L = lambda x_ab: np.argmin([np.linalg.norm(x_ab - L_) for L_ in perfect_lattice_vectors])
         L_ab = lambda x_ab: perfect_lattice_vectors[which_L(x_ab)]
-        Ls = []
-        for (a, b), k in zip([(0, 1), (1, 2), (2, 0)], [2, 0, 1]):
-            x_c1, x_c2 = simplex_points[k], neighbors_points[k]
-            x_a, x_b = simplex_points[a], simplex_points[b]
-            L1 = L_ab(x_b - x_a)
-            L2 = L_ab(x_b - x_c1) + L_ab(x_c1 - x_a)
-            L3 = L_ab(x_b - x_c2) + L_ab(x_c2 - x_a)
-            i_L = [which_L(L) for L in [L1, L2, L3]]
-            Ls.append(perfect_lattice_vectors[np.argmax(np.bincount(i_L))])
+        Ls = [L_ab(simplex_points[b] - simplex_points[a]) for (a, b) in [(0, 1), (1, 2), (2, 0)]]
         return np.sum(Ls, 0)
 
     @staticmethod

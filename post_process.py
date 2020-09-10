@@ -424,11 +424,13 @@ class BurgerField(OrderParameter):
 
 
 def main():
+    correlation_couples = int(1e6)
+    calc_upper_lower = False
+
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results2.0/"
     sim_path = os.path.join(prefix, sys.argv[1])
     calc_type = sys.argv[2]
     N = int(re.split('_h=', re.split('N=', sys.argv[1])[1])[0])
-    correlation_couples = int(1e6)
     randomize = N ** 2 > correlation_couples
     op_dir = os.path.join(sim_path, "OP")
     if not os.path.exists(op_dir): os.mkdir(op_dir)
@@ -440,19 +442,22 @@ def main():
         psi23 = PsiMN(sim_path, 2, 3)
         psi23.calc_order_parameter()
         psi23.write(write_correlation=False, write_vec=True)
-        psi23.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
+        psi23.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples,
+                          calc_upper_lower=calc_upper_lower)
         psi23.write()
     if calc_type == "psi14":
         psi14 = PsiMN(sim_path, 1, 4)
         psi14.calc_order_parameter()
         psi14.write(write_correlation=False, write_vec=True)
-        psi14.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
+        psi14.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples,
+                          calc_upper_lower=calc_upper_lower)
         psi14.write()
     if calc_type == "psi16":
         psi16 = PsiMN(sim_path, 1, 6)
         psi16.calc_order_parameter()
         psi16.write(write_correlation=False, write_vec=True)
-        psi16.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
+        psi16.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples,
+                          calc_upper_lower=calc_upper_lower)
         psi16.write()
     if calc_type == "pos":
         psi23, psi14, psi16 = PsiMN(sim_path, 2, 3), PsiMN(sim_path, 1, 4), PsiMN(sim_path, 1, 6)
@@ -461,7 +466,8 @@ def main():
         correct_psi = psis[np.argmax(np.abs([np.sum(p) for p in psis]))]
         theta = np.angle(np.sum(correct_psi))
         pos = PositionalCorrelationFunction(sim_path, theta)
-        pos.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples)
+        pos.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples,
+                        calc_upper_lower=calc_upper_lower)
         pos.write()
     if calc_type == "burger_square":
         psi14 = PsiMN(sim_path, 1, 4)

@@ -1,7 +1,8 @@
 #!/Local/cmp/anaconda3/bin/python -u
 import os
 import time
-from send_parametric_runs import params_from_name
+# from send_parametric_runs import params_from_name
+import re
 
 prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results2.0/"
 code_prefix = "/srv01/technion/danielab/OOP_hard_sphere_event_chain/"
@@ -16,6 +17,18 @@ def send_specific_run(sim_name, post_types):
                   " -N " + post_type + "_" + sim_name + " -o " + out_pwd + " -e " + err_pwd +
                   " -l nodes=1:ppn=1,mem=1gb,vmem=2gb -q N " + code_prefix + "post_process_env.sh")
 
+def params_from_name(name):
+    ss = re.split("[_=]", name)
+    for i, s in enumerate(ss):
+        if s == 'N':
+            N = int(ss[i + 1])
+        if s == 'h':
+            h = float(ss[i + 1])
+        if s == 'rhoH':
+            rhoH = float(ss[i + 1])
+        if s == 'AF':
+            ic = ss[i + 1]
+    return N, h, rhoH, ic
 
 def main():
     sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]

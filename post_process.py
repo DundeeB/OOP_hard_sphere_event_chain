@@ -112,23 +112,21 @@ class OrderParameter:
         return self.op_vec[i] * np.conjugate(self.op_vec[j]), k
 
     def write(self, write_correlation=True, write_vec=False, write_upper_lower=True):
-        f = lambda a, b: os.path.join(a, b)
-        g = lambda name, mat: np.savetxt(
-            f(f(self.sim_path, "OP"), self.op_name + "_" + name + "_" + str(self.spheres_ind)) + ".txt", mat)
-        if not os.path.exists(f(self.sim_path, "OP")): os.mkdir(f(self.sim_path, "OP"))
+        join = lambda a, b: os.path.join(a, b)
+        op_dir = join(self.sim_path, "OP")
+        op_name_dir = join(op_dir, self.op_name)
+        save_mat = lambda name, mat: np.savetxt(join(op_name_dir, name + "_" + str(self.spheres_ind) + ".txt"), mat)
+        if not os.path.exists(op_dir): os.mkdir(op_dir)
+        if not os.path.exists(op_name_dir): os.mkdir(op_name_dir)
         if write_vec:
             if self.op_vec is None: raise (Exception("Should calculate correlation before writing"))
-            g("vec", self.op_vec)
+            save_mat("vec", self.op_vec)
         if write_correlation:
             if self.op_corr is None: raise (Exception("Should calculate correlation before writing"))
-            g("correlation", np.transpose([self.corr_centers, np.abs(self.op_corr), self.counts]))
+            save_mat("correlation", np.transpose([self.corr_centers, np.abs(self.op_corr), self.counts]))
         if write_upper_lower:
             self.lower.write(write_correlation, write_vec, write_upper_lower=False)
             self.upper.write(write_correlation, write_vec, write_upper_lower=False)
-            np.savetxt(os.path.join(os.path.join(self.sim_path, "OP"), "lower_" + str(self.spheres_ind) + ".txt"),
-                       self.lower.event_2d_cells.all_centers)
-            np.savetxt(os.path.join(os.path.join(self.sim_path, "OP"), "upper_" + str(self.spheres_ind) + ".txt"),
-                       self.upper.event_2d_cells.all_centers)
 
 
 class PsiMN(OrderParameter):
@@ -417,10 +415,6 @@ class BurgerField(OrderParameter):
         if write_upper_lower:
             self.lower.write(write_upper_lower=False)
             self.upper.write(write_upper_lower=False)
-            np.savetxt(os.path.join(os.path.join(self.sim_path, "OP"), "lower_" + str(self.spheres_ind) + ".txt"),
-                       self.lower.event_2d_cells.all_centers)
-            np.savetxt(os.path.join(os.path.join(self.sim_path, "OP"), "upper_" + str(self.spheres_ind) + ".txt"),
-                       self.upper.event_2d_cells.all_centers)
 
 
 def main():
@@ -478,10 +472,14 @@ def main():
         a = np.sqrt(l_x * l_y / N)
         a1 = np.array([a, 0])
         a2 = np.array([0, a])
-
-        burger = BurgerField(sim_path, a1, a2, psi14)
-        burger.calc_order_parameter()
-        burger.write()
+        for sp_ind in load.realizations():
+            if os.path.exists(
+                    os.path.join(load.output_dir, 'OP', 'Burger', 'burger_vectors_vec_' + str(sp_ind) + '.txt')):
+                continue
+            burger = BurgerField(sim_path, a1, a2, psi14, spheres_ind=sp_ind,
+                                 centers=np.loadtxt(os.path.join(load.output_dir, str(sp_ind))), calc_upper_lower=False)
+            burger.calc_order_parameter(calc_upper_lower=False)
+            burger.write()
 
 
 if __name__ == "__main__":

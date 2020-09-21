@@ -39,7 +39,6 @@ def main():
             send_specific_run(sim_name, ["psi23"])
         if h == 0.8:
             send_specific_run(sim_name, ["psi14", "burger_square"])
-            send_specific_run(sim_name, ["burger_square"])
         if h <= 0.4:
             send_specific_run(sim_name, ["psi16"])
 

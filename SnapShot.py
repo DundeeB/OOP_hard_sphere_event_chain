@@ -110,17 +110,24 @@ class WriteOrLoad:
         sio.savemat(file_name, {'rad': float(rad), 'Lx': l_x, 'Ly': l_y,
                                 'H': float(l_z), 'rho_H': rho_H, 'edge': edge, 'n_row': n_row, 'n_col': n_col})
 
-    def last_spheres(self):
+    def realizations(self):
         if not os.path.exists(self.output_dir):
-            return
+            raise ValueError("No folder found: " + self.output_dir)
         files = os.listdir(self.output_dir)
         numbered_files = [int(f) for f in files if re.findall("^\d+$", f)]
         if len(numbered_files) > 0:
-            file_ind = sorted(numbered_files)[-1]
-            sp_name = str(file_ind)
+            numbered_files.sort(reverse=True)
+            return numbered_files
         else:
-            sp_name = 'Initial Conditions'
-            file_ind = 0
+            Warning("No realizations found")
+            if os.path.exists(os.path.join(self.output_dir, 'Initial Conditions')):
+                return [0]
+            else:
+                raise ValueError("No file center found at folder: " + self.output_dir)
+
+    def last_spheres(self):
+        file_ind = self.realizations()[0]
+        sp_name = str(self.realizations()[0]) if file_ind > 0 else 'Initial Conditions'
         return np.loadtxt(os.path.join(self.output_dir, sp_name)), file_ind
 
     def load_Input(self):

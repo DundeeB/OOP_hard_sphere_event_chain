@@ -464,9 +464,6 @@ def main():
                         calc_upper_lower=calc_upper_lower)
         pos.write()
     if calc_type == "burger_square":
-        psi14 = PsiMN(sim_path, 1, 4)
-        psi14.calc_order_parameter()
-
         load = WriteOrLoad(output_dir=sim_path)
         l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = load.load_Input()
         a = np.sqrt(l_x * l_y / N)
@@ -476,10 +473,12 @@ def main():
             if os.path.exists(
                     os.path.join(load.output_dir, 'OP', 'Burger', 'burger_vectors_vec_' + str(sp_ind) + '.txt')):
                 continue
-            burger = BurgerField(sim_path, a1, a2, psi14, spheres_ind=sp_ind,
-                                 centers=np.loadtxt(os.path.join(load.output_dir, str(sp_ind))), calc_upper_lower=False)
+            centers = np.loadtxt(os.path.join(load.output_dir, str(sp_ind)))
+            psi14 = PsiMN(sim_path, 1, 4, spheres_ind=sp_ind, centers=centers)
+            psi14.calc_order_parameter()
+            burger = BurgerField(sim_path, a1, a2, psi14, spheres_ind=sp_ind, centers=centers, calc_upper_lower=False)
             burger.calc_order_parameter(calc_upper_lower=False)
-            burger.write()
+            burger.write(write_upper_lower=False)
 
 
 if __name__ == "__main__":

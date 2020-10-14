@@ -185,7 +185,7 @@ class Event2DCells(ArrayOfCells):
         ty = float(y - p[1]) / v_hat[1] if v_hat[1] != 0 else float('inf')
         return min(tx, ty)
 
-    def perform_total_step(self, i, j, step: Step, draw=None):
+    def perform_total_step(self, i, j, step: Step, draw=None, record_displacements=False):
         """
         Perform step for all the spheres, starting from sphere inside cell
         :param i: indices of the cell containing the sphere trying to make a move
@@ -193,6 +193,8 @@ class Event2DCells(ArrayOfCells):
         :type step: Step
         :type draw: WriteOrLoad
         """
+        if record_displacements:
+            displacements = 0
         while step.total_step > 0:
             if draw is not None:
                 if draw.counter is not None:
@@ -238,7 +240,8 @@ class Event2DCells(ArrayOfCells):
             assert event is not None and not np.isnan(step.current_step)
 
             step.perform_step()  # also subtract current step from total step
-
+            if record_displacements:
+                displacements += 1
             new_cell = self.append_sphere(sphere)
             i, j = new_cell.ind[:2]
 
@@ -258,6 +261,7 @@ class Event2DCells(ArrayOfCells):
             if event.event_type == EventType.PASS:
                 continue
             if event.event_type == EventType.FREE:
+                if record_displacements: return displacements
                 return
 
     def generate_spheres_in_AF_triangular_structure(self, n_row, n_col, rad):

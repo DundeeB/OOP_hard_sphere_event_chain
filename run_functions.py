@@ -8,16 +8,17 @@ import time
 from send_parametric_runs import *
 
 epsilon = 1e-8
-prefix = '/storage/ph_daniel/danielab/ECMC_simulation_results2.0/'
+# prefix = '/storage/ph_daniel/danielab/ECMC_simulation_results2.0/'
+prefix = 'C:\\Users\\Daniel Abutbul\\OneDrive - Technion\\simulation-results'
 
 
-def run_honeycomb(h, n_row, n_col, rho_H):
+def run_honeycomb(h, n_row, n_col, rho_H, iterations=None, record_displacements=False):
     # More physical properties calculated from Input
     N = n_row * n_col
     sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_triangle_ECMC'
     output_dir = prefix + sim_name
     if os.path.exists(output_dir):
-        return run_sim(np.nan, N, h, rho_H, sim_name)
+        return run_sim(np.nan, N, h, rho_H, sim_name, iterations=iterations, record_displacements=record_displacements)
         # when continuing from restart there shouldn't be use of initial arr
     else:
         r = 1
@@ -39,31 +40,33 @@ def run_honeycomb(h, n_row, n_col, rho_H):
         initial_arr.scale_xy(np.sqrt(rho_H_new / rho_H))
         assert initial_arr.edge > sig
 
-        return run_sim(initial_arr, N, h, rho_H, sim_name)
+        return run_sim(initial_arr, N, h, rho_H, sim_name, iterations=iterations,
+                       record_displacements=record_displacements)
 
 
-def run_square(h, n_row, n_col, rho_H):
+def run_square(h, n_row, n_col, rho_H, iterations=None, record_displacements=False):
     # More physical properties calculated from Input
     N = n_row * n_col
     sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_square_ECMC'
     output_dir = prefix + sim_name
     if os.path.exists(output_dir):
-        return run_sim(np.nan, N, h, rho_H, sim_name)
+        return run_sim(np.nan, N, h, rho_H, sim_name, iterations=iterations, record_displacements=record_displacements)
         # when continuing from restart there shouldn't be use of initial arr
     else:
         r, sig = 1, 2
         A = N * sig ** 2 / (rho_H * (1 + h))
         assert n_row == n_col, "Square initial condition for n_row!=n_col is no implemented..."
         N = n_col * n_row
-        a = np.sqrt(A/N)
-        n_row_cells, n_col_cells = int(np.sqrt(A) / (a*np.sqrt(2))), int(np.sqrt(A) / (a*np.sqrt(2)))
-        e = np.sqrt(A / (n_row_cells*n_col_cells))
+        a = np.sqrt(A / N)
+        n_row_cells, n_col_cells = int(np.sqrt(A) / (a * np.sqrt(2))), int(np.sqrt(A) / (a * np.sqrt(2)))
+        e = np.sqrt(A / (n_row_cells * n_col_cells))
         initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)
         initial_arr.add_third_dimension_for_sphere((h + 1) * sig)
         initial_arr.generate_spheres_in_AF_square(n_row, n_col, r)
         assert initial_arr.edge > sig, "Edge of cell is: " + str(initial_arr.edge) + ", which is smaller than sigma."
 
-        return run_sim(initial_arr, N, h, rho_H, sim_name)
+        return run_sim(initial_arr, N, h, rho_H, sim_name, iterations=iterations,
+                       record_displacements=record_displacements)
 
 
 def run_z_quench(origin_sim, desired_h):
@@ -108,16 +111,17 @@ def run_z_quench(origin_sim, desired_h):
     return run_sim(initial_arr, N, desired_h, desired_rho, sim_name)
 
 
-def run_sim(initial_arr, N, h, rho_H, sim_name):
-    iterations = int(N * 1e4)
+def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displacements=False):
+    if iterations is None:
+        iterations = int(N * 1e4)
     rad = 1
     a_free = (1 / rho_H - np.pi / 6) * 2 * rad  # (V-N*4/3*pi*r^3)/N i made a mistake it should be ^(1/3)
     total_step = a_free * np.sqrt(N)
 
     # Initialize View and folder, add spheres
     code_dir = os.getcwd()
-    output_dir = prefix + sim_name
-    batch = output_dir + '/batch'
+    output_dir = os.path.join(prefix, sim_name)
+    batch = os.path.join(output_dir, 'batch')
     if os.path.exists(output_dir):
         files_interface = WriteOrLoad(output_dir, np.nan)
         l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = files_interface.load_Input()
@@ -149,8 +153,11 @@ def run_sim(initial_arr, N, h, rho_H, sim_name):
 
     # Run loops
     initial_time = time.time()
-    day = 60 * 60 * 24  # sec=1
+    day = 86400  # seconds
     i = last_ind
+    if record_displacements:
+        displacements = [0]
+        realizations = [i]
     while time.time() - initial_time < day and i < iterations:
         # Choose sphere
         while True:
@@ -171,7 +178,12 @@ def run_sim(initial_arr, N, h, rho_H, sim_name):
         step = Step(sphere, total_step, v_hat, arr.boundaries)
         i_cell, j_cell = cell.ind[:2]
         try:
-            arr.perform_total_step(i_cell, j_cell, step)
+            if record_displacements:
+                displacements.append(
+                    displacements[-1] + arr.perform_total_step(i_cell, j_cell, step, record_displacements=True))
+                realizations.append(i + 1)
+            else:
+                arr.perform_total_step(i_cell, j_cell, step)
         except:
             files_interface.dump_spheres(arr.all_centers, str(i + 1) + '_err')
             raise
@@ -180,6 +192,8 @@ def run_sim(initial_arr, N, h, rho_H, sim_name):
         i += 1
 
     # save
+    if record_displacements:
+        np.savetxt(os.path.join(output_dir, 'Displacement'), np.array([realizations, displacements]).T)
     assert arr.legal_configuration()
     files_interface.dump_spheres(arr.all_centers, str(i + 1))
 

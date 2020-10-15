@@ -7,7 +7,7 @@ epsilon = 1e-8
 
 
 class Direction:
-    def __init__(self, dim, sgn):
+    def __init__(self, dim, sgn=1):
         self.dim, self.sgn = dim, sgn
 
     def flip(self):
@@ -43,7 +43,8 @@ class Sphere:
             print(RuntimeWarning)
 
     def perform_step(self, direction: Direction, current_step, boundaries):
-        self.center[direction.dim] = self.center[direction.dim] + direction.sgn * current_step
+        dt = direction.sgn * current_step if direction.dim == 2 else current_step
+        self.center[direction.dim] = self.center[direction.dim] + dt
 
         self.box_it(boundaries)
 
@@ -197,7 +198,7 @@ class Metric:
         effective_sigs_sq = [sig_sq - (y2 - y1 - l) ** 2 - (z2 - z1) ** 2 for l in [0, ly, -ly]]
         possible_ts = [x2 - x1 - l - np.sqrt(effective_sig_sq) for l in [0, lx, -lx] for effective_sig_sq in
                        effective_sigs_sq if effective_sig_sq > 0]
-        ts = [t for t in possible_ts if t > 0]
+        ts = [t for t in possible_ts if t > 0 and t < total_step]
         if len(ts) == 0:
             return float('inf')
         return min(ts)

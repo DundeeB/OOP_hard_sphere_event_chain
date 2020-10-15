@@ -6,6 +6,14 @@ from enum import Enum
 epsilon = 1e-8
 
 
+class Direction:
+    def __init__(self, dim, sgn):
+        self.dim, self.sgn = dim, sgn
+
+    def flip(self):
+        self.sgn = -1 * self.sgn
+
+
 class Sphere:
 
     def __init__(self, center, rad):
@@ -34,8 +42,9 @@ class Sphere:
         except RuntimeWarning:
             print(RuntimeWarning)
 
-    def perform_step(self, v_hat, current_step, boundaries):
-        self.center = self.center + np.array(v_hat) * current_step
+    def perform_step(self, direction: Direction, current_step, boundaries):
+        self.center[direction.dim] = self.center[direction.dim] + direction.sgn * current_step
+
         self.box_it(boundaries)
 
 
@@ -107,45 +116,6 @@ class CubeBoundaries:
             # xy yz xz xy yz xz
             return 2 * [bc2, bc0, bc1]
 
-    @staticmethod
-    def vertical_step_to_wall(plane, point):
-        """
-        For a wall=[v0,v1,...], which is a plain going through all the vertices [v0,v1...],
-        Return the vertical to the plain vector, with length the distance to the point
-        :param plane: list of vertices, which define the wall which is the plain going through them
-        :param point: the specified point to get the vertical step to plain from
-        :return: the smallest vector v s.t. v+point is on the plain of the wall
-        """
-        for w in plane:
-            assert len(w) == len(point)
-        d = len(point)
-        p = np.array(point)
-        v = [np.array(w) for w in plane]
-        if d == 1:
-            return v[0] - p
-        if d == 2:
-            t = -np.dot(v[0] - p, v[1] - v[0]) / np.dot(v[1] - v[0], v[1] - v[0])
-            return v[0] - p + t * (v[1] - v[0])
-        if d == 3:
-            # assume for now that edges are vertical so calculation is easier
-            assert np.dot(v[2] - v[0], v[1] - v[0]) < epsilon
-            t = -np.dot(v[0] - p, v[1] - v[0]) / np.dot(v[1] - v[0], v[1] - v[0])
-            s = -np.dot(v[0] - p, v[2] - v[0]) / np.dot(v[2] - v[0], v[2] - v[0])
-            return v[0] - p + t * (v[1] - v[0]) + s * (v[2] - v[0])
-
-    @staticmethod
-    def flip_v_hat_at_wall(wall, sphere, v_hat):
-        """
-        Next to rigid wall boundary condition, we would want v_hat to flip direction
-        :param wall: list of points, defining the wall's plane
-        :type sphere: Sphere
-        :param v_hat: current direction of step
-        :return: flipped direction of  step, opposite to wall
-        """
-        n_hat = CubeBoundaries.vertical_step_to_wall(wall, sphere.center)
-        n_hat = np.array(n_hat) / np.linalg.norm(n_hat)
-        return v_hat - 2 * np.dot(v_hat, n_hat) * n_hat
-
     def boundary_transformed_vectors(self):
         l_x = self.edges[0]
         l_y = self.edges[1]
@@ -172,60 +142,27 @@ class CubeBoundaries:
 class Metric:
 
     @staticmethod
-    def dist_to_boundary(sphere, total_step, v_hat, boundaries):
+    def dist_to_wall(sphere, total_step, direction: Direction, boundaries):
         """
         Figures out the distance for the next WALL boundary (ignoring CYCLIC boundaries)
         :type sphere: Sphere
-        :param v_hat: direction of step
+        :param direction: direction of step
         :param total_step: magnitude of the step to be carried out
         :type boundaries: CubeBoundaries
         :return: the minimal distance to the wall, and the wall.
         If there is no wall in a distance l, dist is inf and wall=[]
         """
-        v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
         pos = np.array(sphere.center)
         r = sphere.rad
-        min_dist_to_wall = float('inf')
-        closest_wall = []
-        for plane, BC_type in zip(boundaries.planes, boundaries.planes_type):
-            if BC_type != BoundaryType.WALL: continue
-            u = CubeBoundaries.vertical_step_to_wall(plane, pos)
-            u = u - r * u / np.linalg.norm(u)  # shift the wall closer by r
-            if np.dot(u, v_hat) <= 0: continue
-            v = np.dot(u, u) / np.dot(u, v_hat)
-            if v < min_dist_to_wall and v <= total_step:
-                min_dist_to_wall = v
-                closest_wall = plane
-        return min_dist_to_wall - epsilon, closest_wall
+        if direction.dim != 2:
+            return float('inf')
+        l = boundaries.edges[2] - pos[2] - r - epsilon if direction.sgn == +1 else pos[2] - r - epsilon
+        return l if l < total_step else float('inf')
 
     @staticmethod
-    def dist_to_boundary_without_r(sphere, total_step, v_hat, boundaries):
+    def dist_to_collision(sphere1, sphere2, total_step, direction: Direction, boundaries):
         """
-        Returns the distance to the boundary without taking into account the sphere radius, +epsilon so after box_it it
-        will give the bottom or the left boundary point. Also ignore whether its a wall or a cyclic boundary
-        :type sphere: Sphere
-        :param total_step: total step left to be performed
-        :param v_hat: direction of step
-        :type boundaries: CubeBoundaries
-        """
-        v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
-        pos = np.array(sphere.center)
-        min_dist_to_wall = float('inf')
-        closest_wall = []
-        for wall in boundaries.planes:
-            u = CubeBoundaries.vertical_step_to_wall(wall, pos)
-            if np.dot(u, v_hat) <= 0:
-                continue
-            v = np.dot(u, u) / np.dot(u, v_hat)
-            if v < min_dist_to_wall and v <= total_step:
-                min_dist_to_wall = v
-                closest_wall = wall
-        return min_dist_to_wall - epsilon, closest_wall
-
-    @staticmethod
-    def dist_to_collision(sphere1, sphere2, total_step, v_hat, boundaries):
-        """
-        Distance sphere1 would need to go in v_hat direction in order to collide with sphere2
+        Distance sphere1 would need to go in direction in order to collide with sphere2
         It is not implemented in the most efficient way,  because for cyclic xy we copy sphere2 8 times (for all
         cyclic boundaries) and then check for collision.
         It is implemented only for steps smaller then system size.
@@ -234,28 +171,36 @@ class Metric:
         :param sphere2: potential for collision
         :type sphere2: Sphere
         :param total_step: maximal step size. If dist for collision > total_step then dist_to_collision-->infty
-        :param v_hat: direction in which sphere1 is to move
+        :param direction: in which sphere1 is to move
         :param boundaries: boundaries for the case some of them are cyclic boundary conditinos
         :type boundaries: CubeBoundaries
         :return: distance for collision if the move is allowed, infty if move can not lead to collision
         """
         assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
             sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries.edges)
-        d = sphere1.rad + sphere2.rad
-        v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
-        vectors = boundaries.boundary_transformed_vectors()
-        for v in vectors:
-            if len(sphere2.center) > len(v):
-                v = [x for x in v] + [0 for _ in range(len(sphere2.center) - len(v))]
-            dx = sphere2.center + v - sphere1.center
-            dx_len = np.linalg.norm(dx)
-            dx_dot_v = np.dot(dx, v_hat)
-            if dx_dot_v <= 0: continue
-            discriminant = dx_dot_v ** 2 + d ** 2 - dx_len ** 2
-            if discriminant <= 0: continue
-            dist: float = dx_dot_v - np.sqrt(discriminant)
-            if dist <= total_step: return dist
-        return float('inf')
+        c1, c2 = sphere1.center, sphere2.center
+        sig_sq = (sphere1.rad + sphere2.rad) ** 2
+        if direction.dim == 2:
+            dz = (c2[2] - c1[2]) * direction.sgn
+            if dz < 0:
+                return float('inf')
+            effective_sig_sq = sig_sq - (c2[1] - c1[1]) ** 2 - (c2[0] - c1[0]) ** 2
+            if effective_sig_sq < 0:
+                return float('inf')
+            t = dz - np.sqrt(effective_sig_sq)
+            if t < 0 or t > total_step:
+                return float('inf')
+            return t
+        x1, x2, y1, y2, z1, z2, lx, ly = c1[direction.dim], c2[direction.dim], c1[1 - direction.dim], c2[
+            1 - direction.dim], c1[2], c2[2], boundaries.edges[direction.dim], boundaries.edges[1 - direction.dim]
+        # now assume the step is in the x direction because I reorganize x and y
+        effective_sigs_sq = [sig_sq - (y2 - y1 - l) ** 2 - (z2 - z1) ** 2 for l in [0, ly, -ly]]
+        possible_ts = [x2 - x1 - l - np.sqrt(effective_sig_sq) for l in [0, lx, -lx] for effective_sig_sq in
+                       effective_sigs_sq if effective_sig_sq > 0]
+        ts = [t for t in possible_ts if t > 0]
+        if len(ts) == 0:
+            return float('inf')
+        return min(ts)
 
     @staticmethod
     def cyclic_vec(boundaries, sphere1, sphere2):

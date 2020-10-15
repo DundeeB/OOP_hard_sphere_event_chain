@@ -12,7 +12,7 @@ class EventType(Enum):
 
 class Event:
 
-    def __init__(self, event_type: EventType, other_sphere: Sphere, wall):
+    def __init__(self, event_type: EventType, other_sphere: Sphere):
         """
         A single event that will happen to sphere, such as collision with another sphere
         or arriving at the boundary of the simulation
@@ -23,12 +23,11 @@ class Event:
         """
         self.event_type = event_type
         self.other_sphere = other_sphere
-        self.wall = wall
 
 
 class Step:
 
-    def __init__(self, sphere: Sphere, total_step, v_hat, boundaries: CubeBoundaries, current_step=np.nan):
+    def __init__(self, sphere: Sphere, total_step, direction: Direction, boundaries: CubeBoundaries, current_step=np.nan):
         """
         The characteristic of the step to be perform
         :type sphere: Sphere
@@ -40,7 +39,7 @@ class Step:
         self.sphere = sphere
         self.total_step = total_step
         self.current_step = current_step
-        self.v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
+        self.direction = direction
         self.boundaries = boundaries
 
     def perform_step(self):
@@ -50,7 +49,7 @@ class Step:
         if np.isnan(self.current_step):
             raise ValueError("Current step is nan and step is about to occur")
         assert self.current_step <= self.total_step
-        self.sphere.perform_step(self.v_hat, self.current_step, self.boundaries)
+        self.sphere.perform_step(self.direction, self.current_step, self.boundaries)
         self.total_step = self.total_step - self.current_step
 
     def next_event(self, other_spheres):
@@ -61,7 +60,7 @@ class Step:
         size or step type (wall free or boundary), and the current step
         """
         sphere, total_step, v_hat = self.sphere, self.total_step, self.v_hat
-        min_dist_to_wall, closest_wall = Metric.dist_to_boundary(sphere, total_step, v_hat, self.boundaries)
+        min_dist_to_wall = Metric.dist_to_wall(sphere, total_step, v_hat, self.boundaries)
         closest_sphere, closest_sphere_dist = [], float('inf')
         for other_sphere in other_spheres:
             if other_sphere == sphere:
@@ -74,15 +73,15 @@ class Step:
         case = np.argmin([min_dist_to_wall, closest_sphere_dist, total_step, self.current_step])
         if case == 0:  # it hits a wall
             self.current_step = min_dist_to_wall
-            return Event(EventType.WALL, [], closest_wall)
+            return Event(EventType.WALL, [])
         if case == 1:  # it hits another sphere
             self.current_step = closest_sphere_dist
-            return Event(EventType.COLLISION, closest_sphere, [])
+            return Event(EventType.COLLISION, closest_sphere)
         if case == 2:  # it hits nothing, both min_dist_to_wall and closest_sphere_dist are inf
             self.current_step = total_step
-            return Event(EventType.FREE, [], [])
+            return Event(EventType.FREE, [])
         else:  # total_step > current_step
-            return Event(EventType.PASS, [], [])  # do not update step.current_step, because next step is PASS and he
+            return Event(EventType.PASS, [])  # do not update step.current_step, because next step is PASS and he
             # would not actually perform total step
 
 
@@ -256,7 +255,7 @@ class Event2DCells(ArrayOfCells):
                 i, j = new_cell.ind[:2]
                 continue
             if event.event_type == EventType.WALL:
-                step.v_hat = CubeBoundaries.flip_v_hat_at_wall(event.wall, sphere, v_hat)
+                step.v_hat = CubeBoundaries.flip_direction_at_wall(event.wall, sphere, v_hat)
                 continue
             if event.event_type == EventType.PASS:
                 continue

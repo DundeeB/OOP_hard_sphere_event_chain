@@ -168,14 +168,11 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
         i_sphere = random.randint(0, len(cell.spheres) - 1)
         sphere = cell.spheres[i_sphere]
 
-        # Choose v_hat
-        t = np.random.random() * np.pi
-        phi = np.random.random() * 2 * np.pi
-        v_hat = (np.cos(phi) * np.sin(t), np.sin(phi) * np.sin(t), np.cos(t))
-        v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
+        # Choose direction
+        direction = Direction.directions()[random.randint(0, 3)]  # x,y,+z,-z
 
         # perform step
-        step = Step(sphere, total_step, v_hat, arr.boundaries)
+        step = Step(sphere, total_step, direction, arr.boundaries)
         i_cell, j_cell = cell.ind[:2]
         try:
             if record_displacements:

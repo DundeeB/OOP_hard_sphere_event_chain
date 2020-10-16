@@ -27,13 +27,14 @@ class Event:
 
 class Step:
 
-    def __init__(self, sphere: Sphere, total_step, direction: Direction, boundaries: CubeBoundaries, current_step=np.nan):
+    def __init__(self, sphere: Sphere, total_step, direction: Direction, boundaries: CubeBoundaries,
+                 current_step=np.nan):
         """
         The characteristic of the step to be perform
         :type sphere: Sphere
         :param total_step: total step left for the current move of spheres
         :param current_step: step sphere is about to perform
-        :param v_hat: direction of the step
+        :param direction: of the step
         :type boundaries: CubeBoundaries
         """
         self.sphere = sphere
@@ -59,13 +60,13 @@ class Step:
         :return: Event object containing the information about the event about to happen after the step, such as step
         size or step type (wall free or boundary), and the current step
         """
-        sphere, total_step, v_hat = self.sphere, self.total_step, self.v_hat
-        min_dist_to_wall = Metric.dist_to_wall(sphere, total_step, v_hat, self.boundaries)
+        sphere, total_step, direction = self.sphere, self.total_step, self.direction
+        min_dist_to_wall = Metric.dist_to_wall(sphere, total_step, direction, self.boundaries)
         closest_sphere, closest_sphere_dist = [], float('inf')
         for other_sphere in other_spheres:
             if other_sphere == sphere:
                 continue
-            sphere_dist = Metric.dist_to_collision(sphere, other_sphere, total_step, v_hat, self.boundaries)
+            sphere_dist = Metric.dist_to_collision(sphere, other_sphere, total_step, direction, self.boundaries)
             if sphere_dist < closest_sphere_dist:
                 closest_sphere_dist = sphere_dist
                 closest_sphere = other_sphere
@@ -130,6 +131,7 @@ class Event2DCells(ArrayOfCells):
                         sp_added_to_cell = True
                         break
             if not sp_added_to_cell:
+                warnings.warn("Guessed cell did not work. Simulation slow down is expected")
                 for c in self.all_cells:
                     if c.center_in_cell(sphere):
                         c.append(sphere)
@@ -176,12 +178,12 @@ class Event2DCells(ArrayOfCells):
         :type step: Step
         :return: the corresponding maximal free step allowed
         """
-        p, v_hat, e, c, r = step.sphere.center, step.v_hat, self.edge, self.cells[i][j].site, step.sphere.rad
+        p, direction, e, c, r = step.sphere.center, step.direction, self.edge, self.cells[i][j].site, step.sphere.rad
         xp, xm, yp, ym = c[0] + 2 * e, c[0] - e, c[1] + 2 * e, c[1] - e
-        x = xp - 2 * r if v_hat[0] >= 0 else xm + 2 * r
-        y = yp - 2 * r if v_hat[1] >= 0 else ym + 2 * r
-        tx = float(x - p[0]) / v_hat[0] if v_hat[0] != 0 else float('inf')
-        ty = float(y - p[1]) / v_hat[1] if v_hat[1] != 0 else float('inf')
+        x = xp - 2 * r if direction[0] >= 0 else xm + 2 * r
+        y = yp - 2 * r if direction[1] >= 0 else ym + 2 * r
+        tx = float(x - p[0]) / direction[0] if direction[0] != 0 else float('inf')
+        ty = float(y - p[1]) / direction[1] if direction[1] != 0 else float('inf')
         return min(tx, ty)
 
     def perform_total_step(self, i, j, step: Step, draw=None, record_displacements=False):
@@ -205,9 +207,9 @@ class Event2DCells(ArrayOfCells):
                                              self, img_name, step)
                 draw.dump_spheres(self.all_centers, img_name)
 
-            sphere, v_hat, cell = step.sphere, step.v_hat, self.cells[i][j]
+            sphere, direction, cell = step.sphere, step.direction, self.cells[i][j]
             step.current_step = np.nan
-            v_hat = np.array(v_hat) / np.linalg.norm(v_hat)
+            direction = np.array(direction) / np.linalg.norm(direction)
             cell.remove_sphere(sphere)
 
             relevant_cells = [self.cells[i][j]] + self.neighbors(i, j)
@@ -221,7 +223,7 @@ class Event2DCells(ArrayOfCells):
                 exception_occurred = False
                 for sp in other_spheres:
                     try:
-                        Metric.dist_to_collision(sphere, sp, step.total_step, v_hat, self.boundaries)
+                        Metric.dist_to_collision(sphere, sp, step.total_step, direction, self.boundaries)
                     except:
                         exception_occurred = True
                         dr_vec = Metric.cyclic_vec(self.boundaries, sp, sphere)  # points from sp to sphere "sphere-sp"
@@ -255,7 +257,7 @@ class Event2DCells(ArrayOfCells):
                 i, j = new_cell.ind[:2]
                 continue
             if event.event_type == EventType.WALL:
-                step.v_hat = CubeBoundaries.flip_direction_at_wall(event.wall, sphere, v_hat)
+                step.direction = CubeBoundaries.flip_direction_at_wall(event.wall, sphere, direction)
                 continue
             if event.event_type == EventType.PASS:
                 continue
@@ -374,16 +376,12 @@ class Event2DCells(ArrayOfCells):
                 self.append_sphere(all_spheres)
                 assert self.legal_configuration()
             else:  # we must move spheres around before squizzing
-                t = np.random.random() * np.pi / 2 + np.pi / 4
-                ts = [t, t - np.pi / 2, t - np.pi, t + np.pi / 2]
-                phi = np.random.random() * np.pi
-                v_hats = [[np.cos(t) * np.cos(phi), np.sin(t) * np.cos(phi), np.sin(phi)] for t in ts]
                 indices = [i_min_y, i_min_x, i_max_y, i_max_x]
-                for i_sp, v_hat in zip(indices, v_hats):
+                for i_sp, direction in zip(indices, Direction.directions()):
                     sphere = self.all_spheres[i_sp]
                     # total_step = 10 * sphere.rad
                     total_step = sphere.rad / 2
-                    step = Step(sphere, total_step, v_hat, self.boundaries)
+                    step = Step(sphere, total_step, direction, self.boundaries)
                     cell = self.append_sphere(sphere)
                     i, j = cell.ind[:2]
                     self.perform_total_step(i, j, step)
@@ -405,17 +403,15 @@ class Event2DCells(ArrayOfCells):
             self.l_z = max_z
             self.boundaries = CubeBoundaries([self.l_x, self.l_y], [BoundaryType.CYCLIC, BoundaryType.CYCLIC])
             self.add_third_dimension_for_sphere(self.l_z)
-            txy = np.random.random() * 2 * np.pi
-            tz = np.random.random() * np.pi
-            v_hat = np.array([np.cos(txy) * np.cos(tz), np.sin(txy) * np.cos(tz), np.sin(tz)])
-            sp_down, sp_up = self.all_spheres[i_min_z], self.all_spheres[i_max_z]
-            # total_step = 10 * sp_up.rad
-            total_step = sp_up.rad / 2
-            step_down, step_up = Step(sp_down, total_step, v_hat, self.boundaries), Step(sp_up, total_step, -v_hat,
-                                                                                         self.boundaries)
-            cell_down, cell_up = self.append_sphere(sp_down), self.append_sphere(sp_up)
-            id, jd = cell_down.ind[:2]
-            self.perform_total_step(id, jd, step_down)
-            iu, ju = cell_up.ind[:2]
-            self.perform_total_step(iu, ju, step_up)
             if assert_exit: return
+            sp_down, sp_up = self.all_spheres[i_min_z], self.all_spheres[i_max_z]
+            total_step = sp_up.rad / 2
+            for direction in Direction.directions()[0:2]:
+                step_sp_down = Step(sp_down, total_step, direction, self.boundaries)
+                step_sp_up = Step(sp_up, total_step, direction if direction.dim != 2 else Direction.directions()[-1],
+                                  self.boundaries)
+                cell_down, cell_up = self.append_sphere(sp_down), self.append_sphere(sp_up)
+                id, jd = cell_down.ind[:2]
+                self.perform_total_step(id, jd, step_sp_down)
+                iu, ju = cell_up.ind[:2]
+                self.perform_total_step(iu, ju, step_sp_up)

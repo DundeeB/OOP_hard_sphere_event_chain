@@ -2,16 +2,26 @@ import copy
 import numpy as np
 import random
 from enum import Enum
+import warnings
 
 epsilon = 1e-8
 
 
 class Direction:
     def __init__(self, dim, sgn=1):
-        self.dim, self.sgn = dim, sgn
+        self.dim = dim
+        if dim == 2:
+            self.sgn = sgn
+        else:
+            self.sgn = 1
+            if sgn != 1:
+                warnings.warn(
+                    "Direction is not z but sgn was given, only positive xy steps are supported, wrong input. " + \
+                    "Input correction to sgn=+1 was applied")
 
-    def flip(self):
-        self.sgn = -1 * self.sgn
+    @staticmethod
+    def directions():
+        return [Direction(0), Direction(1), Direction(2, 1), Direction(2, -1)]
 
 
 class Sphere:

@@ -55,7 +55,6 @@ class Sphere:
     def perform_step(self, direction: Direction, current_step, boundaries):
         dt = direction.sgn * current_step if direction.dim == 2 else current_step
         self.center[direction.dim] = self.center[direction.dim] + dt
-
         self.box_it(boundaries)
 
 
@@ -145,8 +144,10 @@ class CubeBoundaries:
         if both_cyclic:
             for vec in [(l_x, l_y), (l_x, -l_y), (-l_x, -l_y), (-l_x, l_y)]:
                 vectors.append(vec)
-        vectors = [np.array(v) for v in vectors]
-        if self.dim == 3: vectors = np.array([[x for x in v] + [0] for v in vectors])
+        if self.dim == 3:
+            vectors = [np.array([x for x in v] + [0]) for v in vectors]
+        else:
+            vectors = [np.array(v) for v in vectors]
         return vectors
 
 

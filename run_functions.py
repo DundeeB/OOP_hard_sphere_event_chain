@@ -115,8 +115,9 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
     if iterations is None:
         iterations = int(N * 1e4)
     rad = 1
-    a_free = (1 / rho_H - np.pi / 6) * 2 * rad  # (V-N*4/3*pi*r^3)/N i made a mistake it should be ^(1/3)
-    total_step = a_free * np.sqrt(N)
+    a_free = (1 / rho_H - np.pi / 6) ** (1 / 3) * 2 * rad  # ((V-N*4/3*pi*r^3)/N)^(1/3)
+    xy_total_step = a_free * np.sqrt(N)
+    z_total_step = h * rad * np.pi / 3  # make it around h*rad in order for the spheres to cover most of the z otions
 
     # Initialize View and folder, add spheres
     code_dir = os.getcwd()
@@ -165,14 +166,13 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
             cell = arr.all_cells[i_all_cells]
             if len(cell.spheres) > 0:
                 break
-        i_sphere = random.randint(0, len(cell.spheres) - 1)
-        sphere = cell.spheres[i_sphere]
+        sphere = cell.spheres[random.randint(0, len(cell.spheres) - 1)]
 
         # Choose direction
         direction = Direction.directions()[random.randint(0, 3)]  # x,y,+z,-z
 
         # perform step
-        step = Step(sphere, total_step, direction, arr.boundaries)
+        step = Step(sphere, xy_total_step if direction.dim != 2 else z_total_step, direction, arr.boundaries)
         i_cell, j_cell = cell.ind[:2]
         try:
             if record_displacements:
@@ -210,7 +210,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
             return quench_single_run_envelope('zquench', sim_name,
                                               desired_rho_or_h=h)  # notice run sim is sent after z-quench has succeeded
         assert resend_flag, "Simulation did not resend. Initial conditions: " + ic
-    return 0
+    return 0 if not record_displacements else realizations, displacements
 
 
 def main():

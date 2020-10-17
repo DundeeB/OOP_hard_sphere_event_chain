@@ -34,7 +34,7 @@ class WriteOrLoad:
         for sphere in spheres:
             assert isinstance(sphere, Sphere)
             c = sphere.center
-            if len(c) == 3 and c[-1] > 2 * sphere.rad(h + 1) / 2:
+            if len(c) == 3 and c[-1] > 2 * sphere.rad*(h + 1) / 2:
                 color = 'r'
             else:
                 color = 'b'

@@ -178,13 +178,12 @@ class Event2DCells(ArrayOfCells):
         :type step: Step
         :return: the corresponding maximal free step allowed
         """
-        p, direction, e, c, r = step.sphere.center, step.direction, self.edge, self.cells[i][j].site, step.sphere.rad
-        xp, xm, yp, ym = c[0] + 2 * e, c[0] - e, c[1] + 2 * e, c[1] - e
-        x = xp - 2 * r if direction[0] >= 0 else xm + 2 * r
-        y = yp - 2 * r if direction[1] >= 0 else ym + 2 * r
-        tx = float(x - p[0]) / direction[0] if direction[0] != 0 else float('inf')
-        ty = float(y - p[1]) / direction[1] if direction[1] != 0 else float('inf')
-        return min(tx, ty)
+        if step.direction.dim == 2:
+            return float('inf')
+        else:
+            return float(
+                self.cells[i][j].site[step.direction.dim] + 2 * self.edge - 2 * step.sphere.rad - step.sphere.center[
+                    step.direction.dim])
 
     def perform_total_step(self, i, j, step: Step, draw=None, record_displacements=False):
         """
@@ -209,7 +208,6 @@ class Event2DCells(ArrayOfCells):
 
             sphere, direction, cell = step.sphere, step.direction, self.cells[i][j]
             step.current_step = np.nan
-            direction = np.array(direction) / np.linalg.norm(direction)
             cell.remove_sphere(sphere)
 
             relevant_cells = [self.cells[i][j]] + self.neighbors(i, j)
@@ -257,7 +255,7 @@ class Event2DCells(ArrayOfCells):
                 i, j = new_cell.ind[:2]
                 continue
             if event.event_type == EventType.WALL:
-                step.direction = CubeBoundaries.flip_direction_at_wall(event.wall, sphere, direction)
+                step.direction.sgn = -1 * step.direction.sgn
                 continue
             if event.event_type == EventType.PASS:
                 continue
@@ -284,11 +282,11 @@ class Event2DCells(ArrayOfCells):
         for s in spheres_down:
             assert type(s) == Sphere
             cx, cy = s.center
-            s.center = (cx, cy, z_down)
+            s.center = np.array((cx, cy, z_down))
         for s in spheres_up:
             assert type(s) == Sphere
             cx, cy = s.center
-            s.center = (cx, cy + ay * 2 / 3, z_up)
+            s.center = np.array((cx, cy + ay * 2 / 3, z_up))
             s.box_it(self.boundaries)
         self.append_sphere(spheres_down + spheres_up)
         assert self.legal_configuration()

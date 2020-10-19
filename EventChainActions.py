@@ -162,15 +162,6 @@ class Event2DCells(ArrayOfCells):
         else:
             super().generate_spheres_in_cubic_structure(n_spheres_per_cell, rad, extra_edges)
 
-    def closest_site_2d(self, point):
-        """
-        Solve for closest site to point,
-        :return: tuple (i,j) of the closest cell = cells[i][j]
-        """
-        i = int(round(point[1] / self.edge) % self.n_rows)
-        j = int(round(point[0] / self.edge) % self.n_columns)
-        return i, j
-
     def maximal_free_step(self, i, j, step: Step):
         """
         Returns the maximal free step allowed so the sphere would pass between the cells, without overlapping outside

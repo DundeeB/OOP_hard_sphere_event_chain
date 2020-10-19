@@ -82,11 +82,10 @@ class WriteOrLoad:
         self.plt_spheres(title, spheres)
         if step is not None:
             cloned_step = copy.deepcopy(step)
-            for bound_vec in array_of_cells.boundaries.boundary_transformed_vectors():
-                cloned_step.sphere.center = step.sphere.center + bound_vec
-                v_hat = np.array([0, 0, 0])
-                v_hat[step.direction.dim] = step.direction.sgn
-                WriteOrLoad.plt_step(cloned_step.sphere, v_hat * step.total_step, 0.1)
+            cloned_step.sphere.center = step.sphere.center
+            v_hat = np.array([0, 0, 0])
+            v_hat[step.direction.dim] = step.direction.sgn
+            WriteOrLoad.plt_step(cloned_step.sphere, v_hat * step.total_step, 0.1)
         for cell in array_of_cells.all_cells:
             x, y = cell.site
             rec = plt.Rectangle((x, y), cell.edges[0], cell.edges[1], fill=False)

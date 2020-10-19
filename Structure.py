@@ -18,6 +18,8 @@ class Direction:
                 warnings.warn(
                     "Direction is not z but sgn was given, only positive xy steps are supported, wrong input. " + \
                     "Input correction to sgn=+1 was applied")
+            if dim >= 3:
+                raise ValueError("dim=0,1,2")
 
     @staticmethod
     def directions():
@@ -79,53 +81,6 @@ class CubeBoundaries:
         self.boundaries_type = boundaries_type
         self.dim = len(edges)
 
-    @property
-    def vertices(self):
-        """
-        :return: list of sites/vertices of the cube
-        """
-        e0 = self.edges[0]
-        if self.dim == 1:
-            return [(0,), (e0,)]
-        e1 = self.edges[1]
-        if self.dim == 2:
-            return [(0, 0), (e0, 0), (0, e1), (e0, e1)]
-        else:
-            e2 = self.edges[2]  # dim==3
-            return [(0, 0, 0), (e0, 0, 0), (0, e1, 0), (0, 0, e2),
-                    (0, e1, e2), (e0, 0, e2), (e0, e1, 0), (e0, e1, e2)]
-
-    @property
-    def planes(self):
-        vs = self.vertices
-        if self.dim == 1:
-            return [(vs[0],), (vs[1],)]
-        if self.dim == 2:
-            return [(vs[0], vs[1]), (vs[0], vs[2]),
-                    (vs[1], vs[3]), (vs[2], vs[3])]
-        else:  # dim==3
-            return [(vs[0], vs[2], vs[1], vs[6]),  # xy
-                    (vs[0], vs[2], vs[3], vs[4]),  # yz
-                    (vs[0], vs[3], vs[1], vs[5]),  # xz
-                    (vs[4], vs[7], vs[3], vs[5]),  # xy (z=1)
-                    (vs[1], vs[5], vs[6], vs[7]),  # yz (x=1)
-                    (vs[2], vs[4], vs[6], vs[7])]  # xz (y=1)
-
-    @property
-    def planes_type(self):
-        """
-        :return: list of boundary conditions, the i'th boundary condition is for i'th wall in self.walls
-        """
-        bc0 = self.boundaries_type[0]
-        if self.dim == 1: return 2 * [bc0]
-        bc1 = self.boundaries_type[1]
-        if self.dim == 2:
-            return [bc1, bc0, bc0, bc1]
-        else:  # dim=3
-            bc2 = self.boundaries_type[2]
-            # xy yz xz xy yz xz
-            return 2 * [bc2, bc0, bc1]
-
     def boundary_transformed_vectors(self):
         l_x = self.edges[0]
         l_y = self.edges[1]
@@ -136,18 +91,14 @@ class CubeBoundaries:
         both_cyclic = (x_cyclic and y_cyclic)
         vectors = [(0, 0)]
         if x_cyclic:
-            for vec in [(l_x, 0), (-l_x, 0)]:
-                vectors.append(vec)
+            for vec in [(l_x, 0), (-l_x, 0)]: vectors.append(vec)
         if y_cyclic:
-            for vec in [(0, l_y), (0, -l_y)]:
-                vectors.append(vec)
+            for vec in [(0, l_y), (0, -l_y)]: vectors.append(vec)
         if both_cyclic:
             for vec in [(l_x, l_y), (l_x, -l_y), (-l_x, -l_y), (-l_x, l_y)]:
                 vectors.append(vec)
-        if self.dim == 3:
-            vectors = [np.array([x for x in v] + [0]) for v in vectors]
-        else:
-            vectors = [np.array(v) for v in vectors]
+        vectors = [np.array(v) for v in vectors]
+        if self.dim == 3: vectors = np.array([[x for x in v] + [0] for v in vectors])
         return vectors
 
 
@@ -164,12 +115,11 @@ class Metric:
         :return: the minimal distance to the wall, and the wall.
         If there is no wall in a distance l, dist is inf and wall=[]
         """
-        pos = np.array(sphere.center)
-        r = sphere.rad
         if direction.dim != 2:
             return float('inf')
-        l = boundaries.edges[2] - pos[2] - r - epsilon if direction.sgn == +1 else pos[2] - r - epsilon
-        return l if l < total_step else float('inf')
+        t = boundaries.edges[2] - sphere.center[2] - sphere.rad - epsilon if direction.sgn == +1 else \
+            sphere.center[2] - sphere.rad - epsilon
+        return t if t < total_step else float('inf')
 
     @staticmethod
     def dist_to_collision(sphere1, sphere2, total_step, direction: Direction, boundaries):
@@ -190,29 +140,48 @@ class Metric:
         """
         assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
             sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries.edges)
-        c1, c2 = sphere1.center, sphere2.center
-        sig_sq = (sphere1.rad + sphere2.rad) ** 2
-        if direction.dim == 2:
-            dz = (c2[2] - c1[2]) * direction.sgn
-            if dz < 0:
-                return float('inf')
-            effective_sig_sq = sig_sq - (c2[1] - c1[1]) ** 2 - (c2[0] - c1[0]) ** 2
-            if effective_sig_sq < 0:
-                return float('inf')
-            t = dz - np.sqrt(effective_sig_sq)
-            if t < 0 or t > total_step:
-                return float('inf')
-            return t
-        x1, x2, y1, y2, z1, z2, lx, ly = c1[direction.dim], c2[direction.dim], c1[1 - direction.dim], c2[
-            1 - direction.dim], c1[2], c2[2], boundaries.edges[direction.dim], boundaries.edges[1 - direction.dim]
-        # now assume the step is in the x direction because I reorganize x and y
-        effective_sigs_sq = [sig_sq - (y2 - y1 - l) ** 2 - (z2 - z1) ** 2 for l in [0, ly, -ly]]
-        possible_ts = [x2 - x1 - l - np.sqrt(effective_sig_sq) for l in [0, lx, -lx] for effective_sig_sq in
-                       effective_sigs_sq if effective_sig_sq > 0]
-        ts = [t for t in possible_ts if t > 0 and t < total_step]
-        if len(ts) == 0:
-            return float('inf')
-        return min(ts)
+        # c1, c2 = sphere1.center, sphere2.center
+        # sig_sq = (sphere1.rad + sphere2.rad) ** 2
+        # if direction.dim == 2:
+        #     dz = (c2[2] - c1[2]) * direction.sgn
+        #     if dz < 0:
+        #         return float('inf')
+        #     effective_sig_sq = sig_sq - (c2[1] - c1[1]) ** 2 - (c2[0] - c1[0]) ** 2
+        #     if effective_sig_sq < 0:
+        #         return float('inf')
+        #     t = dz - np.sqrt(effective_sig_sq)
+        #     return t if 0 > t > total_step else float('inf')
+        # i, j = direction.dim, 1 - direction.dim
+        # x1, x2, y1, y2, z1, z2, lx, ly = c1[i], c2[i], c1[j], c2[j], c1[2], c2[2], boundaries.edges[i], \
+        #                                  boundaries.edges[j]
+        # # now assume the step is in the x direction because I reorganize x and y
+        # dys = [(y2 - y1 - l) for l in [0, ly, -ly]]
+        # dy = dys[np.argmin(np.abs(dys))]
+        # effective_sig_sq = sig_sq - dy ** 2 - (z2 - z1) ** 2
+        # if effective_sig_sq <= 0:
+        #     return float('inf')
+        # possible_ts = [x2 + l - x1 - s * np.sqrt(effective_sig_sq) for l in [0, lx, -lx] for s in [1, -1]]
+        # ts = [t for t in possible_ts if 0 < t <= total_step]
+        # if len(ts) == 0:
+        #     return float('inf')
+        # return min(ts)
+
+        d = sphere1.rad + sphere2.rad
+        v_hat = [0, 0, 0]
+        v_hat[direction.dim] = direction.sgn
+        vectors = boundaries.boundary_transformed_vectors()
+        for v in vectors:
+            if len(sphere2.center) > len(v):
+                v = [x for x in v] + [0 for _ in range(len(sphere2.center) - len(v))]
+            dx = sphere2.center + v - sphere1.center
+            dx_len = np.linalg.norm(dx)
+            dx_dot_v = np.dot(dx, v_hat)
+            if dx_dot_v <= 0: continue
+            discriminant = dx_dot_v ** 2 + d ** 2 - dx_len ** 2
+            if discriminant <= 0: continue
+            dist: float = dx_dot_v - np.sqrt(discriminant)
+            if dist <= total_step: return dist
+        return float('inf')
 
     @staticmethod
     def cyclic_vec(boundaries, sphere1, sphere2):

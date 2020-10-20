@@ -84,22 +84,7 @@ class CubeBoundaries:
     def boundary_transformed_vectors(self):
         l_x = self.edges[0]
         l_y = self.edges[1]
-        if self.dim == 3 and self.boundaries_type[2] == BoundaryType.CYCLIC: raise Exception(
-            'z wall CYCLIC not supported')
-        x_cyclic = (self.boundaries_type[0] == BoundaryType.CYCLIC)
-        y_cyclic = (self.boundaries_type[1] == BoundaryType.CYCLIC)
-        both_cyclic = (x_cyclic and y_cyclic)
-        vectors = [(0, 0)]
-        if x_cyclic:
-            for vec in [(l_x, 0), (-l_x, 0)]: vectors.append(vec)
-        if y_cyclic:
-            for vec in [(0, l_y), (0, -l_y)]: vectors.append(vec)
-        if both_cyclic:
-            for vec in [(l_x, l_y), (l_x, -l_y), (-l_x, -l_y), (-l_x, l_y)]:
-                vectors.append(vec)
-        vectors = [np.array(v) for v in vectors]
-        if self.dim == 3: vectors = np.array([[x for x in v] + [0] for v in vectors])
-        return vectors
+        return [[vx, vy] for vx in [0, -l_x, l_x] for vy in [0, -l_y, l_y]]
 
 
 class Metric:
@@ -140,47 +125,28 @@ class Metric:
         """
         assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
             sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries.edges)
-        # c1, c2 = sphere1.center, sphere2.center
-        # sig_sq = (sphere1.rad + sphere2.rad) ** 2
-        # if direction.dim == 2:
-        #     dz = (c2[2] - c1[2]) * direction.sgn
-        #     if dz < 0:
-        #         return float('inf')
-        #     effective_sig_sq = sig_sq - (c2[1] - c1[1]) ** 2 - (c2[0] - c1[0]) ** 2
-        #     if effective_sig_sq < 0:
-        #         return float('inf')
-        #     t = dz - np.sqrt(effective_sig_sq)
-        #     return t if 0 > t > total_step else float('inf')
-        # i, j = direction.dim, 1 - direction.dim
-        # x1, x2, y1, y2, z1, z2, lx, ly = c1[i], c2[i], c1[j], c2[j], c1[2], c2[2], boundaries.edges[i], \
-        #                                  boundaries.edges[j]
-        # # now assume the step is in the x direction because I reorganize x and y
-        # dys = [(y2 - y1 - l) for l in [0, ly, -ly]]
-        # dy = dys[np.argmin(np.abs(dys))]
-        # effective_sig_sq = sig_sq - dy ** 2 - (z2 - z1) ** 2
-        # if effective_sig_sq <= 0:
-        #     return float('inf')
-        # possible_ts = [x2 + l - x1 - s * np.sqrt(effective_sig_sq) for l in [0, lx, -lx] for s in [1, -1]]
-        # ts = [t for t in possible_ts if 0 < t <= total_step]
-        # if len(ts) == 0:
-        #     return float('inf')
-        # return min(ts)
-
-        d = sphere1.rad + sphere2.rad
-        v_hat = [0, 0, 0]
-        v_hat[direction.dim] = direction.sgn
-        vectors = boundaries.boundary_transformed_vectors()
-        for v in vectors:
-            if len(sphere2.center) > len(v):
-                v = [x for x in v] + [0 for _ in range(len(sphere2.center) - len(v))]
-            dx = sphere2.center + v - sphere1.center
-            dx_len = np.linalg.norm(dx)
-            dx_dot_v = np.dot(dx, v_hat)
-            if dx_dot_v <= 0: continue
-            discriminant = dx_dot_v ** 2 + d ** 2 - dx_len ** 2
-            if discriminant <= 0: continue
-            dist: float = dx_dot_v - np.sqrt(discriminant)
-            if dist <= total_step: return dist
+        c1, c2 = sphere1.center, sphere2.center
+        sig_sq = (sphere1.rad + sphere2.rad) ** 2
+        if direction.dim == 2:
+            dz = (c2[2] - c1[2]) * direction.sgn
+            if dz <= 0: return float('inf')
+            for v in boundaries.boundary_transformed_vectors():
+                discriminant = sig_sq - (c2[1] - c1[1] + v[1]) ** 2 - (c2[0] - c1[0] + v[0]) ** 2
+                if discriminant < 0: continue
+                dist = dz - np.sqrt(discriminant)  # for non overlapping sphere dist>0 always, no need to check
+                if dist <= total_step: return dist
+        else:
+            i, j = direction.dim, 1 - direction.dim
+            sig_xy_sq = sig_sq - (c2[2] - c1[2]) ** 2
+            if sig_xy_sq <= 0: return float('inf')
+            for v in boundaries.boundary_transformed_vectors():
+                # assume the step is in the x direction and reorganize x and y
+                dx = c2[i] - c1[i] + v[i]
+                if dx <= 0: continue
+                discriminant = sig_xy_sq - (c2[j] - c1[j] + v[j]) ** 2
+                if discriminant <= 0: continue
+                dist = dx - np.sqrt(discriminant)
+                if dist <= total_step: return dist
         return float('inf')
 
     @staticmethod

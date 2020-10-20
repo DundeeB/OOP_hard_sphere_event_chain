@@ -88,7 +88,7 @@ class Step:
 
 class Event2DCells(ArrayOfCells):
 
-    def __init__(self, edge, n_rows, n_columns):
+    def __init__(self, edge, n_rows, n_columns, l_z):
         """
         Construct a 2 dimension default choice list of empty cells (without spheres), with constant edge
         :param n_rows: number of rows in the array of cells
@@ -103,12 +103,12 @@ class Event2DCells(ArrayOfCells):
                 site = (edge * j, edge * i)
                 cells[i][j] = Cell(site, [edge, edge], ind=(i, j))
                 cells[i][j].spheres = []
-        boundaries = CubeBoundaries([l_x, l_y], [BoundaryType.CYCLIC, BoundaryType.CYCLIC])
+        boundaries = CubeBoundaries([l_x, l_y, l_z])
         super().__init__(2, boundaries, cells=cells)
         self.edge = edge
         self.l_x = l_x
         self.l_y = l_y
-        self.l_z = None
+        self.l_z = l_z
 
     def append_sphere(self, spheres):
         if type(spheres) != list:
@@ -143,13 +143,6 @@ class Event2DCells(ArrayOfCells):
         if len(cells) == 1:
             return cells[0]
         return cells
-
-    def add_third_dimension_for_sphere(self, l_z):
-        # TODO: remove this function after it is never used
-        self.l_z = l_z
-        self.boundaries = CubeBoundaries(self.boundaries.edges + [l_z], \
-                                         self.boundaries.boundaries_type + [BoundaryType.WALL])
-        return
 
     def random_generate_spheres(self, n_spheres_per_cell, rad, extra_edges=[]):
         if extra_edges == [] and self.l_z is not None:
@@ -358,10 +351,8 @@ class Event2DCells(ArrayOfCells):
                     vec_to_zero[1] = -min_y
                     self.l_y = new_ly
                 all_spheres = self.translate(vec_to_zero)  # emptied all spheres from self
-                self.boundaries = CubeBoundaries([self.l_x, self.l_y], [BoundaryType.CYCLIC, BoundaryType.CYCLIC])
+                self.boundaries = CubeBoundaries([self.l_x, self.l_y, self.l_z])
                 self.n_rows, self.n_columns = int(np.ceil(self.l_y / self.edge)), int(np.ceil(self.l_x / self.edge))
-                if not np.isnan(self.l_z):
-                    self.add_third_dimension_for_sphere(self.l_z)
                 for i_sp in range(len(all_spheres)):
                     all_spheres[i_sp].box_it(self.boundaries)
                 self.append_sphere(all_spheres)
@@ -392,8 +383,7 @@ class Event2DCells(ArrayOfCells):
                 max_z = desired_lz
                 assert_exit = True
             self.l_z = max_z
-            self.boundaries = CubeBoundaries([self.l_x, self.l_y], [BoundaryType.CYCLIC, BoundaryType.CYCLIC])
-            self.add_third_dimension_for_sphere(self.l_z)
+            self.boundaries = CubeBoundaries([self.l_x, self.l_y, self.l_z])
             if assert_exit: return
             sp_down, sp_up = self.all_spheres[i_min_z], self.all_spheres[i_max_z]
             total_step = sp_up.rad / 2

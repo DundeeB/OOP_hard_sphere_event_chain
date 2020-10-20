@@ -50,7 +50,7 @@ class Sphere:
         :type boundaries: CubeBoundaries
         """
         try:
-            self.center = [x % e for x, e in zip(self.center, boundaries.edges)]
+            self.center = [x % e for x, e in zip(self.center, boundaries)]
         except RuntimeWarning:
             print(RuntimeWarning)
 
@@ -65,31 +65,6 @@ class BoundaryType(Enum):
     CYCLIC = "CyclicBoundaryConditions"
 
 
-class CubeBoundaries:
-    # TODO: set only x cyclic y cyclic z wall option available
-
-    def __init__(self, edges, boundaries_type):
-        """        CubeBoundaries constructor create new boundaries for the simulation.
-        :param edges: list of edge per dimension for the simulation
-        :param boundaries_type: list of boundary conditions, where the i'th arg fits the planes perpendicular to the
-        i'th unit vector. For example, boundary_type[0] = BoundaryType.CYCLIC means the plane perpendicular to x-hat,
-        in 1D the two ends of the rope, in 2D the planes y=0,1 and in 3D the planes yz (x=0,1), are cyclic.
-        """
-        assert len(edges) == len(boundaries_type)
-        for bound in boundaries_type:
-            assert type(bound) == BoundaryType
-        self.edges = edges
-        self.boundaries_type = boundaries_type
-        self.dim = len(edges)
-
-    def boundary_transformed_vectors(self):
-        # TODO: check if the sphere is close to boundaries, with comparison with to the edge size,
-        #  to chech which vectors are relevent
-        l_x = self.edges[0]
-        l_y = self.edges[1]
-        return [[vx, vy] for vx in [0, -l_x, l_x] for vy in [0, -l_y, l_y]]
-
-
 class Metric:
 
     @staticmethod
@@ -99,13 +74,13 @@ class Metric:
         :type sphere: Sphere
         :param direction: direction of step
         :param total_step: magnitude of the step to be carried out
-        :type boundaries: CubeBoundaries
+        :type boundaries: list
         :return: the minimal distance to the wall, and the wall.
         If there is no wall in a distance l, dist is inf and wall=[]
         """
         if direction.dim != 2:
             return float('inf')
-        t = boundaries.edges[2] - sphere.center[2] - sphere.rad - epsilon if direction.sgn == +1 else \
+        t = boundaries[2] - sphere.center[2] - sphere.rad - epsilon if direction.sgn == +1 else \
             sphere.center[2] - sphere.rad - epsilon
         return t if t < total_step else float('inf')
 
@@ -123,18 +98,22 @@ class Metric:
         :param total_step: maximal step size. If dist for collision > total_step then dist_to_collision-->infty
         :param direction: in which sphere1 is to move
         :param boundaries: boundaries for the case some of them are cyclic boundary conditinos
-        :type boundaries: CubeBoundaries
+        :type boundaries: list
         :return: distance for collision if the move is allowed, infty if move can not lead to collision
         """
         assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
-            sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries.edges)
+            sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries)
         # TODO: remove assertion to accelerate
         c1, c2 = sphere1.center, sphere2.center
         sig_sq = (sphere1.rad + sphere2.rad) ** 2
+        l_x, l_y = boundaries[0:2]
+        vectors = [[vx, vy] for vx in [0, -l_x, l_x] for vy in [0, -l_y, l_y]]
+        # TODO: check if the sphere is close to boundaries, with comparison with to the edge size,
+        #  to check which vectors are relevent
         if direction.dim == 2:
             dz = (c2[2] - c1[2]) * direction.sgn
             if dz <= 0: return float('inf')
-            for v in boundaries.boundary_transformed_vectors():
+            for v in vectors:
                 discriminant = sig_sq - (c2[1] - c1[1] + v[1]) ** 2 - (c2[0] - c1[0] + v[0]) ** 2
                 if discriminant < 0: continue
                 dist = dz - np.sqrt(discriminant)  # for non overlapping sphere dist>0 always, no need to check
@@ -143,7 +122,7 @@ class Metric:
             i, j = direction.dim, 1 - direction.dim
             sig_xy_sq = sig_sq - (c2[2] - c1[2]) ** 2
             if sig_xy_sq <= 0: return float('inf')
-            for v in boundaries.boundary_transformed_vectors():
+            for v in vectors:
                 # assume the step is in the x direction and reorganize x and y
                 dx = c2[i] - c1[i] + v[i]
                 if dx <= 0: continue
@@ -160,11 +139,9 @@ class Metric:
         """
         dx = np.array(sphere1.center) - sphere2.center  # direct vector
         vec = np.zeros(len(dx))
-        for i, b in enumerate(boundaries.boundaries_type):
-            if b != BoundaryType.CYCLIC:
-                vec[i] = dx[i]
-                continue
-            l = boundaries.edges[i]
+        vec[2] = dx[2]
+        for i in range(2):
+            l = boundaries[i]
             dxs = np.array([dx[i], dx[i] + l, dx[i] - l])
             vec[i] = dxs[np.argmin(dxs ** 2)]  # find shorter path through B.D.
         return vec
@@ -172,22 +149,19 @@ class Metric:
     @staticmethod
     def cyclic_dist(boundaries, sphere1, sphere2):
         dx = np.array(sphere1.center) - sphere2.center  # direct vector
-        dsq = 0
-        for i, b in enumerate(boundaries.boundaries_type):
-            if b != BoundaryType.CYCLIC:
-                dsq += dx[i] ** 2
-                continue
-            L = boundaries.edges[i]
+        dsq = dx[2] ** 2
+        for i in range(2):
+            L = boundaries[i]
             dsq += min(dx[i] ** 2, (dx[i] + L) ** 2, (dx[i] - L) ** 2)  # find shorter path through B.D.
         return np.sqrt(dsq)
 
     @staticmethod
-    def overlap(sphere1: Sphere, sphere2: Sphere, boundaries: CubeBoundaries):
+    def overlap(sphere1: Sphere, sphere2: Sphere, boundaries):
         """
         Test of two d-dimensional Sphere objects overlap
         :type sphere1: Sphere
         :type sphere2: Sphere
-        :type boundaries: CubeBoundaries
+        :type boundaries: list
         :return: True if they overlap
         """
         if sphere1 == sphere2: return False
@@ -205,7 +179,7 @@ class Metric:
                 return False
 
     @staticmethod
-    def spheres_overlap(spheres, boundaries: CubeBoundaries):
+    def spheres_overlap(spheres, boundaries):
         """
         :type spheres: list
         :param spheres: list of spheres to check direct_overlap between all couples
@@ -299,7 +273,7 @@ class Cell:
                 return False
         return True
 
-    def random_generate_spheres(self, n_spheres, rads, extra_edges=[]):
+    def random_generate_spheres(self, n_spheres, rads):
         """
         Generate n spheres inside the cell. If there are spheres in the cell already,
          it deletes the existing spheres. The algorithm is to randomaly
@@ -317,10 +291,6 @@ class Cell:
             for i in range(n_spheres):
                 r = rads[i]
                 center = np.array(self.site) + [random.random() * e for e in self.edges]
-                if len(extra_edges) > 0:
-                    center = [c for c in center] + [r + epsilon + random.random() * (e - 2 * (r + epsilon)) for e in
-                                                    extra_edges]
-                    # assumes for now extra edge is rigid wall and so generate in the allowed locations
                 spheres.append(Sphere(center, rads[i]))
             if not Metric.direct_overlap(spheres):
                 break
@@ -410,63 +380,37 @@ class ArrayOfCells:
         if self.dim != 2: raise Exception("dim!=2 not implemented yet")
         n_rows = self.n_rows
         n_columns = self.n_columns
-        x_cyclic = self.boundaries.boundaries_type[0] == BoundaryType.CYCLIC
-        y_cyclic = self.boundaries.boundaries_type[1] == BoundaryType.CYCLIC
-        both_cyclic = x_cyclic and y_cyclic
         cells = [[Cell((), []) for _ in range(n_columns + 2)] for _ in range(n_rows + 2)]
         for i in range(n_rows):  # 1 < (i + 1, j+1) < n
             for j in range(n_columns):
                 cells[i + 1][j + 1] = self.cells[i][j]
-        l_x = self.boundaries.edges[0]
+        l_x, l_y = self.boundaries[0:2]
         for i in range(n_rows):  # 1 < i + 1 < n
             c0 = copy.deepcopy(self.cells[i][n_columns - 1])
             c0.transform(c0.site + np.array([-l_x, 0]))
             c1 = copy.deepcopy(self.cells[i][0])
             c1.transform(c1.site + np.array([l_x, 0]))
-            if x_cyclic:
-                cells[i + 1][0] = c0
-                cells[i + 1][n_columns + 1] = c1
-            else:
-                cells[i + 1][0] = Cell(c0.site, c0.edges)
-                cells[i + 1][n_columns + 1] = Cell(c1.site, c1.edges)
-        l_y = self.boundaries.edges[1]
+            cells[i + 1][0] = c0
+            cells[i + 1][n_columns + 1] = c1
         for j in range(n_columns):  # 1 < j + 1 < n
             c0 = copy.deepcopy(self.cells[n_rows - 1][j])
             c0.transform(c0.site + np.array([0, -l_y]))
             c1 = copy.deepcopy(self.cells[0][j])
             c1.transform(c1.site + np.array([0, l_y]))
-            if y_cyclic:
-                cells[0][j + 1] = c0
-                cells[n_rows + 1][j + 1] = c1
-            else:
-                cells[0][j + 1] = Cell(c0.site, c0.edges)
-                cells[n_rows + 1][j + 1] = Cell(c1.site, c1.edges)
-        if both_cyclic:
-            c = copy.deepcopy(self.cells[n_rows - 1][n_columns - 1])
-            c.transform(c.site + np.array([-l_x, -l_y]))
-            cells[0][0] = c
-            c = copy.deepcopy(self.cells[0][0])
-            c.transform(c.site + np.array([l_x, l_y]))
-            cells[n_rows + 1][n_columns + 1] = c
-            c = copy.deepcopy(self.cells[0][n_columns - 1])
-            c.transform(c.site + np.array([-l_x, l_y]))
-            cells[n_rows + 1][0] = c
-            c = copy.deepcopy(self.cells[n_rows - 1][0])
-            c.transform(c.site + np.array([l_x, -l_y]))
-            cells[0][n_columns + 1] = c
-        else:
-            c = copy.deepcopy(self.cells[n_rows - 1][n_columns - 1])
-            c.transform(c.site + np.array([-l_x, -l_y]))
-            cells[0][0] = Cell(c.site, c.edges)
-            c = copy.deepcopy(self.cells[0][0])
-            c.transform(c.site + np.array([l_x, l_y]))
-            cells[n_rows + 1][n_columns + 1] = Cell(c.site, c.edges)
-            c = copy.deepcopy(self.cells[0][n_columns - 1])
-            c.transform(c.site + np.array([-l_x, l_y]))
-            cells[n_rows + 1][0] = Cell(c.site, c.edges)
-            c = copy.deepcopy(self.cells[n_rows - 1][0])
-            c.transform(c.site + np.array([l_x, -l_y]))
-            cells[0][n_columns + 1] = Cell(c.site, c.edges)
+            cells[0][j + 1] = c0
+            cells[n_rows + 1][j + 1] = c1
+        c = copy.deepcopy(self.cells[n_rows - 1][n_columns - 1])
+        c.transform(c.site + np.array([-l_x, -l_y]))
+        cells[0][0] = c
+        c = copy.deepcopy(self.cells[0][0])
+        c.transform(c.site + np.array([l_x, l_y]))
+        cells[n_rows + 1][n_columns + 1] = c
+        c = copy.deepcopy(self.cells[0][n_columns - 1])
+        c.transform(c.site + np.array([-l_x, l_y]))
+        cells[n_rows + 1][0] = c
+        c = copy.deepcopy(self.cells[n_rows - 1][0])
+        c.transform(c.site + np.array([l_x, -l_y]))
+        cells[0][n_columns + 1] = c
         return ArrayOfCells(self.dim, self.boundaries, cells)
 
     @staticmethod
@@ -502,25 +446,11 @@ class ArrayOfCells:
                     return False
                 for sphere in cell.spheres:
                     assert cell.center_in_cell(sphere), "sphere is missing from cell"
-                if self.boundaries.dim == 3:
-                    for sphere in cell.spheres:
-                        c_z = sphere.center[2]
-                        r = sphere.rad
-                        if self.boundaries.boundaries_type[2] == BoundaryType.WALL and \
-                                (c_z - r < -epsilon or c_z + r > self.boundaries.edges[2] + epsilon):
-                            return False
-                if (j == n_columns - 1 or j == 0) and self.boundaries.boundaries_type[0] == BoundaryType.WALL:
-                    for sphere in cell.spheres:
-                        c_x = sphere.center[0]
-                        r = sphere.rad
-                        if c_x - r < -epsilon or c_x + r > self.boundaries.edges[0] + epsilon:
-                            return False
-                if (i == n_rows - 1 or i == 0) and self.boundaries.boundaries_type[1] == BoundaryType.WALL:
-                    for sphere in cell.spheres:
-                        c_y = sphere.center[1]
-                        r = sphere.rad
-                        if c_y - r < -epsilon or c_y + r > self.boundaries.edges[1] + epsilon:
-                            return False
+                for sphere in cell.spheres:
+                    c_z = sphere.center[2]
+                    r = sphere.rad
+                    if c_z - r < -epsilon or c_z + r > self.boundaries[2] + epsilon:
+                        return False
                 for neighbor in self.neighbors(i, j):
                     if self.overlap_2_cells(cell, neighbor):
                         return False

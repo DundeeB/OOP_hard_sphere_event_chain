@@ -34,8 +34,7 @@ def run_honeycomb(h, n_row, n_col, rho_H, iterations=None, record_displacements=
         a = np.sqrt(l_x * l_y / N)
         rho_H_new = (sig ** 2) / ((a ** 2) * (h + 1))
 
-        initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)
-        initial_arr.add_third_dimension_for_sphere((h + 1) * sig)
+        initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells, l_z=(h + 1) * sig)
         initial_arr.generate_spheres_in_AF_triangular_structure(n_row, n_col, r)
         initial_arr.scale_xy(np.sqrt(rho_H_new / rho_H))
         assert initial_arr.edge > sig
@@ -60,8 +59,7 @@ def run_square(h, n_row, n_col, rho_H, iterations=None, record_displacements=Fal
         a = np.sqrt(A / N)
         n_row_cells, n_col_cells = int(np.sqrt(A) / (a * np.sqrt(2))), int(np.sqrt(A) / (a * np.sqrt(2)))
         e = np.sqrt(A / (n_row_cells * n_col_cells))
-        initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells)
-        initial_arr.add_third_dimension_for_sphere((h + 1) * sig)
+        initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells, l_z=(h + 1) * sig)
         initial_arr.generate_spheres_in_AF_square(n_row, n_col, r)
         assert initial_arr.edge > sig, "Edge of cell is: " + str(initial_arr.edge) + ", which is smaller than sigma."
 
@@ -91,9 +89,8 @@ def run_z_quench(origin_sim, desired_h):
         + "edge=" + str(edge) + "\nn_row=" + str(n_row) + "\nn_col=" + str(
             n_col) + "\nWhile system size is:\nl_x=" + str(l_x) + "\nl_y=" + str(l_y)
 
-    initial_arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col)
-    initial_arr.boundaries = CubeBoundaries([l_x, l_y], 2 * [BoundaryType.CYCLIC])
-    initial_arr.add_third_dimension_for_sphere(l_z)
+    initial_arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col, l_z=l_z)
+    initial_arr.boundaries = CubeBoundaries([l_x, l_y, l_z])
     centers, ind = orig_sim_files_interface.last_spheres()
     assert initial_arr.edge > 2 * rad
     initial_arr.append_sphere([Sphere(c, rad) for c in centers])
@@ -131,8 +128,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
         last_centers, last_ind = files_interface.last_spheres()
         sp = [Sphere(tuple(c), rad) for c in last_centers]
         # construct array of cells and fill with spheres
-        arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col)
-        arr.add_third_dimension_for_sphere(l_z)
+        arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col, l_z=l_z)
         arr.append_sphere(sp)
         sys.stdout = open(batch, "a")
         print("\n-----------\nSimulation with same parameters exist already, continuing from last file.\n",

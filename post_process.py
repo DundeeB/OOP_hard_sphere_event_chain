@@ -20,8 +20,7 @@ class OrderParameter:
         self.sim_path = sim_path
         write_or_load = WriteOrLoad(sim_path)
         l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = write_or_load.load_Input()
-        self.event_2d_cells = Event2DCells(edge, n_row, n_col)
-        self.event_2d_cells.add_third_dimension_for_sphere(l_z)
+        self.event_2d_cells = Event2DCells(edge, n_row, n_col, l_z)
         if centers is None or spheres_ind is None:
             centers, spheres_ind = write_or_load.last_spheres()
         self.spheres_ind = spheres_ind

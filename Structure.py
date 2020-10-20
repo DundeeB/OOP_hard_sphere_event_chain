@@ -66,6 +66,7 @@ class BoundaryType(Enum):
 
 
 class CubeBoundaries:
+    # TODO: set only x cyclic y cyclic z wall option available
 
     def __init__(self, edges, boundaries_type):
         """        CubeBoundaries constructor create new boundaries for the simulation.
@@ -82,6 +83,8 @@ class CubeBoundaries:
         self.dim = len(edges)
 
     def boundary_transformed_vectors(self):
+        # TODO: check if the sphere is close to boundaries, with comparison with to the edge size,
+        #  to chech which vectors are relevent
         l_x = self.edges[0]
         l_y = self.edges[1]
         return [[vx, vy] for vx in [0, -l_x, l_x] for vy in [0, -l_y, l_y]]
@@ -125,6 +128,7 @@ class Metric:
         """
         assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
             sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries.edges)
+        # TODO: remove assertion to accelerate
         c1, c2 = sphere1.center, sphere2.center
         sig_sq = (sphere1.rad + sphere2.rad) ** 2
         if direction.dim == 2:

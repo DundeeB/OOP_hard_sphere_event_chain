@@ -145,6 +145,7 @@ class Event2DCells(ArrayOfCells):
         return cells
 
     def add_third_dimension_for_sphere(self, l_z):
+        # TODO: remove this function after it is never used
         self.l_z = l_z
         self.boundaries = CubeBoundaries(self.boundaries.edges + [l_z], \
                                          self.boundaries.boundaries_type + [BoundaryType.WALL])
@@ -202,6 +203,7 @@ class Event2DCells(ArrayOfCells):
             cell.remove_sphere(sphere)
 
             relevant_cells = [self.cells[i][j]] + self.neighbors(i, j)
+            # TODO: take only cells in the direction of the step
             other_spheres = []
             for c in relevant_cells:
                 for s in c.spheres: other_spheres.append(s)

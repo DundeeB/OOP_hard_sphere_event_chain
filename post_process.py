@@ -36,9 +36,9 @@ class OrderParameter:
         self.op_name = "phi"
         if calc_upper_lower:
             upper_centers = [c for c in self.event_2d_cells.all_centers if
-                             c[2] >= self.event_2d_cells.boundaries.edges[2] / 2]
+                             c[2] >= self.event_2d_cells.boundaries[2] / 2]
             lower_centers = [c for c in self.event_2d_cells.all_centers if
-                             c[2] < self.event_2d_cells.boundaries.edges[2] / 2]
+                             c[2] < self.event_2d_cells.boundaries[2] / 2]
             self.upper = type(self)(sim_path, centers=upper_centers, spheres_ind=self.spheres_ind,
                                     calc_upper_lower=False, **kwargs)
             self.lower = type(self)(sim_path, centers=lower_centers, spheres_ind=self.spheres_ind,
@@ -51,7 +51,7 @@ class OrderParameter:
     def correlation(self, bin_width=0.2, calc_upper_lower=True, low_memory=False, randomize=False,
                     realizations=int(1e7)):
         if self.op_vec is None: self.calc_order_parameter()
-        lx, ly = self.event_2d_cells.boundaries.edges[:2]
+        lx, ly = self.event_2d_cells.boundaries[:2]
         l = np.sqrt(lx ** 2 + ly ** 2) / 2
         centers = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1) + bin_width / 2
         counts = np.zeros(len(centers))
@@ -100,7 +100,7 @@ class OrderParameter:
                                    realizations=realizations)
 
     def __pair_corr__(self, i, j, centers, bin_width):
-        lx, ly = self.event_2d_cells.boundaries.edges[:2]
+        lx, ly = self.event_2d_cells.boundaries[:2]
         r, r_ = self.event_2d_cells.all_centers[i], self.event_2d_cells.all_centers[j]
         dr_vec = np.array(r) - r_
         dx = np.min(np.abs([dr_vec[0], dr_vec[0] + lx, dr_vec[0] - lx]))
@@ -142,8 +142,8 @@ class PsiMN(OrderParameter):
     @staticmethod
     def psi_m_n(event_2d_cells, m, n):
         centers = event_2d_cells.all_centers
-        cyc_bound = CubeBoundaries(event_2d_cells.boundaries.edges[:2], 2 * [BoundaryType.CYCLIC])
-        cyc = lambda p1, p2: Metric.cyclic_dist(cyc_bound, Sphere(p1, 1), Sphere(p2, 1))
+        cyc = lambda p1, p2: Metric.cyclic_dist(event_2d_cells.boundaries, Sphere([x for x in p1] + [0], 1),
+                                                Sphere([x for x in p2] + [0], 1))
         graph = kneighbors_graph([p[:2] for p in centers], n_neighbors=n, metric=cyc)
         psimn_vec = np.zeros(len(centers), dtype=np.complex)
         for i in range(len(centers)):
@@ -175,7 +175,7 @@ class PositionalCorrelationFunction(OrderParameter):
                     realizations=int(1e7)):
         theta, rect_width = self.theta, self.rect_width
         v_hat = np.transpose(np.matrix([np.cos(theta), np.sin(theta)]))
-        lx, ly = self.event_2d_cells.boundaries.edges[:2]
+        lx, ly = self.event_2d_cells.boundaries[:2]
         l = np.sqrt(lx ** 2 + ly ** 2) / 2
         bins_edges = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1)
         self.corr_centers = bins_edges[:-1] + bin_width / 2
@@ -226,7 +226,7 @@ class PositionalCorrelationFunction(OrderParameter):
                                    randomize=randomize, realizations=realizations)
 
     def __pair_dist__(self, r, r_, v_hat, rect_width, bins_edges):
-        lx, ly = self.event_2d_cells.boundaries.edges[:2]
+        lx, ly = self.event_2d_cells.boundaries[:2]
         dr = np.array(r) - r_
         dxs = [dr[0], dr[0] + lx, dr[0] - lx]
         dx = dxs[np.argmin(np.abs(dxs))]
@@ -321,9 +321,9 @@ class BurgerField(OrderParameter):
         self.a1, self.a2 = a1, a2
         if calc_upper_lower:
             upper_centers = [c for c in self.event_2d_cells.all_centers if
-                             c[2] >= self.event_2d_cells.boundaries.edges[2] / 2]
+                             c[2] >= self.event_2d_cells.boundaries[2] / 2]
             lower_centers = [c for c in self.event_2d_cells.all_centers if
-                             c[2] < self.event_2d_cells.boundaries.edges[2] / 2]
+                             c[2] < self.event_2d_cells.boundaries[2] / 2]
             self.upper = BurgerField(sim_path, centers=upper_centers, spheres_ind=self.spheres_ind,
                                      calc_upper_lower=False,
                                      a1=a1 + a2, a2=a1 - a2, psi_op=psi_op.upper)
@@ -365,8 +365,8 @@ class BurgerField(OrderParameter):
         dislocation_location = []
         for i, simplex in enumerate(tri.simplices):
             rc = np.mean(tri.points[simplex], 0)
-            if rc[0] < 0 or rc[0] > event_2d_cells.boundaries.edges[0] or rc[1] < 0 or rc[1] > \
-                    event_2d_cells.boundaries.edges[1]:
+            if rc[0] < 0 or rc[0] > event_2d_cells.boundaries[0] or rc[1] < 0 or rc[1] > \
+                    event_2d_cells.boundaries[1]:
                 continue
             b_i = BurgerField.burger_calculation(tri.points[simplex], perfect_lattice_vectors)
             if np.linalg.norm(b_i) > epsilon:
@@ -392,7 +392,7 @@ class BurgerField(OrderParameter):
     @staticmethod
     def wrap_with_boundaries(event_2d_cells, w):
         centers = np.array(event_2d_cells.all_centers)[:, :2]
-        Lx, Ly = event_2d_cells.boundaries.edges[:2]
+        Lx, Ly = event_2d_cells.boundaries[:2]
         x = centers[:, 0]
         y = centers[:, 1]
 

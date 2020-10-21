@@ -123,7 +123,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
     if os.path.exists(output_dir):
         files_interface = WriteOrLoad(output_dir, np.nan)
         l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = files_interface.load_Input()
-        boundaries = CubeBoundaries([l_x, l_y, l_z], 2 * [BoundaryType.CYCLIC] + [BoundaryType.WALL])
+        boundaries = [l_x, l_y, l_z]
         files_interface.boundaries = boundaries
         last_centers, last_ind = files_interface.last_spheres()
         sp = [Sphere(tuple(c), rad) for c in last_centers]

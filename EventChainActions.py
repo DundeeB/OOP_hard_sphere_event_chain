@@ -27,7 +27,7 @@ class Event:
 
 class Step:
 
-    def __init__(self, sphere: Sphere, total_step, direction: Direction, boundaries: CubeBoundaries,
+    def __init__(self, sphere: Sphere, total_step, direction: Direction, boundaries,
                  current_step=np.nan):
         """
         The characteristic of the step to be perform
@@ -35,7 +35,7 @@ class Step:
         :param total_step: total step left for the current move of spheres
         :param current_step: step sphere is about to perform
         :param direction: of the step
-        :type boundaries: CubeBoundaries
+        :type boundaries: list
         """
         self.sphere = sphere
         self.total_step = total_step
@@ -103,7 +103,7 @@ class Event2DCells(ArrayOfCells):
                 site = (edge * j, edge * i)
                 cells[i][j] = Cell(site, [edge, edge], ind=(i, j))
                 cells[i][j].spheres = []
-        boundaries = CubeBoundaries([l_x, l_y, l_z])
+        boundaries = [l_x, l_y, l_z]
         super().__init__(2, boundaries, cells=cells)
         self.edge = edge
         self.l_x = l_x
@@ -143,18 +143,6 @@ class Event2DCells(ArrayOfCells):
         if len(cells) == 1:
             return cells[0]
         return cells
-
-    def random_generate_spheres(self, n_spheres_per_cell, rad, extra_edges=[]):
-        if extra_edges == [] and self.l_z is not None:
-            super().random_generate_spheres(n_spheres_per_cell, rad, extra_edges=[self.l_z])
-        else:
-            super().random_generate_spheres(n_spheres_per_cell, rad, extra_edges)
-
-    def generate_spheres_in_cubic_structure(self, n_spheres_per_cell, rad, extra_edges=[]):
-        if extra_edges == [] and self.l_z is not None:
-            super().generate_spheres_in_cubic_structure(n_spheres_per_cell, rad, extra_edges=[self.l_z])
-        else:
-            super().generate_spheres_in_cubic_structure(n_spheres_per_cell, rad, extra_edges)
 
     def maximal_free_step(self, i, j, step: Step):
         """
@@ -257,8 +245,7 @@ class Event2DCells(ArrayOfCells):
         :param rad: not a list, a single number of the same radius for all spheres
         """
         assert type(rad) != list, "list of different rads is not supported for initial condition AF triangular"
-        assert len(self.boundaries.boundaries_type) == 3, "Anti Ferromagnetic inital conditions make no sense in 2D"
-        l_x, l_y, l_z = self.boundaries.edges
+        l_x, l_y, l_z = self.boundaries
         assert n_row % 2 == 0, "n_row should be even for anti-ferromagnetic triangular Initial conditions"
         ay = 2 * l_y / n_row
         spheres_down = ArrayOfCells.spheres_in_triangular(int(n_row / 2), n_col, rad, l_x, l_y)
@@ -284,7 +271,6 @@ class Event2DCells(ArrayOfCells):
         :param rad: not a list, a single number of the same radius for all spheres
         """
         assert type(rad) != list, "list of different rads is not supported for initial condition AF triangular"
-        assert len(self.boundaries.boundaries_type) == 3, "Anti Ferromagnetic inital conditions make no sense in 2D"
         sig = 2 * rad
         ax, ay = self.l_x / n_sp_col, self.l_y / n_sp_row
         a = min(ax, ay)
@@ -311,8 +297,8 @@ class Event2DCells(ArrayOfCells):
         self.l_x *= factor
         self.l_y *= factor
         # not self.l_z
-        self.boundaries.edges[0] *= factor
-        self.boundaries.edges[1] *= factor
+        self.boundaries[0] *= factor
+        self.boundaries[1] *= factor
         # not self.boundaries[2]
         for c in self.all_cells:
             c.site = [x * factor for x in c.site]
@@ -351,7 +337,7 @@ class Event2DCells(ArrayOfCells):
                     vec_to_zero[1] = -min_y
                     self.l_y = new_ly
                 all_spheres = self.translate(vec_to_zero)  # emptied all spheres from self
-                self.boundaries = CubeBoundaries([self.l_x, self.l_y, self.l_z])
+                self.boundaries = [self.l_x, self.l_y, self.l_z]
                 self.n_rows, self.n_columns = int(np.ceil(self.l_y / self.edge)), int(np.ceil(self.l_x / self.edge))
                 for i_sp in range(len(all_spheres)):
                     all_spheres[i_sp].box_it(self.boundaries)
@@ -383,7 +369,7 @@ class Event2DCells(ArrayOfCells):
                 max_z = desired_lz
                 assert_exit = True
             self.l_z = max_z
-            self.boundaries = CubeBoundaries([self.l_x, self.l_y, self.l_z])
+            self.boundaries = [self.l_x, self.l_y, self.l_z]
             if assert_exit: return
             sp_down, sp_up = self.all_spheres[i_min_z], self.all_spheres[i_max_z]
             total_step = sp_up.rad / 2

@@ -6,7 +6,7 @@ import os
 import re
 import scipy.io as sio
 from EventChainActions import Step
-from Structure import Sphere, CubeBoundaries, ArrayOfCells
+from Structure import *
 
 
 class WriteOrLoad:
@@ -16,7 +16,7 @@ class WriteOrLoad:
         Create new View instance, saving pictures to directory output_dir and having simulation boundary
         boundaries
         :type output_dir: str
-        :type boundaries: CubeBoundaries
+        :type boundaries: list
         """
         self.output_dir = output_dir
         self.boundaries = boundaries
@@ -30,7 +30,7 @@ class WriteOrLoad:
         """
         plt.gcf().set_size_inches(6, 6)
         plt.cla()
-        plt.axis([0, self.boundaries.edges[0], 0, self.boundaries.edges[1]])
+        plt.axis([0, self.boundaries[0], 0, self.boundaries[1]])
         for sphere in spheres:
             assert isinstance(sphere, Sphere)
             c = sphere.center
@@ -107,7 +107,7 @@ class WriteOrLoad:
 
     def save_Input(self, rad, rho_H, edge, n_row, n_col):
         file_name = os.path.join(self.output_dir, 'Input_parameters_from_python.mat')
-        l_x, l_y, l_z = self.boundaries.edges
+        l_x, l_y, l_z = self.boundaries
         sio.savemat(file_name, {'rad': float(rad), 'Lx': l_x, 'Ly': l_y,
                                 'H': float(l_z), 'rho_H': rho_H, 'edge': edge, 'n_row': n_row, 'n_col': n_col})
 

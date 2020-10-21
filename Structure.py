@@ -465,26 +465,24 @@ class ArrayOfCells:
         for i in ind: cell = cell[i]
         return cell
 
-    def random_generate_spheres(self, n_spheres_per_cell, rad, extra_edges=[]):
+    def random_generate_spheres(self, n_spheres_per_cell, rad):
         if type(rad) != list: rad = n_spheres_per_cell * [rad]
         while True:
             for cell in self.all_cells:
-                cell.random_generate_spheres(n_spheres_per_cell, rad, extra_edges)
+                cell.random_generate_spheres(n_spheres_per_cell, rad)
             if self.legal_configuration():
                 return
 
-    def generate_spheres_in_cubic_structure(self, n_spheres_per_cell, rad, extra_edges=[]):
+    def generate_spheres_in_cubic_structure(self, n_spheres_per_cell, rad):
         if type(rad) != list: rad = n_spheres_per_cell * [rad]
         for cell in self.all_cells:
-            dx, dy = epsilon, epsilon
+            dx, dy, dz = epsilon, epsilon, epsilon
             x0, y0 = cell.site
             max_r = 0
             for i in range(n_spheres_per_cell):
                 r = rad[i]
                 if r > max_r: max_r = r
-                center = (x0 + dx + r, y0 + dy + r)
-                if len(extra_edges) > 0:
-                    center = [c for c in center] + [r + random.random() * (e - 2 * r) for e in extra_edges]
+                center = (x0 + dx + r, y0 + dy + r, dz + r)
                 cell.append(Sphere(center, r))
                 dx += 2 * r + epsilon
                 if (i < n_spheres_per_cell - 1) and (dx + 2 * rad[i + 1] > cell.edges[0]):

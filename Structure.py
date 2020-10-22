@@ -47,7 +47,7 @@ class Sphere:
     def box_it(self, boundaries):
         """
         Put the sphere inside the boundaries of the simulation, usefull for cyclic boundary conditions
-        :type boundaries: CubeBoundaries
+        :type boundaries: list
         """
         try:
             self.center = [x % e for x, e in zip(self.center, boundaries)]
@@ -273,7 +273,7 @@ class Cell:
                 return False
         return True
 
-    def random_generate_spheres(self, n_spheres, rads):
+    def random_generate_spheres(self, n_spheres, rads, l_z=3.0):
         """
         Generate n spheres inside the cell. If there are spheres in the cell already,
          it deletes the existing spheres. The algorithm is to randomaly
@@ -290,7 +290,8 @@ class Cell:
             spheres = []
             for i in range(n_spheres):
                 r = rads[i]
-                center = np.array(self.site) + [random.random() * e for e in self.edges]
+                center = np.concatenate((np.array(self.site) + [random.random() * e for e in self.edges],
+                                         [random.random() * (l_z - 2 * r) + r]))
                 spheres.append(Sphere(center, rads[i]))
             if not Metric.direct_overlap(spheres):
                 break
@@ -315,7 +316,7 @@ class ArrayOfCells:
 
     def __init__(self, dim, boundaries, cells=[[]]):
         """
-        :type boundaries: CubeBoundaries
+        :type boundaries: list
         :param dim: dimension of the array of cells. Doesn't have to be dimension of a single sphere.
         :param cells: list of cells defining the array, optional.
         """
@@ -465,11 +466,11 @@ class ArrayOfCells:
         for i in ind: cell = cell[i]
         return cell
 
-    def random_generate_spheres(self, n_spheres_per_cell, rad):
+    def random_generate_spheres(self, n_spheres_per_cell, rad, l_z=3.0):
         if type(rad) != list: rad = n_spheres_per_cell * [rad]
         while True:
             for cell in self.all_cells:
-                cell.random_generate_spheres(n_spheres_per_cell, rad)
+                cell.random_generate_spheres(n_spheres_per_cell, rad, l_z)
             if self.legal_configuration():
                 return
 

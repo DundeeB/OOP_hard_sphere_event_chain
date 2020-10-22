@@ -90,7 +90,7 @@ def run_z_quench(origin_sim, desired_h):
             n_col) + "\nWhile system size is:\nl_x=" + str(l_x) + "\nl_y=" + str(l_y)
 
     initial_arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col, l_z=l_z)
-    initial_arr.boundaries = CubeBoundaries([l_x, l_y, l_z])
+    initial_arr.boundaries = [l_x, l_y, l_z]
     centers, ind = orig_sim_files_interface.last_spheres()
     assert initial_arr.edge > 2 * rad
     initial_arr.append_sphere([Sphere(c, rad) for c in centers])

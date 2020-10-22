@@ -12,13 +12,13 @@ epsilon = 1e-8
 prefix = 'C:\\Users\\Daniel Abutbul\\OneDrive - Technion\\simulation-results'
 
 
-def run_honeycomb(h, n_row, n_col, rho_H, iterations=None, record_displacements=False):
+def run_honeycomb(h, n_row, n_col, rho_H, **kwargs):
     # More physical properties calculated from Input
     N = n_row * n_col
     sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_triangle_ECMC'
     output_dir = prefix + sim_name
     if os.path.exists(output_dir):
-        return run_sim(np.nan, N, h, rho_H, sim_name, iterations=iterations, record_displacements=record_displacements)
+        return run_sim(np.nan, N, h, rho_H, sim_name, **kwargs)
         # when continuing from restart there shouldn't be use of initial arr
     else:
         r = 1
@@ -39,17 +39,16 @@ def run_honeycomb(h, n_row, n_col, rho_H, iterations=None, record_displacements=
         initial_arr.scale_xy(np.sqrt(rho_H_new / rho_H))
         assert initial_arr.edge > sig
 
-        return run_sim(initial_arr, N, h, rho_H, sim_name, iterations=iterations,
-                       record_displacements=record_displacements)
+        return run_sim(initial_arr, N, h, rho_H, sim_name, **kwargs)
 
 
-def run_square(h, n_row, n_col, rho_H, iterations=None, record_displacements=False):
+def run_square(h, n_row, n_col, rho_H, **kwargs):
     # More physical properties calculated from Input
     N = n_row * n_col
     sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_square_ECMC'
     output_dir = prefix + sim_name
     if os.path.exists(output_dir):
-        return run_sim(np.nan, N, h, rho_H, sim_name, iterations=iterations, record_displacements=record_displacements)
+        return run_sim(np.nan, N, h, rho_H, sim_name, **kwargs)
         # when continuing from restart there shouldn't be use of initial arr
     else:
         r, sig = 1, 2
@@ -63,8 +62,7 @@ def run_square(h, n_row, n_col, rho_H, iterations=None, record_displacements=Fal
         initial_arr.generate_spheres_in_AF_square(n_row, n_col, r)
         assert initial_arr.edge > sig, "Edge of cell is: " + str(initial_arr.edge) + ", which is smaller than sigma."
 
-        return run_sim(initial_arr, N, h, rho_H, sim_name, iterations=iterations,
-                       record_displacements=record_displacements)
+        return run_sim(initial_arr, N, h, rho_H, sim_name, **kwargs)
 
 
 def run_z_quench(origin_sim, desired_h):
@@ -108,7 +106,7 @@ def run_z_quench(origin_sim, desired_h):
     return run_sim(initial_arr, N, desired_h, desired_rho, sim_name)
 
 
-def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displacements=False):
+def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displacements=False, write=True):
     if iterations is None:
         iterations = int(N * 1e4)
     rad = 1
@@ -120,7 +118,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
     code_dir = os.getcwd()
     output_dir = os.path.join(prefix, sim_name)
     batch = os.path.join(output_dir, 'batch')
-    if os.path.exists(output_dir):
+    if os.path.exists(output_dir) and write:
         files_interface = WriteOrLoad(output_dir, np.nan)
         l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = files_interface.load_Input()
         boundaries = [l_x, l_y, l_z]
@@ -134,19 +132,19 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
         print("\n-----------\nSimulation with same parameters exist already, continuing from last file.\n",
               file=sys.stdout)
     else:
-        files_interface = WriteOrLoad(output_dir, initial_arr.boundaries)
-        os.mkdir(output_dir)
-        sys.stdout = open(batch, "a")
         arr = initial_arr
-        files_interface.dump_spheres(arr.all_centers, 'Initial Conditions')
-        files_interface.save_Input(arr.all_spheres[0].rad, rho_H, arr.edge, arr.n_rows, arr.n_columns)
-        last_ind = 0  # count starts from 1 so 0 means non exist yet and the first one will be i+1=1
-        # Simulation description
+        if write:
+            files_interface = WriteOrLoad(output_dir, initial_arr.boundaries)
+            os.mkdir(output_dir)
+            sys.stdout = open(batch, "a")
+            files_interface.dump_spheres(arr.all_centers, 'Initial Conditions')
+            files_interface.save_Input(arr.all_spheres[0].rad, rho_H, arr.edge, arr.n_rows, arr.n_columns)
+            os.chdir(output_dir)
+        # print simulation description
         print("\n\nSimulation: N=" + str(N) + ", rhoH=" + str(rho_H) + ", h=" + str(h), file=sys.stdout)
         print("N_iterations=" + str(iterations) +
               ", Lx=" + str(initial_arr.l_x) + ", Ly=" + str(initial_arr.l_y), file=sys.stdout)
-
-    os.chdir(output_dir)
+        last_ind = 0  # count starts from 1 so 0 means non exist yet and the first one will be i+1=1
 
     # Run loops
     initial_time = time.time()
@@ -185,13 +183,15 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
         i += 1
 
     # save
-    if record_displacements:
+    if record_displacements and write:
         np.savetxt(os.path.join(output_dir, 'Displacement'), np.array([realizations, displacements]).T)
     assert arr.legal_configuration()
-    files_interface.dump_spheres(arr.all_centers, str(i + 1))
+    if write:
+        files_interface.dump_spheres(arr.all_centers, str(i + 1))
 
     if i >= iterations:
-        os.system('echo \'Finished ' + str(iterations) + ' iterations\' > FINAL_MESSAGE')
+        if write:
+            os.system('echo \'Finished ' + str(iterations) + ' iterations\' > FINAL_MESSAGE')
     else:  # resend the simulation
         os.system('echo \'\nElapsed time is ' + str(time.time() - initial_time) + '\' >> TIME_LOG')
         os.chdir(code_dir)

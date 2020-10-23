@@ -112,7 +112,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
     rad = 1
     a_free = (1 / rho_H - np.pi / 6) ** (1 / 3) * 2 * rad  # ((V-N*4/3*pi*r^3)/N)^(1/3)
     xy_total_step = a_free * np.sqrt(N)
-    z_total_step = h * rad * np.pi / 3  # make it around h*rad in order for the spheres to cover most of the z otions
+    z_total_step = h * rad * np.pi / 3  # make it around h*rad in order for the spheres to cover most of the z options
 
     # Initialize View and folder, add spheres
     code_dir = os.getcwd()
@@ -175,9 +175,10 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
                 realizations.append(i + 1)
             else:
                 arr.perform_total_step(i_cell, j_cell, step)
-        except:
-            files_interface.dump_spheres(arr.all_centers, str(i + 1) + '_err')
-            raise
+        except Exception as err:
+            if write:
+                files_interface.dump_spheres(arr.all_centers, str(i + 1) + '_err')
+            raise err
         if (i + 1) % (iterations / 100) == 0:
             print(str(100 * (i + 1) / iterations) + "%", end=", ", file=sys.stdout)
         i += 1

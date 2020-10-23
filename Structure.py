@@ -85,7 +85,33 @@ class Metric:
         return t if t < total_step else float('inf')
 
     @staticmethod
-    def dist_to_collision(sphere1, sphere2, total_step, direction: Direction, boundaries):
+    def relevant_cyclic_transform_vecs(center1, boundaries, cut_off):
+        l_x, l_y, c = boundaries[0], boundaries[1], center1
+        vectors = [[0, 0]]  # 1
+        x_down = c[0] - cut_off < 0
+        y_down = c[1] - cut_off < 0
+        x_up = c[0] + cut_off > l_x
+        y_up = c[1] + cut_off > l_y
+        if x_down:
+            vectors.append([-l_x, 0])  # 2
+            if y_down:
+                vectors.append([-l_x, -l_y])  # 3
+            if y_up:
+                vectors.append([-l_x, l_y])  # 4
+        if y_down:
+            vectors.append([0, -l_y])  # 5
+            if x_up:
+                vectors.append([l_x, -l_y])  # 6
+        if x_up:
+            vectors.append([l_x, 0])  # 7
+            if y_up:
+                vectors.append([l_x, l_y])  # 8
+        if y_up:
+            vectors.append([0, l_y])  # 9
+        return vectors
+
+    @staticmethod
+    def dist_to_collision(sphere1, sphere2, total_step, direction: Direction, boundaries, cut_off=float('inf')):
         """
         Distance sphere1 would need to go in direction in order to collide with sphere2
         It is not implemented in the most efficient way,  because for cyclic xy we copy sphere2 8 times (for all
@@ -107,9 +133,10 @@ class Metric:
         c1, c2 = sphere1.center, sphere2.center
         sig_sq = (sphere1.rad + sphere2.rad) ** 2
         l_x, l_y = boundaries[0:2]
-        vectors = [[vx, vy] for vx in [0, -l_x, l_x] for vy in [0, -l_y, l_y]]
-        # TODO: check if the sphere is close to boundaries, with comparison with to the edge size,
-        #  to check which vectors are relevent
+        vectors = [[0, 0]]
+        if c1[0] - cut_off < 0:
+            vectors.append([])
+        vectors = Metric.relevant_cyclic_transform_vecs(c1, boundaries, cut_off)
         if direction.dim == 2:
             dz = (c2[2] - c1[2]) * direction.sgn
             if dz <= 0: return float('inf')

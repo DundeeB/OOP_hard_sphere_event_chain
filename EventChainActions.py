@@ -47,13 +47,13 @@ class Step:
         """
         Perform the current step (calls Sphere's perform step), and subtract step from total step
         """
-        if np.isnan(self.current_step):
-            raise ValueError("Current step is nan and step is about to occur")
-        assert self.current_step <= self.total_step
+        # if np.isnan(self.current_step):
+        #     raise ValueError("Current step is nan and step is about to occur")
+        # assert self.current_step <= self.total_step
         self.sphere.perform_step(self.direction, self.current_step, self.boundaries)
         self.total_step = self.total_step - self.current_step
 
-    def next_event(self, other_spheres):
+    def next_event(self, other_spheres, cut_off=float('inf')):
         """
         Returns the next Event object to be handle, such as perform the step and decide the next event
         :param other_spheres: other spheres which sphere might collide
@@ -66,7 +66,8 @@ class Step:
         for other_sphere in other_spheres:
             if other_sphere == sphere:
                 continue
-            sphere_dist = Metric.dist_to_collision(sphere, other_sphere, total_step, direction, self.boundaries)
+            sphere_dist = Metric.dist_to_collision(sphere, other_sphere, total_step, direction, self.boundaries,
+                                                   cut_off)
             if sphere_dist < closest_sphere_dist:
                 closest_sphere_dist = sphere_dist
                 closest_sphere = other_sphere
@@ -190,12 +191,13 @@ class Event2DCells(ArrayOfCells):
                 for s in c.spheres: other_spheres.append(s)
             step.current_step = self.maximal_free_step(i, j, step)
             try:
-                event = step.next_event(other_spheres)  # updates step.current_step
+                event = step.next_event(other_spheres, cut_off=self.edge)  # updates step.current_step
             except AssertionError as error:  # sometimes I have overlap between spheres I might try to fix
                 exception_occurred = False
                 for sp in other_spheres:
                     try:
-                        Metric.dist_to_collision(sphere, sp, step.total_step, direction, self.boundaries)
+                        Metric.dist_to_collision(sphere, sp, step.total_step, direction, self.boundaries,
+                                                 cut_off=self.edge)
                     except:
                         exception_occurred = True
                         dr_vec = Metric.cyclic_vec(self.boundaries, sp, sphere)  # points from sp to sphere "sphere-sp"
@@ -206,20 +208,25 @@ class Event2DCells(ArrayOfCells):
                         sphere.center += displace
                 if exception_occurred:
                     assert self.legal_configuration(), "Resolving overlap failed"
-                    event = step.next_event(other_spheres)  # updates step.current_step
+                    event = step.next_event(other_spheres, cut_off=self.edge)  # updates step.current_step
                 else:
                     raise
 
-            assert event is not None and not np.isnan(step.current_step)
+            # assert event is not None and not np.isnan(step.current_step)
 
             step.perform_step()  # also subtract current step from total step
             if record_displacements:
                 displacements += 1
-            new_cell = self.append_sphere(sphere)
+                if displacements > 1e7:
+                    raise ValueError('more than 1e7 displacement does not make sense in context of debuggin')
+            #     TODO: remove assertion
+            new_cell = self.append_sphere(
+                sphere)  # TODO: replace all append sphere use as finding cell by fast cell finding
             i, j = new_cell.ind[:2]
 
             if event.event_type == EventType.COLLISION:
                 new_cell, flag = None, None
+                # TODO: improove efficienct I should know who's the spheres cell by indexing
                 for new_cell in relevant_cells:
                     if new_cell.center_in_cell(event.other_sphere):
                         flag = not None

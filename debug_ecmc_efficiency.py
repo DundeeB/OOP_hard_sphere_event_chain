@@ -10,8 +10,7 @@ for iterations in range(200, 1000, 200):
     # iterations per minute are of order 10
     t.append(time.time() - initial_time)
     d.append(displacements[-1])
-    # os.rmdir(
-    #     "C:\\Users\\Daniel Abutbul\\OneDrive - Technion\\simulation-results\\N=8100_h=0.8_rhoH=0.79_AF_square_ECMC")
+    print("\nDisplacements per sec are: " + str(d[-1] / t[-1]) + "\n")
 
 plt.figure()
 size = 30

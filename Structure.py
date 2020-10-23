@@ -132,10 +132,6 @@ class Metric:
         # TODO: remove assertion to accelerate
         c1, c2 = sphere1.center, sphere2.center
         sig_sq = (sphere1.rad + sphere2.rad) ** 2
-        l_x, l_y = boundaries[0:2]
-        vectors = [[0, 0]]
-        if c1[0] - cut_off < 0:
-            vectors.append([])
         vectors = Metric.relevant_cyclic_transform_vecs(c1, boundaries, cut_off)
         if direction.dim == 2:
             dz = (c2[2] - c1[2]) * direction.sgn

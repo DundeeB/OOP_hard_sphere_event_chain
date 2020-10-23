@@ -71,7 +71,7 @@ class Step:
             if sphere_dist < closest_sphere_dist:
                 closest_sphere_dist = sphere_dist
                 closest_sphere = other_sphere
-        if np.isnan(self.current_step): self.current_step = float('inf')
+        # if np.isnan(self.current_step): self.current_step = float('inf')
         case = np.argmin([min_dist_to_wall, closest_sphere_dist, total_step, self.current_step])
         if case == 0:  # it hits a wall
             self.current_step = min_dist_to_wall
@@ -111,6 +111,9 @@ class Event2DCells(ArrayOfCells):
         self.l_y = l_y
         self.l_z = l_z
 
+    def cell_of_sphere(self, sphere):
+        return self.cells[int(np.floor(sphere.center[1] / self.edge))][int(np.floor(sphere.center[0] / self.edge))]
+
     def append_sphere(self, spheres):
         if type(spheres) != list:
             assert type(spheres) == Sphere
@@ -118,29 +121,13 @@ class Event2DCells(ArrayOfCells):
         cells = []
         for sphere in spheres:
             sp_added_to_cell = False
-            i_likely, j_likely = int(np.floor(sphere.center[1] / self.edge)), int(
-                np.floor(sphere.center[0] / self.edge))
-            if self.cells[i_likely][j_likely].center_in_cell(sphere):
-                self.cells[i_likely][j_likely].append(sphere)
-                cells.append(self.cells[i_likely][j_likely])
-                sp_added_to_cell = True
-            else:
-                for c in self.neighbors(i_likely, j_likely):
-                    if c.center_in_cell(sphere):
-                        c.append(sphere)
-                        cells.append(c)
-                        sp_added_to_cell = True
-                        break
-            if not sp_added_to_cell:
-                warnings.warn("Guessed cell did not work. Simulation slow down is expected")
-                for c in self.all_cells:
-                    if c.center_in_cell(sphere):
-                        c.append(sphere)
-                        cells.append(c)
-                        sp_added_to_cell = True
-                        break
-            if not sp_added_to_cell:
-                raise ValueError("A sphere was not added to any of the cells")
+            # i_likely, j_likely = int(np.floor(sphere.center[1] / self.edge)), int(
+            #     np.floor(sphere.center[0] / self.edge))
+            # if self.cells[i_likely][j_likely].center_in_cell(sphere):
+            cell = self.cell_of_sphere(sphere)
+            cell.append(sphere)
+            cells.append(cell)
+            sp_added_to_cell = True
         if len(cells) == 1:
             return cells[0]
         return cells
@@ -184,11 +171,28 @@ class Event2DCells(ArrayOfCells):
             step.current_step = np.nan
             cell.remove_sphere(sphere)
 
-            relevant_cells = [self.cells[i][j]] + self.neighbors(i, j)
-            # TODO: take only cells in the direction of the step
+            # relevant_cells = [self.cells[i][j]] + self.neighbors(i, j)
             other_spheres = []
-            for c in relevant_cells:
-                for s in c.spheres: other_spheres.append(s)
+
+            def add(c):
+                for s in c.spheres:
+                    other_spheres.append(s)
+
+            add(self.cells[i][j])
+            ip1, jp1, im1, jm1 = ArrayOfCells.cyclic_indices(i, j, self.n_rows, self.n_columns)
+            if direction.dim == 0:
+                for c in [self.cells[ip1][j], self.cells[ip1][jp1], self.cells[i][jp1],
+                          self.cells[im1][jp1], self.cells[im1][j]]:
+                    add(c)
+            else:
+                if direction.dim == 1:
+                    for c in [self.cells[i][jm1], self.cells[ip1][jm1], self.cells[ip1][j],
+                              self.cells[ip1][jp1], self.cells[i][jp1]]:
+                        add(c)
+                else:
+                    for c in [self.cells[ip1][jm1], self.cells[ip1][j], self.cells[ip1][jp1], self.cells[i][jp1],
+                              self.cells[i][jm1], self.cells[im1][jm1], self.cells[im1][j], self.cells[im1][jp1]]:
+                        add(c)
             step.current_step = self.maximal_free_step(i, j, step)
             try:
                 event = step.next_event(other_spheres, cut_off=self.edge)  # updates step.current_step
@@ -217,23 +221,13 @@ class Event2DCells(ArrayOfCells):
             step.perform_step()  # also subtract current step from total step
             if record_displacements:
                 displacements += 1
-                if displacements > 1e7:
-                    raise ValueError('more than 1e7 displacement does not make sense in context of debuggin')
-            #     TODO: remove assertion
-            new_cell = self.append_sphere(
-                sphere)  # TODO: replace all append sphere use as finding cell by fast cell finding
+            new_cell = self.append_sphere(sphere)
+            # TODO: replace all append sphere use as finding cell by fast cell finding
             i, j = new_cell.ind[:2]
 
             if event.event_type == EventType.COLLISION:
-                new_cell, flag = None, None
-                # TODO: improove efficienct I should know who's the spheres cell by indexing
-                for new_cell in relevant_cells:
-                    if new_cell.center_in_cell(event.other_sphere):
-                        flag = not None
-                        break
-                assert flag is not None, "Didn't find new cell for the collided sphere"
                 step.sphere = event.other_sphere
-                i, j = new_cell.ind[:2]
+                i, j = self.cell_of_sphere(step.sphere).ind[:2]
                 continue
             if event.event_type == EventType.WALL:
                 step.direction.sgn = -1 * step.direction.sgn

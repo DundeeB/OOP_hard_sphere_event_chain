@@ -7,7 +7,6 @@ for iterations in range(200, 1000, 200):
     initial_time = time.time()
     realizations, displacements = run_square(0.8, 90, 90, 0.79, record_displacements=True, iterations=iterations,
                                              write=False)
-    # iterations per minute are of order 10
     t.append(time.time() - initial_time)
     d.append(displacements[-1])
     print("\nDisplacements per sec are: " + str(d[-1] / t[-1]) + "\n")

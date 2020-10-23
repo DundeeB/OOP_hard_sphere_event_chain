@@ -222,7 +222,6 @@ class Event2DCells(ArrayOfCells):
             if record_displacements:
                 displacements += 1
             new_cell = self.append_sphere(sphere)
-            # TODO: replace all append sphere use as finding cell by fast cell finding
             i, j = new_cell.ind[:2]
 
             if event.event_type == EventType.COLLISION:

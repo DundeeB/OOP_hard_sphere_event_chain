@@ -171,14 +171,10 @@ class Event2DCells(ArrayOfCells):
             step.current_step = np.nan
             cell.remove_sphere(sphere)
 
-            # relevant_cells = [self.cells[i][j]] + self.neighbors(i, j)
-            other_spheres = []
-
+            # other_spheres = [s for c in [self.cells[i][j]] + self.neighbors(i, j) for s in c.spheres]
+            other_spheres = [s for s in cell.spheres]
             def add(c):
                 for s in c.spheres:
-                    other_spheres.append(s)
-            for s in self.cells[i][j].spheres:
-                if s != sphere:
                     other_spheres.append(s)
             ip1, jp1, im1, jm1 = ArrayOfCells.cyclic_indices(i, j, self.n_rows, self.n_columns)
             if direction.dim == 0:

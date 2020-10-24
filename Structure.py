@@ -127,8 +127,9 @@ class Metric:
         :type boundaries: list
         :return: distance for collision if the move is allowed, infty if move can not lead to collision
         """
-        # assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
-        #     sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries)
+        assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
+            sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries)
+        # TODO: remove assertion for acceleration when the code will be fairly tested and workning
         c1, c2 = sphere1.center, sphere2.center
         sig_sq = (sphere1.rad + sphere2.rad) ** 2
         vectors = Metric.relevant_cyclic_transform_vecs(c1, boundaries, cut_off)

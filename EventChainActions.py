@@ -62,16 +62,8 @@ class Step:
         """
         sphere, total_step, direction = self.sphere, self.total_step, self.direction
         min_dist_to_wall = Metric.dist_to_wall(sphere, total_step, direction, self.boundaries)
-        closest_sphere, closest_sphere_dist = [], float('inf')
-        for other_sphere in other_spheres:
-            # if other_sphere == sphere:
-            #     continue
-            sphere_dist = Metric.dist_to_collision(sphere, other_sphere, total_step, direction, self.boundaries,
-                                                   cut_off)
-            if sphere_dist < closest_sphere_dist:
-                closest_sphere_dist = sphere_dist
-                closest_sphere = other_sphere
-        # if np.isnan(self.current_step): self.current_step = float('inf')
+        closest_sphere_dist, closest_sphere = Metric.dist_to_collision(sphere, other_spheres, total_step, direction,
+                                                                       self.boundaries, cut_off)
         case = np.argmin([min_dist_to_wall, closest_sphere_dist, total_step, self.current_step])
         if case == 0:  # it hits a wall
             self.current_step = min_dist_to_wall
@@ -173,9 +165,11 @@ class Event2DCells(ArrayOfCells):
 
             # other_spheres = [s for c in [self.cells[i][j]] + self.neighbors(i, j) for s in c.spheres]
             other_spheres = [s for s in cell.spheres]
+
             def add(c):
                 for s in c.spheres:
                     other_spheres.append(s)
+
             ip1, jp1, im1, jm1 = ArrayOfCells.cyclic_indices(i, j, self.n_rows, self.n_columns)
             if direction.dim == 0:
                 for c in [self.cells[ip1][j], self.cells[ip1][jp1], self.cells[i][jp1],

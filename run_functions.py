@@ -58,9 +58,9 @@ def run_square(h, n_row, n_col, rho_H, **kwargs):
         a = np.sqrt(A / N)
         n_row_cells, n_col_cells = int(np.sqrt(A) / (a * np.sqrt(2))), int(np.sqrt(A) / (a * np.sqrt(2)))
         e = np.sqrt(A / (n_row_cells * n_col_cells))
+        assert e > sig, "Edge of cell is: " + str(e) + ", which is smaller than sigma."
         initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells, l_z=(h + 1) * sig)
         initial_arr.generate_spheres_in_AF_square(n_row, n_col, r)
-        assert initial_arr.edge > sig, "Edge of cell is: " + str(initial_arr.edge) + ", which is smaller than sigma."
 
         return run_sim(initial_arr, N, h, rho_H, sim_name, **kwargs)
 
@@ -155,16 +155,11 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
         realizations = [i]
     while time.time() - initial_time < day and i < iterations:
         # Choose sphere
-        while True:
-            i_all_cells = random.randint(0, len(arr.all_cells) - 1)
-            cell = arr.all_cells[i_all_cells]
-            if len(cell.spheres) > 0:
-                break
-        sphere = cell.spheres[random.randint(0, len(cell.spheres) - 1)]
-
+        spheres = arr.all_spheres
+        sphere = spheres[random.randint(0, len(spheres) - 1)]
+        cell = arr.cell_of_sphere(sphere)
         # Choose direction
         direction = Direction.directions()[random.randint(0, 3)]  # x,y,+z,-z
-
         # perform step
         step = Step(sphere, xy_total_step if direction.dim != 2 else z_total_step, direction, arr.boundaries)
         i_cell, j_cell = cell.ind[:2]

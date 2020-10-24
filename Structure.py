@@ -110,7 +110,7 @@ class Metric:
         # return [[vx, vy] for vx in [0, -l_x, l_x] for vy in [0, -l_y, l_y]]
 
     @staticmethod
-    def dist_to_collision(sphere1, sphere2, total_step, direction: Direction, boundaries, cut_off=float('inf')):
+    def dist_to_collision(sphere1, other_spheres, total_step, direction: Direction, boundaries, cut_off=float('inf')):
         """
         Distance sphere1 would need to go in direction in order to collide with sphere2
         It is not implemented in the most efficient way,  because for cyclic xy we copy sphere2 8 times (for all
@@ -128,31 +128,37 @@ class Metric:
         """
         # assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
         #     sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries)
-        # TODO: remove assertion for acceleration when the code will be fairly tested and workning
-        c1, c2 = sphere1.center, sphere2.center
-        sig_sq = (sphere1.rad + sphere2.rad) ** 2
+        c1 = sphere1.center
         vectors = Metric.relevant_cyclic_transform_vecs(c1, boundaries, cut_off)
-        if direction.dim == 2:
-            dz = (c2[2] - c1[2]) * direction.sgn
-            if dz <= 0: return float('inf')
-            for v in vectors:
-                discriminant = sig_sq - (c2[1] - c1[1] + v[1]) ** 2 - (c2[0] - c1[0] + v[0]) ** 2
-                if discriminant < 0: continue
-                dist = dz - np.sqrt(discriminant)  # for non overlapping sphere dist>0 always, no need to check
-                if dist <= total_step: return dist
-        else:
-            i, j = direction.dim, 1 - direction.dim
-            sig_xy_sq = sig_sq - (c2[2] - c1[2]) ** 2
-            if sig_xy_sq <= 0: return float('inf')
-            for v in vectors:
-                # assume the step is in the x direction and reorganize x and y
-                dx = c2[i] - c1[i] + v[i]
-                if dx <= 0: continue
-                discriminant = sig_xy_sq - (c2[j] - c1[j] + v[j]) ** 2
-                if discriminant <= 0: continue
-                dist = dx - np.sqrt(discriminant)
-                if dist <= total_step: return dist
-        return float('inf')
+        closest_sphere, closest_sphere_dist = [], float('inf')
+        for sphere2 in other_spheres:
+            c2 = sphere2.center
+            sig_sq = (sphere1.rad + sphere2.rad) ** 2
+            if direction.dim == 2:
+                dz = (c2[2] - c1[2]) * direction.sgn
+                if dz <= 0: continue
+                for v in vectors:
+                    discriminant = sig_sq - (c2[1] - c1[1] + v[1]) ** 2 - (c2[0] - c1[0] + v[0]) ** 2
+                    if discriminant <= 0: continue
+                    dist = dz - np.sqrt(discriminant)  # for non overlapping sphere dist>0 always, no need to check
+                    if dist <= total_step and dist < closest_sphere_dist:
+                        closest_sphere_dist = dist
+                        closest_sphere = sphere2
+            else:
+                i, j = direction.dim, 1 - direction.dim
+                sig_xy_sq = sig_sq - (c2[2] - c1[2]) ** 2
+                if sig_xy_sq <= 0: continue
+                for v in vectors:
+                    # assume the step is in the x direction and reorganize x and y
+                    dx = c2[i] - c1[i] + v[i]
+                    if dx <= 0: continue
+                    discriminant = sig_xy_sq - (c2[j] - c1[j] + v[j]) ** 2
+                    if discriminant <= 0: continue
+                    dist = dx - np.sqrt(discriminant)
+                    if dist <= total_step and dist < closest_sphere_dist:
+                        closest_sphere_dist = dist
+                        closest_sphere = sphere2
+        return closest_sphere_dist, closest_sphere
 
     @staticmethod
     def cyclic_vec(boundaries, sphere1, sphere2):

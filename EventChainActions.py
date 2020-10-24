@@ -64,8 +64,8 @@ class Step:
         min_dist_to_wall = Metric.dist_to_wall(sphere, total_step, direction, self.boundaries)
         closest_sphere, closest_sphere_dist = [], float('inf')
         for other_sphere in other_spheres:
-            if other_sphere == sphere:
-                continue
+            # if other_sphere == sphere:
+            #     continue
             sphere_dist = Metric.dist_to_collision(sphere, other_sphere, total_step, direction, self.boundaries,
                                                    cut_off)
             if sphere_dist < closest_sphere_dist:
@@ -177,8 +177,9 @@ class Event2DCells(ArrayOfCells):
             def add(c):
                 for s in c.spheres:
                     other_spheres.append(s)
-
-            add(self.cells[i][j])
+            for s in self.cells[i][j].spheres:
+                if s != sphere:
+                    other_spheres.append(s)
             ip1, jp1, im1, jm1 = ArrayOfCells.cyclic_indices(i, j, self.n_rows, self.n_columns)
             if direction.dim == 0:
                 for c in [self.cells[ip1][j], self.cells[ip1][jp1], self.cells[i][jp1],
@@ -194,30 +195,29 @@ class Event2DCells(ArrayOfCells):
                               self.cells[i][jm1], self.cells[im1][jm1], self.cells[im1][j], self.cells[im1][jp1]]:
                         add(c)
             step.current_step = self.maximal_free_step(i, j, step)
-            try:
-                event = step.next_event(other_spheres, cut_off=self.edge)  # updates step.current_step
-            except AssertionError as error:  # sometimes I have overlap between spheres I might try to fix
-                exception_occurred = False
-                for sp in other_spheres:
-                    try:
-                        Metric.dist_to_collision(sphere, sp, step.total_step, direction, self.boundaries,
-                                                 cut_off=self.edge)
-                    except:
-                        exception_occurred = True
-                        dr_vec = Metric.cyclic_vec(self.boundaries, sp, sphere)  # points from sp to sphere "sphere-sp"
-                        dr = np.linalg.norm(dr_vec)
-                        sig = sphere.rad + sp.rad
-                        assert dr <= sig, "handeling the wrong exception"
-                        displace = (sig - dr + epsilon) * dr_vec / dr
-                        sphere.center += displace
-                if exception_occurred:
-                    assert self.legal_configuration(), "Resolving overlap failed"
-                    event = step.next_event(other_spheres, cut_off=self.edge)  # updates step.current_step
-                else:
-                    raise
+            # try:
+            event = step.next_event(other_spheres, cut_off=self.edge)  # updates step.current_step
+            # except AssertionError as error:  # sometimes I have overlap between spheres I might try to fix
+            #     exception_occurred = False
+            #     for sp in other_spheres:
+            #         try:
+            #             Metric.dist_to_collision(sphere, sp, step.total_step, direction, self.boundaries,
+            #                                      cut_off=self.edge)
+            #         except:
+            #             exception_occurred = True
+            #             dr_vec = Metric.cyclic_vec(self.boundaries, sp, sphere)  # points from sp to sphere "sphere-sp"
+            #             dr = np.linalg.norm(dr_vec)
+            #             sig = sphere.rad + sp.rad
+            #             assert dr <= sig, "handeling the wrong exception"
+            #             displace = (sig - dr + epsilon) * dr_vec / dr
+            #             sphere.center += displace
+            #     if exception_occurred:
+            #         assert self.legal_configuration(), "Resolving overlap failed"
+            #         event = step.next_event(other_spheres, cut_off=self.edge)  # updates step.current_step
+            #     else:
+            #         raise
 
             # assert event is not None and not np.isnan(step.current_step)
-
             step.perform_step()  # also subtract current step from total step
             if record_displacements:
                 displacements += 1

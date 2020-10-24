@@ -261,12 +261,12 @@ class Cell:
         """
         if type(new_spheres) == list:
             for sphere in new_spheres:
-                if sphere not in self.spheres:
-                    self.spheres.append(sphere)
+                # if sphere not in self.spheres:
+                self.spheres.append(sphere)
         else:
-            assert type(new_spheres) == Sphere
-            if new_spheres not in self.spheres:
-                self.spheres.append(new_spheres)
+            # assert type(new_spheres) == Sphere
+            # if new_spheres not in self.spheres:
+            self.spheres.append(new_spheres)
 
     def remove_sphere(self, spheres_to_remove):
         """
@@ -276,7 +276,7 @@ class Cell:
         if type(spheres_to_remove) == list:
             for sphere in spheres_to_remove: self.spheres.remove(sphere)
         else:
-            assert type(spheres_to_remove) == Sphere
+            # assert type(spheres_to_remove) == Sphere
             self.spheres.remove(spheres_to_remove)
 
     def center_in_cell(self, sphere):

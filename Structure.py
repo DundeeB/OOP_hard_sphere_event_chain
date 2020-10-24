@@ -126,9 +126,9 @@ class Metric:
         :type boundaries: list
         :return: distance for collision if the move is allowed, infty if move can not lead to collision
         """
-        for sphere2 in other_spheres:
-            assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
-                sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries)
+        # for sphere2 in other_spheres:
+        #     assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
+        #         sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries)
         c1 = sphere1.center
         vectors = Metric.relevant_cyclic_transform_vecs(c1, boundaries, cut_off)
         closest_sphere, closest_sphere_dist = [], float('inf')
@@ -142,25 +142,23 @@ class Metric:
             dz = dz[I]
             other_spheres = [other_spheres[k] for k in I]
             # if len(vectors) == 1:  # vectors = [[0,0]] boundaries are not important
-            init_other_spheres = copy.deepcopy(other_spheres)
             for v in vectors:
-                other_spheres = copy.deepcopy(init_other_spheres)
                 discriminant = np.array(
                     [sig_sq - (s2.center[1] - c1[1] + v[1]) ** 2 - (s2.center[0] - c1[0] + v[0]) ** 2 for s2 in
                      other_spheres])
-                I = np.where(discriminant > 0)[0]
-                if len(I) == 0:
+                I = discriminant > 0
+                if np.sum(I) == 0:
                     continue
-                dz, discriminant = dz[I], discriminant[I]
-                other_spheres = [other_spheres[k] for k in I]
                 dist = dz - np.sqrt(discriminant)
-                I = np.where(dist <= total_step)[0]
-                if len(I) == 0:
+                I = np.logical_and(dist <= total_step,I)
+                if np.sum(I) == 0:
                     continue
+                I = np.where(I)[0]
+                dist = dist[I]
                 min_dist = dist.min()
                 if min_dist < closest_sphere_dist:
                     closest_sphere_dist = min_dist
-                    closest_sphere = other_spheres[dist.argmin()]
+                    closest_sphere = [other_spheres[k] for k in I][dist.argmin()]
             # else:
             #     for sphere2 in other_spheres:
             #         c2 = sphere2.center
@@ -195,10 +193,12 @@ class Metric:
                 I = np.logical_and(dist <= total_step, I)
                 if np.sum(I) == 0:
                     continue
+                I = np.where(I)[0]
+                dist = dist[I]
                 min_dist = dist.min()
                 if min_dist < closest_sphere_dist:
                     closest_sphere_dist = min_dist
-                    closest_sphere = other_spheres[dist.argmin()]
+                    closest_sphere = [other_spheres[k] for k in I][dist.argmin()]
             # for sphere2 in other_spheres:
             #     c2 = sphere2.center
             #     sig_xy_sq = sig_sq - (c2[2] - c1[2]) ** 2

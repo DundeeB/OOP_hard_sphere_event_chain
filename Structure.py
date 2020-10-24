@@ -126,38 +126,93 @@ class Metric:
         :type boundaries: list
         :return: distance for collision if the move is allowed, infty if move can not lead to collision
         """
-        # assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
-        #     sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries)
+        for sphere2 in other_spheres:
+            assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
+                sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries)
         c1 = sphere1.center
         vectors = Metric.relevant_cyclic_transform_vecs(c1, boundaries, cut_off)
         closest_sphere, closest_sphere_dist = [], float('inf')
-        for sphere2 in other_spheres:
-            c2 = sphere2.center
-            sig_sq = (sphere1.rad + sphere2.rad) ** 2
-            if direction.dim == 2:
-                dz = (c2[2] - c1[2]) * direction.sgn
-                if dz <= 0: continue
-                for v in vectors:
-                    discriminant = sig_sq - (c2[1] - c1[1] + v[1]) ** 2 - (c2[0] - c1[0] + v[0]) ** 2
-                    if discriminant <= 0: continue
-                    dist = dz - np.sqrt(discriminant)  # for non overlapping sphere dist>0 always, no need to check
-                    if dist <= total_step and dist < closest_sphere_dist:
-                        closest_sphere_dist = dist
-                        closest_sphere = sphere2
-            else:
-                i, j = direction.dim, 1 - direction.dim
-                sig_xy_sq = sig_sq - (c2[2] - c1[2]) ** 2
-                if sig_xy_sq <= 0: continue
-                for v in vectors:
-                    # assume the step is in the x direction and reorganize x and y
-                    dx = c2[i] - c1[i] + v[i]
-                    if dx <= 0: continue
-                    discriminant = sig_xy_sq - (c2[j] - c1[j] + v[j]) ** 2
-                    if discriminant <= 0: continue
-                    dist = dx - np.sqrt(discriminant)
-                    if dist <= total_step and dist < closest_sphere_dist:
-                        closest_sphere_dist = dist
-                        closest_sphere = sphere2
+        # TODO: try improove efficiency by numpy calculation where vector is all other spheres
+        sig_sq = 4 * sphere1.rad ** 2  # assumes all sphere have equal radii
+        if direction.dim == 2:
+            dz = np.array([(s2.center[2] - c1[2]) * direction.sgn for s2 in other_spheres])
+            I = np.where(dz > 0)[0]
+            if len(I) == 0:
+                return closest_sphere_dist, closest_sphere
+            dz = dz[I]
+            other_spheres = [other_spheres[k] for k in I]
+            # if len(vectors) == 1:  # vectors = [[0,0]] boundaries are not important
+            init_other_spheres = copy.deepcopy(other_spheres)
+            for v in vectors:
+                other_spheres = copy.deepcopy(init_other_spheres)
+                discriminant = np.array(
+                    [sig_sq - (s2.center[1] - c1[1] + v[1]) ** 2 - (s2.center[0] - c1[0] + v[0]) ** 2 for s2 in
+                     other_spheres])
+                I = np.where(discriminant > 0)[0]
+                if len(I) == 0:
+                    continue
+                dz, discriminant = dz[I], discriminant[I]
+                other_spheres = [other_spheres[k] for k in I]
+                dist = dz - np.sqrt(discriminant)
+                I = np.where(dist <= total_step)[0]
+                if len(I) == 0:
+                    continue
+                min_dist = dist.min()
+                if min_dist < closest_sphere_dist:
+                    closest_sphere_dist = min_dist
+                    closest_sphere = other_spheres[dist.argmin()]
+            # else:
+            #     for sphere2 in other_spheres:
+            #         c2 = sphere2.center
+            #         dz = (c2[2] - c1[2]) * direction.sgn
+            #         if dz <= 0: continue
+            #         for v in vectors:
+            #             discriminant = sig_sq - (c2[1] - c1[1] + v[1]) ** 2 - (c2[0] - c1[0] + v[0]) ** 2
+            #             if discriminant <= 0: continue
+            #             dist = dz - np.sqrt(discriminant)  # for non overlapping sphere dist>0 always, no need to check
+            #             if dist <= total_step and dist < closest_sphere_dist:
+            #                 closest_sphere_dist = dist
+            #                 closest_sphere = sphere2
+        else:
+            i, j = direction.dim, 1 - direction.dim
+            sig_xy_sq = np.array([sig_sq - (s2.center[2] - c1[2]) ** 2 for s2 in other_spheres])
+            I = np.where(sig_xy_sq > 0)[0]
+            if len(I) == 0:
+                return closest_sphere_dist, closest_sphere
+            other_spheres = [other_spheres[k] for k in I]
+            sig_xy_sq = sig_xy_sq[I]
+            for v in vectors:
+                dx = np.array([s2.center[i] - c1[i] + v[i] for s2 in other_spheres])
+                I = dx > 0
+                if np.sum(I) == 0:
+                    continue
+                dy = np.array([s2.center[j] - c1[j] + v[j] for s2 in other_spheres])
+                discriminant = sig_xy_sq - dy ** 2
+                I = np.logical_and(discriminant > 0, I)
+                if np.sum(I) == 0:
+                    continue
+                dist = dx - np.sqrt(discriminant)
+                I = np.logical_and(dist <= total_step, I)
+                if np.sum(I) == 0:
+                    continue
+                min_dist = dist.min()
+                if min_dist < closest_sphere_dist:
+                    closest_sphere_dist = min_dist
+                    closest_sphere = other_spheres[dist.argmin()]
+            # for sphere2 in other_spheres:
+            #     c2 = sphere2.center
+            #     sig_xy_sq = sig_sq - (c2[2] - c1[2]) ** 2
+            #     if sig_xy_sq <= 0: continue
+            #     for v in vectors:
+            #         # assume the step is in the x direction and reorganize x and y
+            #         dx = c2[i] - c1[i] + v[i]
+            #         if dx <= 0: continue
+            #         discriminant = sig_xy_sq - (c2[j] - c1[j] + v[j]) ** 2
+            #         if discriminant <= 0: continue
+            #         dist = dx - np.sqrt(discriminant)
+            #         if dist <= total_step and dist < closest_sphere_dist:
+            #             closest_sphere_dist = dist
+            #             closest_sphere = sphere2
         return closest_sphere_dist, closest_sphere
 
     @staticmethod

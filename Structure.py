@@ -94,21 +94,20 @@ class Metric:
         y_up = c[1] + cut_off > l_y
         if x_down:
             vectors.append([-l_x, 0])  # 2
-            if y_down:
-                vectors.append([-l_x, -l_y])  # 3
-            if y_up:
-                vectors.append([-l_x, l_y])  # 4
-        if y_down:
-            vectors.append([0, -l_y])  # 5
-            if x_up:
-                vectors.append([l_x, -l_y])  # 6
+            if y_down: vectors.append([-l_x, -l_y])  # 6
+            if y_up: vectors.append([-l_x, l_y])  # 7
+
+        if y_down: vectors.append([0, -l_y])  # 3
         if x_up:
-            vectors.append([l_x, 0])  # 7
-            if y_up:
-                vectors.append([l_x, l_y])  # 8
-        if y_up:
-            vectors.append([0, l_y])  # 9
+            vectors.append([l_x, 0])  # 4
+            if y_down: vectors.append([l_x, -l_y])  # 8
+            if y_up: vectors.append([l_x, l_y])  # 9
+        if y_up: vectors.append([0, l_y])  # 5
         return vectors
+        # [0, 0]      [-l_x, 0]    [l_x, 0]
+        # [0, -l_y]   [-l_x, -l_y] [l_x, -l_y]
+        # [0, l_y]    [-l_x, l_y]  [l_x, l_y]
+        # return [[vx, vy] for vx in [0, -l_x, l_x] for vy in [0, -l_y, l_y]]
 
     @staticmethod
     def dist_to_collision(sphere1, sphere2, total_step, direction: Direction, boundaries, cut_off=float('inf')):
@@ -127,8 +126,8 @@ class Metric:
         :type boundaries: list
         :return: distance for collision if the move is allowed, infty if move can not lead to collision
         """
-        assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
-            sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries)
+        # assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
+        #     sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries)
         # TODO: remove assertion for acceleration when the code will be fairly tested and workning
         c1, c2 = sphere1.center, sphere2.center
         sig_sq = (sphere1.rad + sphere2.rad) ** 2

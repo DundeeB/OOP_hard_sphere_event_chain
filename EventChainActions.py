@@ -102,14 +102,9 @@ class Event2DCells(ArrayOfCells):
             spheres = [spheres]
         cells = []
         for sphere in spheres:
-            sp_added_to_cell = False
-            # i_likely, j_likely = int(np.floor(sphere.center[1] / self.edge)), int(
-            #     np.floor(sphere.center[0] / self.edge))
-            # if self.cells[i_likely][j_likely].center_in_cell(sphere):
             cell = self.cell_of_sphere(sphere)
             cell.append(sphere)
             cells.append(cell)
-            sp_added_to_cell = True
         if len(cells) == 1:
             return cells[0]
         return cells
@@ -138,6 +133,7 @@ class Event2DCells(ArrayOfCells):
         """
         if record_displacements:
             displacements = 0
+
         while step.total_step > 0:
             if draw is not None:
                 if draw.counter is not None:
@@ -210,12 +206,12 @@ class Event2DCells(ArrayOfCells):
         z_down = (1 + 10 * epsilon) * rad
         for s in spheres_down:
             assert type(s) == Sphere
-            cx, cy = s.center
-            s.center = np.array((cx, cy, z_down))
+            cx, cy = s.center[:2]
+            s.center = [cx, cy, z_down]
         for s in spheres_up:
             assert type(s) == Sphere
-            cx, cy = s.center
-            s.center = np.array((cx, cy + ay * 2 / 3, z_up))
+            cx, cy = s.center[:2]
+            s.center = [cx, cy + ay * 2 / 3, z_up]
             s.box_it(self.boundaries)
         self.append_sphere(spheres_down + spheres_up)
         assert self.legal_configuration()
@@ -238,7 +234,7 @@ class Event2DCells(ArrayOfCells):
                 sign = (-1) ** (i + j)
                 r = rad + 100 * epsilon
                 x, y, z = (j + 1 / 2) * ax, (i + 1 / 2) * ay, sign * r + self.l_z * (1 - sign) / 2
-                spheres.append(Sphere((x, y, z), rad))
+                spheres.append(Sphere([x, y, z], rad))
         self.append_sphere(spheres)
         assert self.legal_configuration()
 
@@ -259,11 +255,8 @@ class Event2DCells(ArrayOfCells):
         for c in self.all_cells:
             c.site = [x * factor for x in c.site]
             c.edges = [e * factor for e in c.edges]  # cell is 2D
-        for s in self.all_spheres:
-            cx = s.center[0] * factor
-            cy = s.center[1] * factor
-            # Not s.center[2]
-            s.center = (cx, cy, s.center[2])
+            for s in c.spheres:
+                s.center = [s.center[0] * factor, s.center[1] * factor, s.center[2]]
         assert self.legal_configuration(), "Scaling failed, illegal configuration"
 
     def quench(self, desired_rho):

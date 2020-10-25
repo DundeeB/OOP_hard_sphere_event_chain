@@ -34,7 +34,7 @@ class Sphere:
         :param center: d dimension of sphere center
         :param rad: scalar - radius of sphere
         """
-        self.center = np.array(center)
+        self.center = [c for c in center]  # list and not np array or tuple
         self.rad = rad
 
     @property
@@ -126,8 +126,9 @@ class Metric:
         :type boundaries: list
         :return: distance for collision if the move is allowed, infty if move can not lead to collision
         """
-        # assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
-        #     sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries)
+        for sphere2 in other_spheres:
+            assert not Metric.overlap(sphere1, sphere2, boundaries), "Overlap between:\nSphere1: " + str(
+                sphere1.center) + "\nSphere2: " + str(sphere2.center) + "\nBoundaries are: " + str(boundaries)
         c1 = sphere1.center
         vectors = Metric.relevant_cyclic_transform_vecs(c1, boundaries, cut_off)
         closest_sphere, closest_sphere_dist = [], float('inf')
@@ -524,7 +525,7 @@ class ArrayOfCells:
 
     def append_sphere(self, spheres):
         if type(spheres) != list:
-            assert type(spheres) == Sphere
+            # assert type(spheres) == Sphere
             spheres = [spheres]
         cells = []
         for sphere in spheres:
@@ -556,7 +557,7 @@ class ArrayOfCells:
                 else:
                     xj = (1 + epsilon) * rad + ax * (j + 1 / 2)  # cos(pi / 3) = 1 / 2
                 yi = (1 + epsilon) * rad + ay * i
-                spheres.append(Sphere((xj, yi), rad))
+                spheres.append(Sphere([xj, yi, rad], rad))
         return spheres
 
     def translate(self, vec):

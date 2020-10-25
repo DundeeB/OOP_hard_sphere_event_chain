@@ -43,16 +43,6 @@ class Step:
         self.direction = direction
         self.boundaries = boundaries
 
-    def perform_step(self):
-        """
-        Perform the current step (calls Sphere's perform step), and subtract step from total step
-        """
-        # if np.isnan(self.current_step):
-        #     raise ValueError("Current step is nan and step is about to occur")
-        # assert self.current_step <= self.total_step
-        self.sphere.perform_step(self.direction, self.current_step, self.boundaries)
-        self.total_step = self.total_step - self.current_step
-
     def next_event(self, other_spheres, cut_off=float('inf')):
         """
         Returns the next Event object to be handle, such as perform the step and decide the next event
@@ -160,10 +150,8 @@ class Event2DCells(ArrayOfCells):
                 draw.dump_spheres(self.all_centers, img_name)
 
             sphere, direction, cell = step.sphere, step.direction, self.cells[i][j]
-            step.current_step = np.nan
             cell.remove_sphere(sphere)
 
-            # other_spheres = [s for c in [self.cells[i][j]] + self.neighbors(i, j) for s in c.spheres]
             other_spheres = [s for s in cell.spheres]
 
             def add(c):
@@ -185,35 +173,13 @@ class Event2DCells(ArrayOfCells):
                               self.cells[i][jm1], self.cells[im1][jm1], self.cells[im1][j], self.cells[im1][jp1]]:
                         add(c)
             step.current_step = self.maximal_free_step(i, j, step)
-            # try:
             event = step.next_event(other_spheres, cut_off=self.edge)  # updates step.current_step
-            # except AssertionError as error:  # sometimes I have overlap between spheres I might try to fix
-            #     exception_occurred = False
-            #     for sp in other_spheres:
-            #         try:
-            #             Metric.dist_to_collision(sphere, sp, step.total_step, direction, self.boundaries,
-            #                                      cut_off=self.edge)
-            #         except:
-            #             exception_occurred = True
-            #             dr_vec = Metric.cyclic_vec(self.boundaries, sp, sphere)  # points from sp to sphere "sphere-sp"
-            #             dr = np.linalg.norm(dr_vec)
-            #             sig = sphere.rad + sp.rad
-            #             assert dr <= sig, "handeling the wrong exception"
-            #             displace = (sig - dr + epsilon) * dr_vec / dr
-            #             sphere.center += displace
-            #     if exception_occurred:
-            #         assert self.legal_configuration(), "Resolving overlap failed"
-            #         event = step.next_event(other_spheres, cut_off=self.edge)  # updates step.current_step
-            #     else:
-            #         raise
-
-            # assert event is not None and not np.isnan(step.current_step)
-            step.perform_step()  # also subtract current step from total step
+            step.sphere.perform_step(direction, step.current_step, self.boundaries)
+            step.total_step = step.total_step - step.current_step
             if record_displacements:
                 displacements += 1
             new_cell = self.append_sphere(sphere)
             i, j = new_cell.ind[:2]
-
             if event.event_type == EventType.COLLISION:
                 step.sphere = event.other_sphere
                 i, j = self.cell_of_sphere(step.sphere).ind[:2]

@@ -4,7 +4,7 @@ import numpy as np
 import time
 import re
 
-prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results2.0/"
+prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"
 code_prefix = "/srv01/technion/danielab/OOP_hard_sphere_event_chain/"
 
 
@@ -68,7 +68,12 @@ def resend_all_runs():
 
 def main():
     # resend_all_runs()
-    send_single_run_envelope(0.8, 150, 150, 0.7, 'square')  # N=22500_h=0.8_rhoH=0.7_AF_square_ECMC
+    send_single_run_envelope(0.8, 10, 10, 0.8, 'honeycomb')
+    # for n_row, n_col in zip([100, 200, 300], [100, 200, 300]):
+    #     for h in [0.8, 1.0]:
+    #         for rhoH in np.linspace(0.75, 0.85, 11) if h == 0.8 else np.linspace(0.8, 0.9, 11):
+    #             send_single_run_envelope(h, n_row, n_col, rhoH, 'square')
+    #             send_single_run_envelope(h, n_row, n_col, rhoH, 'honeycomb')
 
 
 if __name__ == "__main__":

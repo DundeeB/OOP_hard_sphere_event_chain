@@ -68,7 +68,7 @@ def resend_all_runs():
 
 def main():
     # resend_all_runs()
-    send_single_run_envelope(0.8, 10, 10, 0.8, 'honeycomb')
+    send_single_run_envelope(0.8, 30, 30, 0.8, 'honeycomb')
     # for n_row, n_col in zip([100, 200, 300], [100, 200, 300]):
     #     for h in [0.8, 1.0]:
     #         for rhoH in np.linspace(0.75, 0.85, 11) if h == 0.8 else np.linspace(0.8, 0.9, 11):

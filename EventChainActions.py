@@ -1,4 +1,5 @@
 from Structure import *
+# import time
 
 epsilon = 1e-8
 
@@ -133,8 +134,11 @@ class Event2DCells(ArrayOfCells):
         """
         if record_displacements:
             displacements = 0
+            # init_time = time.time()  # use record displacement as debug mode switch
 
         while step.total_step > 0:
+            # if time.time() - init_time > 10:
+            #     print("A single step is taking more than 10s")
             if draw is not None:
                 if draw.counter is not None:
                     draw.counter += 1
@@ -202,16 +206,16 @@ class Event2DCells(ArrayOfCells):
         ay = 2 * l_y / n_row
         spheres_down = ArrayOfCells.spheres_in_triangular(int(n_row / 2), n_col, rad, l_x, l_y)
         spheres_up = ArrayOfCells.spheres_in_triangular(int(n_row / 2), n_col, rad, l_x, l_y)
-        z_up = l_z - (1 + 10 * epsilon) * rad
-        z_down = (1 + 10 * epsilon) * rad
+        dz_max = np.sqrt((2 * rad) ** 2 - (2.0 / 3.0 * ay) ** 2)
+        dr_max = (self.l_z / 2 - rad - dz_max / 2) / 2  # by two to not have coincidence collision
         for s in spheres_down:
             assert type(s) == Sphere
             cx, cy = s.center[:2]
-            s.center = [cx, cy, z_down]
+            s.center = [cx, cy, rad + dr_max * np.random.random()]
         for s in spheres_up:
             assert type(s) == Sphere
             cx, cy = s.center[:2]
-            s.center = [cx, cy + ay * 2 / 3, z_up]
+            s.center = [cx, cy + ay * 2.0 / 3, l_z - rad - dr_max * np.random.random()]
             s.box_it(self.boundaries)
         self.append_sphere(spheres_down + spheres_up)
         assert self.legal_configuration()
@@ -229,11 +233,14 @@ class Event2DCells(ArrayOfCells):
         assert a ** 2 + (self.l_z - sig) ** 2 > sig ** 2 and 4 * a ** 2 > sig ** 2, \
             "Can not create so many spheres in the AF square lattice"
         spheres = []
+        dz_max = np.sqrt(sig ** 2 - a ** 2)
+        dr_max = self.l_z / 2 - rad - dz_max / 2  # by two to not have coincidence collision
         for i in range(n_sp_row):
             for j in range(n_sp_col):
                 sign = (-1) ** (i + j)
                 r = rad + 100 * epsilon
-                x, y, z = (j + 1 / 2) * ax, (i + 1 / 2) * ay, sign * r + self.l_z * (1 - sign) / 2
+                dr = np.random.random() * dr_max
+                x, y, z = (j + 1 / 2) * ax, (i + 1 / 2) * ay, sign * (r + dr) + self.l_z * (1 - sign) / 2
                 spheres.append(Sphere([x, y, z], rad))
         self.append_sphere(spheres)
         assert self.legal_configuration()

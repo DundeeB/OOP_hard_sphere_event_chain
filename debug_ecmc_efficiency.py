@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 t, d = [], []
 for iterations in range(200, 1000, 200):
     initial_time = time.time()
-    realizations, displacements = run_honeycomb(0.9, 30, 30, 0.79, record_displacements=True, iterations=iterations,
+    realizations, displacements = run_honeycomb(0.9, 900, 0.79, record_displacements=True, iterations=iterations,
                                              write=False)
     t.append(time.time() - initial_time)
     d.append(displacements[-1])

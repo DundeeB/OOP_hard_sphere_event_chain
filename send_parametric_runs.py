@@ -68,11 +68,14 @@ def main():
     # resend_all_runs()
     send_single_run_envelope(0.8, 100**2, 0.7, 'honeycomb')
     send_single_run_envelope(0.8, 100**2, 0.7, 'square')
-    # for N in [100 ** 2, 200 ** 2, 300 ** 2]:
-    #     for h in [0.8, 1.0]:
-    #         for rhoH in np.linspace(0.75, 0.85, 11) if h == 0.8 else np.linspace(0.8, 0.9, 11):
-    #             send_single_run_envelope(h, N, rhoH, 'square')
-    #             send_single_run_envelope(h, N, rhoH, 'honeycomb')
+    send_single_run_envelope(1.0, 100 ** 2, 0.75, 'honeycomb')
+    send_single_run_envelope(1.0, 100 ** 2, 0.75, 'square')
+
+    for N in [100 ** 2, 200 ** 2, 300 ** 2]:
+        for h in [0.8, 1.0]:
+            for rhoH in np.linspace(0.75, 0.85, 11) if h == 0.8 else np.linspace(0.8, 0.9, 11):
+                send_single_run_envelope(h, N, rhoH, 'square')
+                send_single_run_envelope(h, N, rhoH, 'honeycomb')
 
 
 if __name__ == "__main__":

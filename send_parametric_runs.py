@@ -8,9 +8,8 @@ prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"
 code_prefix = "/srv01/technion/danielab/OOP_hard_sphere_event_chain/"
 
 
-def send_single_run_envelope(h, n_row, n_col, rhoH, initial_conditions):
-    params = "h=" + str(h) + ",n_row=" + str(n_row) + ",n_col=" + str(n_col) + ",rhoH=" + str(rhoH) + \
-             ",initial_conditions=" + initial_conditions
+def send_single_run_envelope(h, N, rhoH, initial_conditions):
+    params = "N=" + str(N) + ",h=" + str(h) + ",rhoH=" + str(rhoH) + ",initial_conditions=" + initial_conditions
     if initial_conditions == 'honeycomb':
         init_name_in_dir = 'AF_triangle_ECMC'
     else:
@@ -19,8 +18,7 @@ def send_single_run_envelope(h, n_row, n_col, rhoH, initial_conditions):
         else:
             raise NotImplementedError(
                 "Implemented initial conditions are: square, honeycomb. No " + initial_conditions + " implemented")
-    sim_name = "N=" + str(n_row * n_col) + "_h=" + str(h) + "_rhoH=" + str(rhoH) + \
-               "_" + init_name_in_dir
+    sim_name = "N=" + str(N) + "_h=" + str(h) + "_rhoH=" + str(rhoH) + "_" + init_name_in_dir
     out_pwd = prefix + "out/" + sim_name + ".out"
     err_pwd = prefix + "out/" + sim_name + ".err"
     time.sleep(2.0)
@@ -68,12 +66,13 @@ def resend_all_runs():
 
 def main():
     # resend_all_runs()
-    # send_single_run_envelope(0.8, 30, 30, 0.8, 'honeycomb')
-    for n_row, n_col in zip([100, 200, 300], [100, 200, 300]):
-        for h in [0.8, 1.0]:
-            for rhoH in np.linspace(0.75, 0.85, 11) if h == 0.8 else np.linspace(0.8, 0.9, 11):
-                send_single_run_envelope(h, n_row, n_col, rhoH, 'square')
-                send_single_run_envelope(h, n_row, n_col, rhoH, 'honeycomb')
+    send_single_run_envelope(0.8, 100, 100, 0.7, 'honeycomb')
+    send_single_run_envelope(0.8, 100, 100, 0.7, 'square')
+    # for N in [100 ** 2, 200 ** 2, 300 ** 2]:
+    #     for h in [0.8, 1.0]:
+    #         for rhoH in np.linspace(0.75, 0.85, 11) if h == 0.8 else np.linspace(0.8, 0.9, 11):
+    #             send_single_run_envelope(h, N, rhoH, 'square')
+    #             send_single_run_envelope(h, N, rhoH, 'honeycomb')
 
 
 if __name__ == "__main__":

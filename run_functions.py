@@ -12,15 +12,16 @@ prefix = '/storage/ph_daniel/danielab/ECMC_simulation_results3.0/'
 # prefix = 'C:\\Users\\Daniel Abutbul\\OneDrive - Technion\\simulation-results'
 
 
-def run_honeycomb(h, n_row, n_col, rho_H, **kwargs):
+def run_honeycomb(h, N, rho_H, **kwargs):
     # More physical properties calculated from Input
-    N = n_row * n_col
     sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_triangle_ECMC'
     output_dir = prefix + sim_name
     if os.path.exists(output_dir):
         return run_sim(np.nan, N, h, rho_H, sim_name, **kwargs)
         # when continuing from restart there shouldn't be use of initial arr
     else:
+        n_row = int(np.sqrt(N))
+        n_col = n_row
         r = 1
         sig = 2 * r
         # build input parameters for cells
@@ -42,19 +43,18 @@ def run_honeycomb(h, n_row, n_col, rho_H, **kwargs):
         return run_sim(initial_arr, N, h, rho_H, sim_name, **kwargs)
 
 
-def run_square(h, n_row, n_col, rho_H, **kwargs):
+def run_square(h, N, rho_H, **kwargs):
     # More physical properties calculated from Input
-    N = n_row * n_col
     sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_square_ECMC'
     output_dir = prefix + sim_name
     if os.path.exists(output_dir):
         return run_sim(np.nan, N, h, rho_H, sim_name, **kwargs)
         # when continuing from restart there shouldn't be use of initial arr
     else:
-        r, sig = 1, 2
+        n_row = int(np.sqrt(N))
+        n_col = n_row  # Square initial condition for n_row!=n_col is not implemented...
+        r, sig = 1.0, 2.0
         A = N * sig ** 2 / (rho_H * (1 + h))
-        assert n_row == n_col, "Square initial condition for n_row!=n_col is no implemented..."
-        N = n_col * n_row
         a = np.sqrt(A / N)
         n_row_cells, n_col_cells = int(np.sqrt(A) / (a * np.sqrt(2))), int(np.sqrt(A) / (a * np.sqrt(2)))
         e = np.sqrt(A / (n_row_cells * n_col_cells))
@@ -147,12 +147,13 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
 
     # Run loops
     initial_time = time.time()
-    day = 86400  # seconds
+    # day = 86400  # seconds
+    minute = 60  # seconds
     i = last_ind
     if record_displacements:
         displacements = [0]
         realizations = [i]
-    while time.time() - initial_time < day and i < iterations:
+    while time.time() - initial_time < minute and i < iterations:
         # Choose sphere
         spheres = arr.all_spheres
         sphere = spheres[random.randint(0, len(spheres) - 1)]
@@ -191,7 +192,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
         os.system('echo \'\nElapsed time is ' + str(time.time() - initial_time) + '\' >> TIME_LOG')
         os.chdir(code_dir)
         resend_flag = False
-        n_factor = int(np.sqrt(N / 900))
+        n_factor = int(np.sqrt(N))
         ic = re.split('_', sim_name)[4]
         if ic == 'square':
             return send_single_run_envelope(h, 30 * n_factor, 30 * n_factor, rho_H, 'square')
@@ -206,14 +207,14 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
 
 def main():
     args = sys.argv[1:]
-    if len(args) == 5:
-        h, n_row, n_col, rho_H = [float(x) for x in args[0:4]]
-        n_col, n_row = int(n_col), int(n_row)
+    if len(args) == 4:
+        h, N, rho_H = [float(x) for x in args[0:3]]
+        N = int(N)
         if args[-1] == 'square':
-            run_square(h, n_row, n_col, rho_H)
+            run_square(h, N, rho_H)
         else:
             if args[-1] == 'honeycomb':
-                run_honeycomb(h, n_row, n_col, rho_H)
+                run_honeycomb(h, N, rho_H)
     else:
         action, other_sim_dir, desired_h = args[0], args[1], float(args[2])
         if action == 'zquench':

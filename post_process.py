@@ -418,6 +418,35 @@ class BurgerField(OrderParameter):
             self.upper.write(write_upper_lower=False)
 
 
+def if_exist_load(path):
+    if os.path.exists(path):
+        mat = np.loadtxt(path, dtype=complex)
+        return [int(r) for r in mat[:, 0]], [p for p in mat[:, 1]]
+    else:
+        return [], []
+
+
+def sort_save(path, reals, psis):
+    I = np.argsort(reals)
+    reals = np.array(reals)[I]
+    psis_mean = np.array(psis)[I]
+    np.savetxt(path, np.array([reals, psis_mean]).T)
+
+
+def psi_mean(m, n, sim_path):
+    load = WriteOrLoad(output_dir=sim_path)
+    psis_path = os.path.join(load.output_dir, 'OP', 'psi_' + str(m) + str(n), 'mean_vs_real.txt')
+    reals, psis_mean = if_exist_load(psis_path)
+    for sp_ind in load.realizations():
+        if sp_ind in reals: continue
+        centers = np.loadtxt(os.path.join(load.output_dir, str(sp_ind)))
+        psi = PsiMN(sim_path, m, n, spheres_ind=sp_ind, centers=centers)
+        psi.calc_order_parameter()
+        reals.append(sp_ind)
+        psis_mean.append(np.mean(psi.op_vec))
+    sort_save(psis_path, reals, psis_mean)
+
+
 def main():
     correlation_couples = int(1e6)
     calc_upper_lower = False
@@ -465,19 +494,6 @@ def main():
                         calc_upper_lower=calc_upper_lower)
         pos.write()
 
-    def if_exist_load(path):
-        if os.path.exists(psis_path):
-            mat = np.loadtxt(path, dtype=complex)
-            return [int(r) for r in mat[:, 0]], [p for p in mat[:, 1]]
-        else:
-            return [], []
-
-    def sort_save(path, reals, psis):
-        I = np.argsort(reals)
-        reals = np.array(reals)[I]
-        psis_mean = np.array(psis)[I]
-        np.savetxt(path, np.array([reals, psis_mean]).T)
-
     if calc_type == "burger_square":
         load = WriteOrLoad(output_dir=sim_path)
         l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = load.load_Input()
@@ -501,21 +517,8 @@ def main():
             psis_mean.append(np.mean(psi14.op_vec))
         sort_save(psis_path, reals, psis_mean)
 
-    def psi_mean(m, n):
-        load = WriteOrLoad(output_dir=sim_path)
-        psis_path = os.path.join(load.output_dir, 'OP', 'psi_' + str(m) + str(n), 'mean_vs_real.txt')
-        reals, psis_mean = if_exist_load(psis_path)
-        for sp_ind in load.realizations():
-            if sp_ind in reals: continue
-            centers = np.loadtxt(os.path.join(load.output_dir, str(sp_ind)))
-            psi = PsiMN(sim_path, m, n, spheres_ind=sp_ind, centers=centers)
-            psi.calc_order_parameter()
-            reals.append(sp_ind)
-            psis_mean.append(np.mean(psi.op_vec))
-        sort_save(psis_path, reals, psis_mean)
-
-    if calc_type == "psi23mean": psi_mean(2, 3)
-    if calc_type == "psi14mean": psi_mean(1, 4)
+    if calc_type == "psi23mean": psi_mean(2, 3, sim_path)
+    if calc_type == "psi14mean": psi_mean(1, 4, sim_path)
 
 
 if __name__ == "__main__":

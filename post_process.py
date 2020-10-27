@@ -14,6 +14,8 @@ from scipy.spatial import Delaunay
 epsilon = 1e-8
 
 
+# TODO: either find out the time it takes to correlations calculation, or make it run for 2 days instead of fixed
+#  number of realizations.
 class OrderParameter:
 
     def __init__(self, sim_path, centers=None, spheres_ind=None, calc_upper_lower=True, **kwargs):
@@ -455,19 +457,36 @@ def main():
     if calc_type == "pos":
         psi23, psi14, psi16 = PsiMN(sim_path, 2, 3), PsiMN(sim_path, 1, 4), PsiMN(sim_path, 1, 6)
         psi23.calc_order_parameter(), psi14.calc_order_parameter(), psi16.calc_order_parameter()
-        psis = [psi14.op_vec, psi23.op_vec, psi16.op_vec]
-        correct_psi = psis[np.argmax(np.abs([np.sum(p) for p in psis]))]
+        psis_mean = [psi14.op_vec, psi23.op_vec, psi16.op_vec]
+        correct_psi = psis_mean[np.argmax(np.abs([np.sum(p) for p in psis_mean]))]
         theta = np.angle(np.sum(correct_psi))
         pos = PositionalCorrelationFunction(sim_path, theta)
         pos.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples,
                         calc_upper_lower=calc_upper_lower)
         pos.write()
+
+    def if_exist_load(path):
+        if os.path.exists(psis_path):
+            mat = np.loadtxt(path, dtype=complex)
+            return [int(r) for r in mat[:, 0]], [p for p in mat[:, 1]]
+        else:
+            return [], []
+
+    def sort_save(path, reals, psis):
+        I = np.argsort(reals)
+        reals = np.array(reals)[I]
+        psis_mean = np.array(psis)[I]
+        np.savetxt(path, np.array([reals, psis_mean]).T)
+
     if calc_type == "burger_square":
         load = WriteOrLoad(output_dir=sim_path)
         l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = load.load_Input()
         a = np.sqrt(l_x * l_y / N)
         a1 = np.array([a, 0])
         a2 = np.array([0, a])
+
+        psis_path = os.path.join(load.output_dir, 'OP', 'psi_14', 'mean_vs_real.txt')
+        reals, psis_mean = if_exist_load(psis_path)
         for sp_ind in load.realizations():
             if os.path.exists(
                     os.path.join(load.output_dir, 'OP', 'Burger', 'burger_vectors_vec_' + str(sp_ind) + '.txt')):
@@ -478,6 +497,25 @@ def main():
             burger = BurgerField(sim_path, a1, a2, psi14, spheres_ind=sp_ind, centers=centers, calc_upper_lower=False)
             burger.calc_order_parameter(calc_upper_lower=False)
             burger.write(write_upper_lower=False)
+            reals.append(sp_ind)
+            psis_mean.append(np.mean(psi14.op_vec))
+        sort_save(psis_path, reals, psis_mean)
+
+    def psi_mean(m, n):
+        load = WriteOrLoad(output_dir=sim_path)
+        psis_path = os.path.join(load.output_dir, 'OP', 'psi_' + str(m) + str(n), 'mean_vs_real.txt')
+        reals, psis_mean = if_exist_load(psis_path)
+        for sp_ind in load.realizations():
+            if sp_ind in reals: continue
+            centers = np.loadtxt(os.path.join(load.output_dir, str(sp_ind)))
+            psi = PsiMN(sim_path, m, n, spheres_ind=sp_ind, centers=centers)
+            psi.calc_order_parameter()
+            reals.append(sp_ind)
+            psis_mean.append(np.mean(psi.op_vec))
+        sort_save(psis_path, reals, psis_mean)
+
+    if calc_type == "psi23mean": psi_mean(2, 3)
+    if calc_type == "psi14mean": psi_mean(1, 4)
 
 
 if __name__ == "__main__":

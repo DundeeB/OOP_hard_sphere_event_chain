@@ -96,7 +96,6 @@ class Metric:
             vectors.append([-l_x, 0])  # 2
             if y_down: vectors.append([-l_x, -l_y])  # 6
             if y_up: vectors.append([-l_x, l_y])  # 7
-
         if y_down: vectors.append([0, -l_y])  # 3
         if x_up:
             vectors.append([l_x, 0])  # 4
@@ -104,10 +103,6 @@ class Metric:
             if y_up: vectors.append([l_x, l_y])  # 9
         if y_up: vectors.append([0, l_y])  # 5
         return vectors
-        # [0, 0]      [-l_x, 0]    [l_x, 0]
-        # [0, -l_y]   [-l_x, -l_y] [l_x, -l_y]
-        # [0, l_y]    [-l_x, l_y]  [l_x, l_y]
-        # return [[vx, vy] for vx in [0, -l_x, l_x] for vy in [0, -l_y, l_y]]
 
     @staticmethod
     def dist_to_collision(sphere1, other_spheres, total_step, direction: Direction, boundaries, cut_off=float('inf')):
@@ -150,7 +145,7 @@ class Metric:
                 sig_xy_sq = sig_sq - (c2[2] - c1[2]) ** 2
                 if sig_xy_sq <= 0: continue
                 for v in vectors:
-                    # assume the step is in the x direction and reorganize x and y
+                    # dx is in the direction of the step i, and dy in j direction
                     dx = c2[i] - c1[i] + v[i]
                     if dx <= 0: continue
                     discriminant = sig_xy_sq - (c2[j] - c1[j] + v[j]) ** 2

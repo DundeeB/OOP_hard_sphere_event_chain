@@ -17,6 +17,7 @@ def send_specific_run(sim_name, post_types):
                   " -N " + post_type + "_" + sim_name + " -o " + out_pwd + " -e " + err_pwd +
                   " -l nodes=1:ppn=1,mem=1gb,vmem=2gb -q N " + code_prefix + "post_process_env.sh")
 
+
 def params_from_name(name):
     ss = re.split("[_=]", name)
     for i, s in enumerate(ss):
@@ -30,13 +31,14 @@ def params_from_name(name):
             ic = ss[i + 1]
     return N, h, rhoH, ic
 
+
 def main():
     sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
     for sim_name in sims:
         N, h, rhoH, ic = params_from_name(sim_name)
-        # ["psi23", "psi14", "psi16", "pos","burger_square"]
+        # ["psi23", "psi14", "psi16", "pos", "burger_square", "psi23mean", "psi14mean"]
         if h >= 1.0:
-            send_specific_run(sim_name, ["psi23"])
+            send_specific_run(sim_name, ["psi23", "psi23mean"])
         if h == 0.8:
             send_specific_run(sim_name, ["psi14", "burger_square"])
         if h <= 0.4:
@@ -44,5 +46,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-    # send_specific_run("N=8100_h=1.0_rhoH=0.86_AF_triangle_ECMC",["psi23"])
+    # main()
+    for rhoH in ["0.81", "0.79"]:
+        for ic in ["triangle", "square"]:
+            send_specific_run("N=8100_h=0.8_rhoH=" + rhoH + "_AF_" + ic + "_ECMC", ["psi14mean"])

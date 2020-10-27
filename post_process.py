@@ -434,8 +434,14 @@ def sort_save(path, reals, psis):
 
 
 def psi_mean(m, n, sim_path):
+    op_dir = os.path.join(sim_path, "OP")
+    if not os.path.exists(op_dir): os.mkdir(op_dir)
+    op_name_dir = os.path.join(op_dir, 'psi_' + str(m) + str(n))
+    if not os.path.exists(op_name_dir): os.mkdir(op_name_dir)
+    psis_path = os.path.join(op_name_dir, 'mean_vs_real.txt')
+
     load = WriteOrLoad(output_dir=sim_path)
-    psis_path = os.path.join(load.output_dir, 'OP', 'psi_' + str(m) + str(n), 'mean_vs_real.txt')
+
     reals, psis_mean = if_exist_load(psis_path)
     for sp_ind in load.realizations():
         if sp_ind in reals: continue
@@ -493,14 +499,12 @@ def main():
         pos.correlation(low_memory=True, randomize=randomize, realizations=correlation_couples,
                         calc_upper_lower=calc_upper_lower)
         pos.write()
-
     if calc_type == "burger_square":
         load = WriteOrLoad(output_dir=sim_path)
         l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = load.load_Input()
         a = np.sqrt(l_x * l_y / N)
         a1 = np.array([a, 0])
         a2 = np.array([0, a])
-
         psis_path = os.path.join(load.output_dir, 'OP', 'psi_14', 'mean_vs_real.txt')
         reals, psis_mean = if_exist_load(psis_path)
         for sp_ind in load.realizations():
@@ -516,7 +520,6 @@ def main():
             reals.append(sp_ind)
             psis_mean.append(np.mean(psi14.op_vec))
         sort_save(psis_path, reals, psis_mean)
-
     if calc_type == "psi23mean": psi_mean(2, 3, sim_path)
     if calc_type == "psi14mean": psi_mean(1, 4, sim_path)
 

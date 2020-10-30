@@ -10,7 +10,10 @@ import random
 import re
 from datetime import date
 from scipy.spatial import Delaunay
+import time
 
+# TODO: zip files in ATLAS
+# TODO: positional correlations
 epsilon = 1e-8
 
 
@@ -315,9 +318,14 @@ class RealizationsAveragedOP:
 
 
 class BurgerField(OrderParameter):
+
+    @staticmethod
+    def name():
+        return "burger_vectors"
+
     def __init__(self, sim_path, a1, a2, psi_op, centers=None, spheres_ind=None, calc_upper_lower=True):
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower=False)
-        self.op_name = "burger_vectors"
+        self.op_name = BurgerField.name()
         self.psi = psi_op.op_vec
         self.n_orientation = psi_op.m * psi_op.n
         self.a1, self.a2 = a1, a2
@@ -443,13 +451,19 @@ def psi_mean(m, n, sim_path):
     load = WriteOrLoad(output_dir=sim_path)
 
     reals, psis_mean = if_exist_load(psis_path)
-    for sp_ind in load.realizations():
+    init_time = time.time()
+    day = 86400  # sec
+    i = 0
+    realizations = load.realizations()
+    while time.time() - init_time < 2 * day and i < len(realizations):
+        sp_ind = realizations[i]
         if sp_ind in reals: continue
         centers = np.loadtxt(os.path.join(load.output_dir, str(sp_ind)))
         psi = PsiMN(sim_path, m, n, spheres_ind=sp_ind, centers=centers)
         psi.calc_order_parameter()
         reals.append(sp_ind)
         psis_mean.append(np.mean(psi.op_vec))
+        i += 1
     sort_save(psis_path, reals, psis_mean)
 
 
@@ -457,7 +471,7 @@ def main():
     correlation_couples = int(1e6)
     calc_upper_lower = False
 
-    prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results2.0/"
+    prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"
     sim_path = os.path.join(prefix, sys.argv[1])
     calc_type = sys.argv[2]
     N = int(re.split('_h=', re.split('N=', sys.argv[1])[1])[0])
@@ -505,12 +519,21 @@ def main():
         a = np.sqrt(l_x * l_y / N)
         a1 = np.array([a, 0])
         a2 = np.array([0, a])
-        psis_path = os.path.join(load.output_dir, 'OP', 'psi_14', 'mean_vs_real.txt')
+
+        psi_dir_name = os.path.join(op_dir, 'psi_14')
+        if not os.path.exists(psi_dir_name): os.mkdir(psi_dir_name)
+        psis_path = os.path.join(psi_dir_name, 'mean_vs_real.txt')
         reals, psis_mean = if_exist_load(psis_path)
-        for sp_ind in load.realizations():
-            if os.path.exists(
-                    os.path.join(load.output_dir, 'OP', 'Burger', 'burger_vectors_vec_' + str(sp_ind) + '.txt')):
-                continue
+
+        burg_dir = os.path.join(op_dir, BurgerField.name())
+
+        init_time = time.time()
+        day = 86400  # sec
+        i = 0
+        realizations = load.realizations()
+        while time.time() - init_time < 2 * day and i < len(realizations):
+            sp_ind = realizations[i]
+            if os.path.exists(os.path.join(burg_dir, 'vec_' + str(sp_ind) + '.txt')): continue
             centers = np.loadtxt(os.path.join(load.output_dir, str(sp_ind)))
             psi14 = PsiMN(sim_path, 1, 4, spheres_ind=sp_ind, centers=centers)
             psi14.calc_order_parameter()
@@ -519,6 +542,7 @@ def main():
             burger.write(write_upper_lower=False)
             reals.append(sp_ind)
             psis_mean.append(np.mean(psi14.op_vec))
+            i += 1
         sort_save(psis_path, reals, psis_mean)
     if calc_type == "psi23mean": psi_mean(2, 3, sim_path)
     if calc_type == "psi14mean": psi_mean(1, 4, sim_path)

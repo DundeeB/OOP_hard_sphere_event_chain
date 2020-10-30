@@ -4,7 +4,7 @@ import time
 # from send_parametric_runs import params_from_name
 import re
 
-prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results2.0/"
+prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"
 code_prefix = "/srv01/technion/danielab/OOP_hard_sphere_event_chain/"
 
 
@@ -46,7 +46,7 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
-    for rhoH in ["0.81", "0.79"]:
-        for ic in ["triangle", "square"]:
-            send_specific_run("N=8100_h=0.8_rhoH=" + rhoH + "_AF_" + ic + "_ECMC", ["psi14mean"])
+    main()
+    # for rhoH in ["0.81", "0.79"]:
+    #     for ic in ["triangle", "square"]:
+    #         send_specific_run("N=8100_h=0.8_rhoH=" + rhoH + "_AF_" + ic + "_ECMC", ["psi14mean"])

@@ -12,13 +12,10 @@ from datetime import date
 from scipy.spatial import Delaunay
 import time
 
-# TODO: zip files in ATLAS
 # TODO: positional correlations
 epsilon = 1e-8
 
 
-# TODO: either find out the time it takes to correlations calculation, or make it run for 2 days instead of fixed
-#  number of realizations.
 class OrderParameter:
 
     def __init__(self, sim_path, centers=None, spheres_ind=None, calc_upper_lower=True, **kwargs):
@@ -54,7 +51,7 @@ class OrderParameter:
         pass
 
     def correlation(self, bin_width=0.2, calc_upper_lower=True, low_memory=False, randomize=False,
-                    realizations=int(1e7)):
+                    realizations=int(1e7), time_limit=172800):
         if self.op_vec is None: self.calc_order_parameter()
         lx, ly = self.event_2d_cells.boundaries[:2]
         l = np.sqrt(lx ** 2 + ly ** 2) / 2
@@ -89,11 +86,15 @@ class OrderParameter:
                         counts[k] += 1
                         phiphi_hist[k] += phi_phi
             else:
+                init_time = time.time()
                 for real in range(realizations):
                     i, j = random.randint(0, len(self.op_vec) - 1), random.randint(0, len(self.op_vec) - 1)
                     phi_phi, k = self.__pair_corr__(i, j, centers, bin_width)
                     counts[k] += 1
                     phiphi_hist[k] += phi_phi
+                    if time.time() - init_time > time_limit:
+                        print("Time limit of " + str(time_limit / 86400) + " days exceeds, stops adding realizations")
+                        break
         self.counts = counts
         self.op_corr = np.real(phiphi_hist) / counts + 1j * np.imag(phiphi_hist) / counts
         self.corr_centers = centers
@@ -177,7 +178,7 @@ class PositionalCorrelationFunction(OrderParameter):
             self.lower.op_name = "lower_" + self.op_name
 
     def correlation(self, bin_width=0.2, calc_upper_lower=True, low_memory=False, randomize=False,
-                    realizations=int(1e7)):
+                    realizations=int(1e7), time_limit=172800):
         theta, rect_width = self.theta, self.rect_width
         v_hat = np.transpose(np.matrix([np.cos(theta), np.sin(theta)]))
         lx, ly = self.event_2d_cells.boundaries[:2]
@@ -214,10 +215,15 @@ class PositionalCorrelationFunction(OrderParameter):
                     for r_ in self.event_2d_cells.all_centers:
                         self.__pair_dist__(r, r_, v_hat, rect_width, bins_edges)
             else:
+                init_time = time.time()
                 for realization in range(realizations):
                     i, j = random.randint(0, len(self.event_2d_cells) - 1), random.randint(0,
                                                                                            len(self.event_2d_cells) - 1)
                     self.__pair_dist__(self.event_2d_cells[i], self.event_2d_cells[j])
+                    if time.time() - init_time > time_limit:
+                        print(
+                            "Exceed time limit of " + str(time_limit / 86400) + " days. Stopping summing realizations")
+                        break
         self.op_corr = self.counts / np.nanmean(self.counts[np.where(self.counts > 0)])
 
         if calc_upper_lower:
@@ -468,7 +474,7 @@ def psi_mean(m, n, sim_path):
 
 
 def main():
-    correlation_couples = int(1e6)
+    correlation_couples = float('inf')
     calc_upper_lower = False
 
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"

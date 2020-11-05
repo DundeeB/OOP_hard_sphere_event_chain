@@ -481,7 +481,8 @@ def main():
     sim_path = os.path.join(prefix, sys.argv[1])
     calc_type = sys.argv[2]
     N = int(re.split('_h=', re.split('N=', sys.argv[1])[1])[0])
-    randomize = N ** 2 > correlation_couples
+    # randomize = N ** 2 > correlation_couples
+    randomize = True
     op_dir = os.path.join(sim_path, "OP")
     if not os.path.exists(op_dir): os.mkdir(op_dir)
     log = os.path.join(op_dir, "log")

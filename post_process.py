@@ -474,7 +474,7 @@ def psi_mean(m, n, sim_path):
 
 
 def main():
-    correlation_couples = float('inf')
+    correlation_couples = int(1e10)
     calc_upper_lower = False
 
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"

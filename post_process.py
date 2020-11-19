@@ -449,6 +449,7 @@ class BraggStructure(OrderParameter):
         self.op_vec = np.exp([1j * (self.k[0] * r[0] + self.k[1] * r[1]) for r in self.spheres])
 
     def correlation(self):
+        # TODO: calculate it in different way because there are (10^6)^2 couples which is too much
         if self.op_vec == None:
             self.calc_order_parameter()
         self.S = np.sum([p * p_conj for p in self.op_vec for p_conj in np.conj(self.op_vec)])

@@ -10,6 +10,7 @@ import random
 import re
 from datetime import date
 from scipy.spatial import Delaunay
+from scipy.optimize import fmin
 import time
 
 # TODO: positional correlations
@@ -430,6 +431,56 @@ class BurgerField(OrderParameter):
         if write_upper_lower:
             self.lower.write(write_upper_lower=False)
             self.upper.write(write_upper_lower=False)
+
+
+class BraggStructure(OrderParameter):
+    def __init__(self, sim_path, k, psi_op, centers=None, spheres_ind=None):
+        super().__init__(sim_path, centers, spheres_ind, calc_upper_lower=False)
+        self.k = k
+        n_orientation = psi_op.m * psi_op.n
+        psi_avg = np.mean(psi_op.op_vec)
+        orientation = np.imag(np.log(psi_avg)) / n_orientation
+        R = np.array([[np.cos(orientation), np.sin(orientation)], [-np.sin(orientation), np.cos(orientation)]])
+        self.spheres = [np.matmul(R, r[:2]) for r in self.event_2d_cells.all_centers]
+        self.op_name = "S_k=" + str(k)
+        self.k_peak = None
+
+    def calc_order_parameter(self):
+        self.op_vec = np.exp([1j * (self.k[0] * r[0] + self.k[1] * r[1]) for r in self.spheres])
+
+    def correlation(self):
+        if self.op_vec == None:
+            self.calc_order_parameter()
+        self.S = np.sum([p * p_conj for p in self.op_vec for p_conj in np.conj(self.op_vec)])
+
+    @staticmethod
+    def calc_S(k, sp):
+        struct = BraggStructure('', k, sp)
+        struct.correlation()
+        return struct.S
+
+    def k_perf(self):
+        return 2 * np.pi / np.sqrt(self.event_2d_cells.l_x * self.event_2d_cells.l_y / len(
+            self.spheres)) * np.array([1, 1])  # rotate self.spheres by orientation before so peak is at [1, 1]
+
+    def calc_peak(self):
+        S = lambda k: -BraggStructure.calc_S(k, self.spheres)
+        self.k_peak, S_peak_m, _, _, _ = fmin(S, self.k_perf(), xtol=0.01 / len(self.spheres), ftol=1.0,
+                                              full_output=True)
+        self.S_peak = -S_peak_m
+
+
+class MagneticBraggStructure(BraggStructure):
+    def calc_order_parameter(self):
+        self.op_vec = np.array([(2 * (r[2] - 1) / (self.event_2d_cells.l_z - 1) - 1) *  # z in [-1,1]
+                                np.exp(1j * (self.k[0] * r[0] + self.k[1] * r[1]))
+                                for r in self.event_2d_cells.all_centers])
+
+    def k_perf(self):
+        if self.k_peak is None:
+            return super(MagneticBraggStructure, self).k_perf() / 2
+        else:
+            return self.k_peak / 2
 
 
 def if_exist_load(path):

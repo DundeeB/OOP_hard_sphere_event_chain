@@ -448,11 +448,29 @@ class BraggStructure(OrderParameter):
     def calc_order_parameter(self):
         self.op_vec = np.exp([1j * (self.k[0] * r[0] + self.k[1] * r[1]) for r in self.spheres])
 
-    def correlation(self):
-        # TODO: calculate it in different way because there are (10^6)^2 couples which is too much
+    def correlation(self, low_memory=True, randomize=True, realizations=int(1e7), time_limit=172800):
+        N = len(self.spheres)
         if self.op_vec == None:
             self.calc_order_parameter()
-        self.S = np.sum([p * p_conj for p in self.op_vec for p_conj in np.conj(self.op_vec)])
+        if not low_memory:
+            sum_ = np.sum([p * p_conj for p in self.op_vec for p_conj in np.conj(self.op_vec)])
+        else:
+            sum_ = 0
+            if not randomize:
+                for p in self.op_vec:
+                    for p_conj in np.conj(self.op_vec):
+                        sum_ += p * p_conj
+            else:
+                init_time = time.time()
+                for real in range(realizations):
+                    i, j = random.randint(0, len(self.op_vec) - 1), random.randint(0, len(self.op_vec) - 1)
+                    sum_ += self.op_vec[i] * self.op_vec[j].conjugate()
+                    if time.time() - init_time > time_limit:
+                        print("Time limit of " + str(time_limit / 86400) + " days exceeds, stops adding realizations")
+                        break
+                # normalize sum_ as it should estimate the sum of N^2 entries
+                sum_ *= N ** 2 / real
+        self.S = sum_ / N
 
     @staticmethod
     def calc_S(k, sp):

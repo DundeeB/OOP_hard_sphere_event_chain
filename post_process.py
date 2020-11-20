@@ -434,66 +434,69 @@ class BurgerField(OrderParameter):
 
 
 class BraggStructure(OrderParameter):
-    def __init__(self, sim_path, k, psi_op, centers=None, spheres_ind=None):
+    def __init__(self, sim_path, psi_op, centers=None, spheres_ind=None):
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower=False)
-        self.k = k
         n_orientation = psi_op.m * psi_op.n
         psi_avg = np.mean(psi_op.op_vec)
         orientation = np.imag(np.log(psi_avg)) / n_orientation
         R = np.array([[np.cos(orientation), np.sin(orientation)], [-np.sin(orientation), np.cos(orientation)]])
         self.spheres = [np.matmul(R, r[:2]) for r in self.event_2d_cells.all_centers]
-        self.op_name = "S_k=" + str(k)
+        self.op_name = "Bragg_S"
         self.k_peak = None
+        self.data = []
 
-    def calc_order_parameter(self):
-        self.op_vec = np.exp([1j * (self.k[0] * r[0] + self.k[1] * r[1]) for r in self.spheres])
+    def op(self, k):
+        return np.exp([1j * (k[0] * r[0] + k[1] * r[1]) for r in self.spheres])
 
-    def correlation(self, low_memory=True, randomize=True, realizations=int(1e7), time_limit=172800):
+    def S(self, k, low_memory=True, randomize=True, realizations=int(1e7), time_limit=172800):
+        eikr = self.op(k)
+        eikr_conj = np.conjugate(eikr)
         N = len(self.spheres)
-        if self.op_vec == None:
-            self.calc_order_parameter()
+        sum_ = 0
         if not low_memory:
-            sum_ = np.sum([p * p_conj for p in self.op_vec for p_conj in np.conj(self.op_vec)])
+            sum_ = np.sum([p * p_conj for p in eikr for p_conj in eikr_conj])
         else:
-            sum_ = 0
             if not randomize:
-                for p in self.op_vec:
-                    for p_conj in np.conj(self.op_vec):
+                for p in eikr:
+                    for p_conj in eikr_conj:
                         sum_ += p * p_conj
             else:
                 init_time = time.time()
                 for real in range(realizations):
-                    i, j = random.randint(0, len(self.op_vec) - 1), random.randint(0, len(self.op_vec) - 1)
-                    sum_ += self.op_vec[i] * self.op_vec[j].conjugate()
+                    i, j = random.randint(0, len(eikr) - 1), random.randint(0, len(eikr) - 1)
+                    sum_ += eikr[i] * eikr_conj[j]
                     if time.time() - init_time > time_limit:
                         print("Time limit of " + str(time_limit / 86400) + " days exceeds, stops adding realizations")
                         break
                 # normalize sum_ as it should estimate the sum of N^2 entries
-                sum_ *= N ** 2 / real
-        self.S = sum_ / N
-
-    @staticmethod
-    def calc_S(k, sp):
-        struct = BraggStructure('', k, sp)
-        struct.correlation()
-        return struct.S
+                sum_ *= N ** 2 / (real + 1)
+        S_ = sum_ / N
+        if not low_memory and randomize:
+            self.data.append = [k, S_, real]
+        else:
+            self.data.append = [k, S_, N ** 2]
+        return S_
 
     def k_perf(self):
         return 2 * np.pi / np.sqrt(self.event_2d_cells.l_x * self.event_2d_cells.l_y / len(
             self.spheres)) * np.array([1, 1])  # rotate self.spheres by orientation before so peak is at [1, 1]
 
-    def calc_peak(self):
-        S = lambda k: -BraggStructure.calc_S(k, self.spheres)
+    def calc_peak(self, **kwargs):
+        S = lambda k: -self.S(k, **kwargs)
         self.k_peak, S_peak_m, _, _, _ = fmin(S, self.k_perf(), xtol=0.01 / len(self.spheres), ftol=1.0,
                                               full_output=True)
         self.S_peak = -S_peak_m
 
 
 class MagneticBraggStructure(BraggStructure):
-    def calc_order_parameter(self):
-        self.op_vec = np.array([(2 * (r[2] - 1) / (self.event_2d_cells.l_z - 1) - 1) *  # z in [-1,1]
-                                np.exp(1j * (self.k[0] * r[0] + self.k[1] * r[1]))
-                                for r in self.event_2d_cells.all_centers])
+    def __init__(self, **kwargs):
+        super.__init__(**kwargs)
+        self.op_name = "Bragg_Sm"
+
+    def op(self, k):
+        return np.array([(2 * (r[2] - 1) / (self.event_2d_cells.l_z - 1) - 1) *  # z in [-1,1]
+                         np.exp(1j * (self.k[0] * r[0] + self.k[1] * r[1]))
+                         for r in self.spheres])
 
     def k_perf(self):
         if self.k_peak is None:

@@ -471,10 +471,10 @@ class BraggStructure(OrderParameter):
                 # normalize sum_ as it should estimate the sum of N^2 entries
                 sum_ *= N ** 2 / (real + 1)
         S_ = sum_ / N
-        if not low_memory and randomize:
-            self.data.append = [k, S_, real]
+        if low_memory and randomize:
+            self.data.append = [k[0], k[1], S_, real]
         else:
-            self.data.append = [k, S_, N ** 2]
+            self.data.append = [k[0], k[1], S_, N ** 2]
         return S_
 
     def k_perf(self):
@@ -487,6 +487,10 @@ class BraggStructure(OrderParameter):
                                               full_output=True)
         self.S_peak = -S_peak_m
 
+    def write(self):
+        self.op_vec = np.array(self.data)
+        super().write(write_correlation=False, write_vec=True, write_upper_lower=False)
+
 
 class MagneticBraggStructure(BraggStructure):
     def __init__(self, **kwargs):
@@ -494,6 +498,7 @@ class MagneticBraggStructure(BraggStructure):
         self.op_name = "Bragg_Sm"
 
     def op(self, k):
+        # sum_n(z_n*e^(ikr_n))
         return np.array([(2 * (r[2] - 1) / (self.event_2d_cells.l_z - 1) - 1) *  # z in [-1,1]
                          np.exp(1j * (self.k[0] * r[0] + self.k[1] * r[1]))
                          for r in self.spheres])

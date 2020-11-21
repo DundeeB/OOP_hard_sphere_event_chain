@@ -496,8 +496,8 @@ class BraggStructure(OrderParameter):
 
 
 class MagneticBraggStructure(BraggStructure):
-    def __init__(self, sim_path, psi_op, centers=None, spheres_ind=None):
-        super().__init__(sim_path, psi_op, centers, spheres_ind)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.op_name = "Bragg_Sm"
 
     def op(self, k):

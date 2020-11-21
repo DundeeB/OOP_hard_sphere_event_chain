@@ -18,24 +18,29 @@ print('Magnetic Bragg elapsed time: ' + str(t2 - t1))
 #     bragg.S(bragg.k_perf(), realizations=int(real))
 #
 # reals = [d[3] for d in bragg.data]
-# S_values = [np.abs(d[2]) for d in bragg.data]
-#
-# size = 30
-# params = {'legend.fontsize': 'large',
-#           'figure.figsize': (20, 8),
-#           'axes.labelsize': size,
-#           'axes.titlesize': size,
-#           'xtick.labelsize': size * 0.75,
-#           'ytick.labelsize': size * 0.75,
-#           'axes.titlepad': 25,
-#           'font.weight': 'bold'}
-# plt.rcParams.update(params)
-# plt.grid()
-#
+
+
+size = 30
+params = {'legend.fontsize': 'large',
+          'figure.figsize': (20, 8),
+          'axes.labelsize': size,
+          'axes.titlesize': size,
+          'xtick.labelsize': size * 0.75,
+          'ytick.labelsize': size * 0.75,
+          'axes.titlepad': 25,
+          'font.weight': 'bold'}
+plt.rcParams.update(params)
+plt.grid()
+
 # plt.semilogx(reals, S_values, '--o', label='N=8100 Randomized realizations out of N^2 couples', linewidth=1.5)
+for data in [bragg.data, braggM.data]:
+    ks = [np.sqrt(d[0] ** 2 + d[1] ** 2) for d in data]
+    S_values = [np.abs(d[2]) for d in data]
+    plt.plot(ks, S_values, 'o', linewidth=1.5)
 # correct_S = bragg.S(bragg.k_perf(), randomize=False)
 # plt.semilogx(len(bragg.spheres) ** 2, correct_S, 'ok', label='converged value for all N^2 couples', markersize=15)
 # plt.xlabel('Couples realizations')
-# plt.ylabel('|S| value at $k_{perf}$')
-# plt.legend()
-# plt.show()
+plt.ylabel('|S| value')
+plt.xlabel('|k|')
+plt.legend()
+plt.show()

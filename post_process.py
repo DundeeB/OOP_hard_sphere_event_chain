@@ -491,7 +491,7 @@ class BraggStructure(OrderParameter):
         self.op_vec = np.array(self.data)
         # overrides the usless e^(ikr) vector for writing the important data in self.data, while self.op_corr has
         # already been calculated and saved
-        super().write(write_correlation=self.op_corr is None, write_vec=True, write_upper_lower=False)
+        super().write(write_correlation=self.op_corr is not None, write_vec=True, write_upper_lower=False)
 
     def calc_order_parameter(self):
         self.calc_peak()
@@ -560,6 +560,7 @@ def psi_mean(m, n, sim_path):
 def main():
     # correlation_couples = int(1e10)
     correlation_couples = 1000
+    day = 86400  # sec
 
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"
     sim_path = os.path.join(prefix, sys.argv[1])
@@ -614,7 +615,6 @@ def main():
         burg_dir = os.path.join(op_dir, BurgerField.name())
 
         init_time = time.time()
-        day = 86400  # sec
         i = 0
         realizations = load.realizations()
         while time.time() - init_time < 2 * day and i < len(realizations):
@@ -641,7 +641,7 @@ def main():
         else:
             bragg = BraggStructure(sim_path, psi)
         bragg.calc_order_parameter()
-        bragg.correlation(realizations=correlation_couples, time_limit=172800 - (time.time() - init_time))
+        bragg.correlation(realizations=correlation_couples, time_limit=2 * day - (time.time() - init_time))
         bragg.write()
     if calc_type == "psi23mean": psi_mean(2, 3, sim_path)
     if calc_type == "psi14mean": psi_mean(1, 4, sim_path)

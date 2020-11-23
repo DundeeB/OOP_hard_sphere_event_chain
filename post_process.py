@@ -94,7 +94,8 @@ class OrderParameter:
                     counts[k] += 1
                     phiphi_hist[k] += phi_phi
                     if time.time() - init_time > time_limit:
-                        print("Time limit of " + str(time_limit / 86400) + " days exceeds, stops adding realizations")
+                        print("Time limit of " + str(time_limit / 86400) + " days exceeds, " + str(
+                            real + 1) + "Realizations where added. Stops adding realizations")
                         break
         self.counts = counts
         self.op_corr = np.real(phiphi_hist) / counts + 1j * np.imag(phiphi_hist) / counts
@@ -557,7 +558,8 @@ def psi_mean(m, n, sim_path):
 
 
 def main():
-    correlation_couples = int(1e10)
+    # correlation_couples = int(1e10)
+    correlation_couples = 1000
 
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"
     sim_path = os.path.join(prefix, sys.argv[1])

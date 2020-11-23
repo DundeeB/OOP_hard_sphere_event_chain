@@ -446,7 +446,7 @@ class BraggStructure(OrderParameter):
     def calc_eikr(self, k):
         return np.exp([1j * (k[0] * r[0] + k[1] * r[1]) for r in self.spheres])
 
-    def S(self, k, low_memory=True, randomize=True, realizations=int(1e7), time_limit=172800):
+    def S(self, k, low_memory=True, randomize=False, realizations=int(1e7), time_limit=172800):
         eikr = self.calc_eikr(k)
         eikr_conj = np.conjugate(eikr)
         N = len(self.spheres)
@@ -496,7 +496,7 @@ class BraggStructure(OrderParameter):
         self.calc_peak()
         self.op_vec = self.calc_eikr(self.k_peak)
 
-    def correlation(self, bin_width=0.2, low_memory=False, randomize=False, realizations=int(1e7), time_limit=172800):
+    def correlation(self, bin_width=0.2, low_memory=True, randomize=True, realizations=int(1e7), time_limit=172800):
         super().correlation(bin_width, False, low_memory, randomize, realizations, time_limit)
 
 
@@ -629,6 +629,7 @@ def main():
             i += 1
         sort_save(psis_path, reals, psis_mean)
     if calc_type.startswith("Bragg_S"):
+        init_time = time.time()
         if calc_type.endswith("23"): psi = PsiMN(sim_path, 2, 3)
         if calc_type.endswith("16"): psi = PsiMN(sim_path, 1, 6)
         if calc_type.endswith("14"): psi = PsiMN(sim_path, 1, 4)
@@ -637,7 +638,6 @@ def main():
             bragg = MagneticBraggStructure(sim_path, psi)
         else:
             bragg = BraggStructure(sim_path, psi)
-        init_time = time.time()
         bragg.calc_order_parameter()
         bragg.correlation(realizations=correlation_couples, time_limit=172800 - (time.time() - init_time))
         bragg.write()

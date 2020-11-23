@@ -40,15 +40,15 @@ def main():
         # if h >= 1.0:
         #     send_specific_run(sim_name, ["psi23", "psi23mean"])
         if h == 0.8:
-            # send_specific_run(sim_name, ["psi14", "burger_square", "Bragg_S14", "Bragg_Sm14"])
-            send_specific_run(sim_name, ["Bragg_S14", "Bragg_Sm14"])
+            send_specific_run(sim_name, ["psi14", "burger_square", "Bragg_S14", "Bragg_Sm14"])
+            # send_specific_run(sim_name, ["Bragg_S14", "Bragg_Sm14"])
         # if h <= 0.4:
         #     send_specific_run(sim_name, ["psi16"])
 
 
 if __name__ == "__main__":
-    # main()
-    send_specific_run("N=10000_h=0.8_rhoH=0.79_AF_square_ECMC", ["Bragg_S14", "Bragg_Sm14"])
+    main()
+    # send_specific_run("N=10000_h=0.8_rhoH=0.79_AF_square_ECMC", ["Bragg_S14", "Bragg_Sm14"])
     # for rhoH in ["0.81", "0.79"]:
     #     for ic in ["triangle", "square"]:
     #         send_specific_run("N=8100_h=0.8_rhoH=" + rhoH + "_AF_" + ic + "_ECMC", ["psi14mean"])

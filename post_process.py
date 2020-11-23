@@ -558,8 +558,7 @@ def psi_mean(m, n, sim_path):
 
 
 def main():
-    # correlation_couples = int(1e10)
-    correlation_couples = 1000
+    correlation_couples = int(1e10)
     day = 86400  # sec
 
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"

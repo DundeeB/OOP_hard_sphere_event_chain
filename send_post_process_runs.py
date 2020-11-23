@@ -36,19 +36,15 @@ def main():
     sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
     for sim_name in sims:
         N, h, rhoH, ic = params_from_name(sim_name)
-        # ["psi23", "psi14", "psi16", "pos", "burger_square", "psi23mean", "psi14mean"]
+        # ["psi23", "psi14", "psi16", "pos", "burger_square", "psi23mean", "psi14mean", "Bragg_S14","Bragg_Sm23"]
         # if h >= 1.0:
-        #     send_specific_run(sim_name, ["psi23", "psi23mean"])
+        #     send_specific_run(sim_name, ["psi23", "psi23mean", "Bragg_S23", "Bragg_Sm23"])
         if h == 0.8:
             send_specific_run(sim_name, ["psi14", "burger_square", "Bragg_S14", "Bragg_Sm14"])
             # send_specific_run(sim_name, ["Bragg_S14", "Bragg_Sm14"])
         # if h <= 0.4:
-        #     send_specific_run(sim_name, ["psi16"])
+        #     send_specific_run(sim_name, ["psi16", "Bragg_S16", "Bragg_Sm16"])
 
 
 if __name__ == "__main__":
     main()
-    # send_specific_run("N=10000_h=0.8_rhoH=0.79_AF_square_ECMC", ["Bragg_S14", "Bragg_Sm14"])
-    # for rhoH in ["0.81", "0.79"]:
-    #     for ic in ["triangle", "square"]:
-    #         send_specific_run("N=8100_h=0.8_rhoH=" + rhoH + "_AF_" + ic + "_ECMC", ["psi14mean"])

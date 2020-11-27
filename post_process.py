@@ -67,7 +67,7 @@ class OrderParameter:
                     phi_phi, k = self.__pair_corr__(i, j, bin_width)
                     counts[k] += 1
                     phiphi_hist[k] += np.real(phi_phi)
-                    if realization % 100 == 0 and time.time() - init_time > time_limit:
+                    if realization % 1000 == 0 and time.time() - init_time > time_limit:
                         break
             else:
                 for i in range(len(self.event_2d_cells.all_centers)):
@@ -115,7 +115,6 @@ class OrderParameter:
         dx = np.min(np.abs([dr_vec[0], dr_vec[0] + lx, dr_vec[0] - lx]))
         dy = np.min(np.abs([dr_vec[1], dr_vec[1] + ly, dr_vec[1] - ly]))
         dr = np.sqrt(dx ** 2 + dy ** 2)
-        # k = np.where(np.logical_and(centers - bin_width / 2 <= dr, centers + bin_width / 2 > dr))[0][0]
         k = int(np.floor(dr / bin_width))
         return self.op_vec[i] * np.conjugate(self.op_vec[j]), k
 
@@ -183,7 +182,7 @@ class PositionalCorrelationFunction(OrderParameter):
     def correlation(self, bin_width=0.2, calc_upper_lower=False, low_memory=True, randomize=False,
                     realizations=int(1e7), time_limit=172800):
         theta, rect_width = self.theta, self.rect_width
-        v_hat = np.transpose(np.matrix([np.cos(theta), np.sin(theta)]))
+        v_hat = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
         lx, ly = self.event_2d_cells.boundaries[:2]
         l = np.sqrt(lx ** 2 + ly ** 2) / 2
         bins_edges = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1)
@@ -219,13 +218,14 @@ class PositionalCorrelationFunction(OrderParameter):
             if randomize:
                 for realization in range(realizations):
                     i, j = random.randint(0, N - 1), random.randint(0, N - 1)
-                    self.__pair_dist__(self.event_2d_cells.all_centers[i], self.event_2d_cells.all_centers[j])
-                    if realization % 100 == 0 and time.time() - init_time > time_limit:
+                    self.__pair_dist__(self.event_2d_cells.all_centers[i], self.event_2d_cells.all_centers[j], v_hat,
+                                       rect_width)
+                    if realization % 1000 == 0 and time.time() - init_time > time_limit:
                         break
             else:
                 for r in self.event_2d_cells.all_centers:
                     for r_ in self.event_2d_cells.all_centers:
-                        self.__pair_dist__(r, r_, v_hat, rect_width, bins_edges)
+                        self.__pair_dist__(r, r_, v_hat, rect_width)
                 realization = N * (N - 1) / 2
         print("\nTime Passed: " + str((time.time() - init_time) / 86400) + " days.\nSummed " + str(
             realization) + " pairs")
@@ -241,7 +241,7 @@ class PositionalCorrelationFunction(OrderParameter):
             self.lower.correlation(bin_width=bin_width, low_memory=low_memory, randomize=randomize,
                                    realizations=realizations)
 
-    def __pair_dist__(self, r, r_, v_hat, rect_width, bins_edges):
+    def __pair_dist__(self, r, r_, v_hat, rect_width):
         lx, ly = self.event_2d_cells.boundaries[:2]
         dr = np.array(r) - r_
         dxs = [dr[0], dr[0] + lx, dr[0] - lx]
@@ -253,8 +253,7 @@ class PositionalCorrelationFunction(OrderParameter):
         dist_vec = v_hat * dist_on_line - np.transpose(np.matrix(dr))
         dist_to_line = np.linalg.norm(dist_vec)
         if dist_to_line <= rect_width / 2 and dist_on_line > 0:
-            k = np.where(
-                np.logical_and(bins_edges[:-1] <= dist_on_line, bins_edges[1:] > dist_on_line))[0][0]
+            k = int(np.floor(dist_on_line / rect_width))
             self.counts[k] += 1
 
 

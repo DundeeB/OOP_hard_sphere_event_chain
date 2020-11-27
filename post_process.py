@@ -57,25 +57,25 @@ class OrderParameter:
         l = np.sqrt(lx ** 2 + ly ** 2) / 2
         centers = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1) + bin_width / 2
         counts = np.zeros(len(centers))
-        phiphi_hist = np.zeros(len(centers), dtype=np.complex)
+        phiphi_hist = np.zeros(len(centers))
+        init_time = time.time()
+        N = len(self.event_2d_cells.all_centers)
         if low_memory:
             if randomize:
-                init_time = time.time()
-                for real in range(realizations):
-                    i, j = random.randint(0, len(self.op_vec) - 1), random.randint(0, len(self.op_vec) - 1)
-                    phi_phi, k = self.__pair_corr__(i, j, centers, bin_width)
+                for realization in range(realizations):
+                    i, j = random.randint(0, N - 1), random.randint(0, N - 1)
+                    phi_phi, k = self.__pair_corr__(i, j, bin_width)
                     counts[k] += 1
                     phiphi_hist[k] += np.real(phi_phi)
-                    if time.time() - init_time > time_limit:
-                        print("Time limit of " + str(time_limit / 86400) + " days exceeds, " + str(
-                            real + 1) + "Realizations where added. Stops adding realizations")
+                    if realization % 100 == 0 and time.time() - init_time > time_limit:
                         break
             else:
                 for i in range(len(self.event_2d_cells.all_centers)):
                     for j in range(i):  # j<i, j=i not interesting and j>i double counting accounted for in counts
-                        phi_phi, k = self.__pair_corr__(i, j, centers, bin_width)
+                        phi_phi, k = self.__pair_corr__(i, j, bin_width)
                         counts[k] += 2  # r-r' and r'-r
                         phiphi_hist[k] += 2 * np.real(phi_phi)  # a+a'=2Re(a)
+                realization = N * (N - 1) / 2
         else:
             N = len(self.op_vec)
             v = np.array(self.op_vec).reshape(1, N)
@@ -97,6 +97,9 @@ class OrderParameter:
                     i += 1
                 phiphi_hist[i] += np.real(phiphi_vec[0, j])
                 counts[i] += 1
+            realization = N ** 2
+        print("\nTime Passed: " + str((time.time() - init_time) / 86400) + " days.\nSummed " + str(
+            realization) + " pairs")
         self.counts = counts
         self.op_corr = phiphi_hist / counts
         self.corr_centers = centers
@@ -105,14 +108,15 @@ class OrderParameter:
             self.lower.correlation(bin_width, low_memory=low_memory, randomize=randomize, realizations=realizations)
             self.upper.correlation(bin_width, low_memory=low_memory, randomize=randomize, realizations=realizations)
 
-    def __pair_corr__(self, i, j, centers, bin_width):
+    def __pair_corr__(self, i, j, bin_width):
         lx, ly = self.event_2d_cells.boundaries[:2]
         r, r_ = self.event_2d_cells.all_centers[i], self.event_2d_cells.all_centers[j]
         dr_vec = np.array(r) - r_
         dx = np.min(np.abs([dr_vec[0], dr_vec[0] + lx, dr_vec[0] - lx]))
         dy = np.min(np.abs([dr_vec[1], dr_vec[1] + ly, dr_vec[1] - ly]))
         dr = np.sqrt(dx ** 2 + dy ** 2)
-        k = np.where(np.logical_and(centers - bin_width / 2 <= dr, centers + bin_width / 2 > dr))[0][0]
+        # k = np.where(np.logical_and(centers - bin_width / 2 <= dr, centers + bin_width / 2 > dr))[0][0]
+        k = np.floor(dr / bin_width)
         return self.op_vec[i] * np.conjugate(self.op_vec[j]), k
 
     def write(self, write_correlation=True, write_vec=False, write_upper_lower=False):
@@ -185,6 +189,8 @@ class PositionalCorrelationFunction(OrderParameter):
         bins_edges = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1)
         self.corr_centers = bins_edges[:-1] + bin_width / 2
         self.counts = np.zeros(len(self.corr_centers))
+        init_time = time.time()
+        N = len(self.event_2d_cells.all_centers)
         if not low_memory:
             x = np.array([r[0] for r in self.event_2d_cells.all_centers])
             y = np.array([r[1] for r in self.event_2d_cells.all_centers])
@@ -208,21 +214,21 @@ class PositionalCorrelationFunction(OrderParameter):
             pairs_dr = pairs_dr[J]
             rs = pairs_dr * v_hat
             self.counts, _ = np.histogram(rs, bins_edges)
+            realization = N ** 2
         else:
-            init_time = time.time()
-            N = len(self.event_2d_cells.all_centers)
-            if not randomize:
+            if randomize:
+                for realization in range(realizations):
+                    i, j = random.randint(0, N - 1), random.randint(0, N - 1)
+                    self.__pair_dist__(self.event_2d_cells.all_centers[i], self.event_2d_cells.all_centers[j])
+                    if realization % 100 == 0 and time.time() - init_time > time_limit:
+                        break
+            else:
                 for r in self.event_2d_cells.all_centers:
                     for r_ in self.event_2d_cells.all_centers:
                         self.__pair_dist__(r, r_, v_hat, rect_width, bins_edges)
                 realization = N * (N - 1) / 2
-            else:
-                for realization in range(realizations):
-                    i, j = random.randint(0, N - 1), random.randint(0, N - 1)
-                    self.__pair_dist__(self.event_2d_cells.all_centers[i], self.event_2d_cells.all_centers[j])
-                    if time.time() - init_time > time_limit:
-                        break
-            print("\nTime Passed: " + str((time.time() - init_time) / 86400) + " days.\nSummed " + str(realization))
+        print("\nTime Passed: " + str((time.time() - init_time) / 86400) + " days.\nSummed " + str(
+            realization) + " pairs")
         self.op_corr = self.counts / np.nanmean(self.counts[np.where(self.counts > 0)])
 
         if calc_upper_lower:

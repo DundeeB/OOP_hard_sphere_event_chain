@@ -13,7 +13,6 @@ from scipy.spatial import Delaunay
 from scipy.optimize import fmin
 import time
 
-# TODO: positional correlations
 epsilon = 1e-8
 
 
@@ -59,7 +58,25 @@ class OrderParameter:
         centers = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1) + bin_width / 2
         counts = np.zeros(len(centers))
         phiphi_hist = np.zeros(len(centers), dtype=np.complex)
-        if not low_memory:
+        if low_memory:
+            if randomize:
+                init_time = time.time()
+                for real in range(realizations):
+                    i, j = random.randint(0, len(self.op_vec) - 1), random.randint(0, len(self.op_vec) - 1)
+                    phi_phi, k = self.__pair_corr__(i, j, centers, bin_width)
+                    counts[k] += 1
+                    phiphi_hist[k] += np.real(phi_phi)
+                    if time.time() - init_time > time_limit:
+                        print("Time limit of " + str(time_limit / 86400) + " days exceeds, " + str(
+                            real + 1) + "Realizations where added. Stops adding realizations")
+                        break
+            else:
+                for i in range(len(self.event_2d_cells.all_centers)):
+                    for j in range(i):  # j<i, j=i not interesting and j>i double counting accounted for in counts
+                        phi_phi, k = self.__pair_corr__(i, j, centers, bin_width)
+                        counts[k] += 2  # r-r' and r'-r
+                        phiphi_hist[k] += 2 * np.real(phi_phi)  # a+a'=2Re(a)
+        else:
             N = len(self.op_vec)
             v = np.array(self.op_vec).reshape(1, N)
             phiphi_vec = (np.conj(v) * v.T).reshape((N ** 2,))
@@ -80,24 +97,6 @@ class OrderParameter:
                     i += 1
                 phiphi_hist[i] += np.real(phiphi_vec[0, j])
                 counts[i] += 1
-        else:
-            if not randomize:
-                for i in range(len(self.event_2d_cells.all_centers)):
-                    for j in range(i):  # j<i, j=i not interesting and j>i double counting accounted for in counts
-                        phi_phi, k = self.__pair_corr__(i, j, centers, bin_width)
-                        counts[k] += 2  # r-r' and r'-r
-                        phiphi_hist[k] += 2 * np.real(phi_phi)  # a+a'=2Re(a)
-            else:
-                init_time = time.time()
-                for real in range(realizations):
-                    i, j = random.randint(0, len(self.op_vec) - 1), random.randint(0, len(self.op_vec) - 1)
-                    phi_phi, k = self.__pair_corr__(i, j, centers, bin_width)
-                    counts[k] += 1
-                    phiphi_hist[k] += np.real(phi_phi)
-                    if time.time() - init_time > time_limit:
-                        print("Time limit of " + str(time_limit / 86400) + " days exceeds, " + str(
-                            real + 1) + "Realizations where added. Stops adding realizations")
-                        break
         self.counts = counts
         self.op_corr = phiphi_hist / counts
         self.corr_centers = centers
@@ -210,20 +209,20 @@ class PositionalCorrelationFunction(OrderParameter):
             rs = pairs_dr * v_hat
             self.counts, _ = np.histogram(rs, bins_edges)
         else:
+            init_time = time.time()
+            N = len(self.event_2d_cells.all_centers)
             if not randomize:
                 for r in self.event_2d_cells.all_centers:
                     for r_ in self.event_2d_cells.all_centers:
                         self.__pair_dist__(r, r_, v_hat, rect_width, bins_edges)
+                realization = N * (N - 1) / 2
             else:
-                init_time = time.time()
                 for realization in range(realizations):
-                    i, j = random.randint(0, len(self.event_2d_cells) - 1), random.randint(0,
-                                                                                           len(self.event_2d_cells) - 1)
-                    self.__pair_dist__(self.event_2d_cells[i], self.event_2d_cells[j])
+                    i, j = random.randint(0, N - 1), random.randint(0, N - 1)
+                    self.__pair_dist__(self.event_2d_cells.all_centers[i], self.event_2d_cells.all_centers[j])
                     if time.time() - init_time > time_limit:
-                        print(
-                            "Exceed time limit of " + str(time_limit / 86400) + " days. Stopping summing realizations")
                         break
+            print("\nTime Passed: " + str((time.time() - init_time) / 86400) + " days.\nSummed " + str(realization))
         self.op_corr = self.counts / np.nanmean(self.counts[np.where(self.counts > 0)])
 
         if calc_upper_lower:
@@ -282,6 +281,7 @@ class RealizationsAveragedOP:
         self.numbered_files = numbered_files[:num_realizations]
 
     def calc_write(self, bin_width=0.2, calc_upper_lower=True):
+        # TODO: read exisiting data and save expensive calculation time
         op_type, op_args, numbered_files = self.op_type, self.op_args, self.numbered_files
         op = op_type(*op_args)  # starts with the last realization by default
         op.write(bin_width=bin_width)

@@ -116,7 +116,7 @@ class OrderParameter:
         dy = np.min(np.abs([dr_vec[1], dr_vec[1] + ly, dr_vec[1] - ly]))
         dr = np.sqrt(dx ** 2 + dy ** 2)
         # k = np.where(np.logical_and(centers - bin_width / 2 <= dr, centers + bin_width / 2 > dr))[0][0]
-        k = np.floor(dr / bin_width)
+        k = int(np.floor(dr / bin_width))
         return self.op_vec[i] * np.conjugate(self.op_vec[j]), k
 
     def write(self, write_correlation=True, write_vec=False, write_upper_lower=False):

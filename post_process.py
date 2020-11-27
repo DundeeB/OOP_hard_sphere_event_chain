@@ -60,8 +60,9 @@ class OrderParameter:
         counts = np.zeros(len(centers))
         phiphi_hist = np.zeros(len(centers), dtype=np.complex)
         if not low_memory:
-            phiphi_vec = (np.conj(np.transpose(np.matrix(self.op_vec))) *
-                          np.matrix(self.op_vec)).reshape((len(self.op_vec) ** 2,))
+            N = len(self.op_vec)
+            v = np.array(self.op_vec).reshape(1, N)
+            phiphi_vec = (np.conj(v) * v.T).reshape((N ** 2,))
             x = np.array([r[0] for r in self.event_2d_cells.all_centers])
             y = np.array([r[1] for r in self.event_2d_cells.all_centers])
             dx = (x.reshape((len(x), 1)) - x.reshape((1, len(x)))).reshape(len(x) ** 2, )
@@ -77,28 +78,28 @@ class OrderParameter:
             for j in range(len(pairs_dr)):
                 if pairs_dr[j] > centers[i] + bin_width / 2:
                     i += 1
-                phiphi_hist[i] += phiphi_vec[0, j]
+                phiphi_hist[i] += np.real(phiphi_vec[0, j])
                 counts[i] += 1
         else:
             if not randomize:
                 for i in range(len(self.event_2d_cells.all_centers)):
-                    for j in range(len(self.event_2d_cells.all_centers)):
+                    for j in range(i):  # j<i, j=i not interesting and j>i double counting accounted for in counts
                         phi_phi, k = self.__pair_corr__(i, j, centers, bin_width)
-                        counts[k] += 1
-                        phiphi_hist[k] += phi_phi
+                        counts[k] += 2  # r-r' and r'-r
+                        phiphi_hist[k] += 2 * np.real(phi_phi)  # a+a'=2Re(a)
             else:
                 init_time = time.time()
                 for real in range(realizations):
                     i, j = random.randint(0, len(self.op_vec) - 1), random.randint(0, len(self.op_vec) - 1)
                     phi_phi, k = self.__pair_corr__(i, j, centers, bin_width)
                     counts[k] += 1
-                    phiphi_hist[k] += phi_phi
+                    phiphi_hist[k] += np.real(phi_phi)
                     if time.time() - init_time > time_limit:
                         print("Time limit of " + str(time_limit / 86400) + " days exceeds, " + str(
                             real + 1) + "Realizations where added. Stops adding realizations")
                         break
         self.counts = counts
-        self.op_corr = np.real(phiphi_hist) / counts + 1j * np.imag(phiphi_hist) / counts
+        self.op_corr = phiphi_hist / counts
         self.corr_centers = centers
 
         if calc_upper_lower:
@@ -127,7 +128,7 @@ class OrderParameter:
             save_mat("vec", self.op_vec)
         if write_correlation:
             if self.op_corr is None: raise (Exception("Should calculate correlation before writing"))
-            save_mat("correlation", np.transpose([self.corr_centers, np.real(self.op_corr), self.counts]))
+            save_mat("correlation", np.transpose([self.corr_centers, self.op_corr, self.counts]))
         if write_upper_lower:
             self.lower.write(write_correlation, write_vec, write_upper_lower=False)
             self.upper.write(write_correlation, write_vec, write_upper_lower=False)

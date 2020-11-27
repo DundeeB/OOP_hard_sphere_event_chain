@@ -50,7 +50,7 @@ class OrderParameter:
         """to be override by child class"""
         pass
 
-    def correlation(self, bin_width=0.2, calc_upper_lower=False, low_memory=True, randomize=True,
+    def correlation(self, bin_width=0.2, calc_upper_lower=False, low_memory=True, randomize=False,
                     realizations=int(1e7), time_limit=172800):
         if self.op_vec is None: self.calc_order_parameter()
         lx, ly = self.event_2d_cells.boundaries[:2]
@@ -180,7 +180,7 @@ class PositionalCorrelationFunction(OrderParameter):
             self.upper.op_name = "upper_" + self.op_name
             self.lower.op_name = "lower_" + self.op_name
 
-    def correlation(self, bin_width=0.2, calc_upper_lower=False, low_memory=True, randomize=True,
+    def correlation(self, bin_width=0.2, calc_upper_lower=False, low_memory=True, randomize=False,
                     realizations=int(1e7), time_limit=172800):
         theta, rect_width = self.theta, self.rect_width
         v_hat = np.transpose(np.matrix([np.cos(theta), np.sin(theta)]))
@@ -504,7 +504,7 @@ class BraggStructure(OrderParameter):
             self.tour_on_circle(k_radii)
         self.calc_four_peaks()
 
-    def correlation(self, bin_width=0.2, low_memory=True, randomize=True, realizations=int(1e7), time_limit=172800):
+    def correlation(self, bin_width=0.2, low_memory=True, randomize=False, realizations=int(1e7), time_limit=172800):
         super().correlation(bin_width, False, low_memory, randomize, realizations, time_limit)
 
 

@@ -40,7 +40,7 @@ def main():
         # if h >= 1.0:
         #     send_specific_run(sim_name, ["psi23", "psi23mean", "Bragg_S23", "Bragg_Sm23"])
         if h == 0.8:
-            send_specific_run(sim_name, ["psi14", "burger_square", "Bragg_S14", "Bragg_Sm14"])
+            send_specific_run(sim_name, ["psi14", "burger_square", "Bragg_S14", "Bragg_Sm14", "pos"])
             # send_specific_run(sim_name, ["Bragg_S14", "Bragg_Sm14"])
         # if h <= 0.4:
         #     send_specific_run(sim_name, ["psi16", "Bragg_S16", "Bragg_Sm16"])

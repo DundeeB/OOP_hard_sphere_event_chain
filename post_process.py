@@ -112,8 +112,7 @@ class OrderParameter:
         dx = np.min(np.abs([dr_vec[0], dr_vec[0] + lx, dr_vec[0] - lx]))
         dy = np.min(np.abs([dr_vec[1], dr_vec[1] + ly, dr_vec[1] - ly]))
         dr = np.sqrt(dx ** 2 + dy ** 2)
-        k = \
-            np.where(np.logical_and(centers - bin_width / 2 <= dr, centers + bin_width / 2 > dr))[0][0]
+        k = np.where(np.logical_and(centers - bin_width / 2 <= dr, centers + bin_width / 2 > dr))[0][0]
         return self.op_vec[i] * np.conjugate(self.op_vec[j]), k
 
     def write(self, write_correlation=True, write_vec=False, write_upper_lower=False):
@@ -128,7 +127,7 @@ class OrderParameter:
             save_mat("vec", self.op_vec)
         if write_correlation:
             if self.op_corr is None: raise (Exception("Should calculate correlation before writing"))
-            save_mat("correlation", np.transpose([self.corr_centers, np.abs(self.op_corr), self.counts]))
+            save_mat("correlation", np.transpose([self.corr_centers, np.real(self.op_corr), self.counts]))
         if write_upper_lower:
             self.lower.write(write_correlation, write_vec, write_upper_lower=False)
             self.upper.write(write_correlation, write_vec, write_upper_lower=False)
@@ -447,45 +446,40 @@ class BraggStructure(OrderParameter):
     def calc_eikr(self, k):
         return np.exp([1j * (k[0] * r[0] + k[1] * r[1]) for r in self.spheres])
 
-    def S(self, k, low_memory=True, randomize=False, realizations=int(1e7), time_limit=172800):
-        eikr = self.calc_eikr(k)
-        eikr_conj = np.conjugate(eikr)
+    def S(self, k):
+        sum_r = np.sum(self.calc_eikr(k))
         N = len(self.spheres)
-        sum_ = 0
-        if not low_memory:
-            sum_ = np.sum([p * p_conj for p in eikr for p_conj in eikr_conj])
-        else:
-            if not randomize:
-                for p in eikr:
-                    for p_conj in eikr_conj:
-                        sum_ += p * p_conj
-            else:
-                init_time = time.time()
-                for real in range(realizations):
-                    i, j = random.randint(0, len(eikr) - 1), random.randint(0, len(eikr) - 1)
-                    sum_ += eikr[i] * eikr_conj[j]
-                    if time.time() - init_time > time_limit:
-                        print("Time limit of " + str(time_limit / 86400) + " days exceeds, stops adding realizations")
-                        break
-                # normalize sum_ as it should estimate the sum of N^2 entries
-                sum_ *= N ** 2 / (real + 1)
-        S_ = sum_ / N
-        if low_memory and randomize:
-            self.data.append([k[0], k[1], S_, real])
-        else:
-            S_ = np.real(S_)
-            self.data.append([k[0], k[1], S_, N ** 2])
+        S_ = np.real(1 / N * sum_r * np.conjugate(sum_r))
+        self.data.append([k[0], k[1], S_])
         return S_
+
+    def tour_on_circle(self, k_radii, theta=None):
+        if theta is None:
+            theta_peak = np.arctan2(self.k_peak[1], self.k_peak[0])
+            theta = np.mod(theta_peak + np.linspace(0, 1, 101) * 2 * np.pi, 2 * np.pi)
+            theta = np.sort(np.concatenate([theta, [np.pi / 4 * x for x in range(8)]]))
+        for t in theta:
+            self.S(k_radii * np.array([np.cos(t), np.sin(t)]))
 
     def k_perf(self):
         return 2 * np.pi / np.sqrt(self.event_2d_cells.l_x * self.event_2d_cells.l_y / len(
             self.spheres)) * np.array([1, 1])  # rotate self.spheres by orientation before so peak is at [1, 1]
 
-    def calc_peak(self, *args, **kwargs):
-        S = lambda k: -np.real(self.S(k, *args, **kwargs))
+    def calc_peak(self):
+        S = lambda k: -self.S(k)
         self.k_peak, S_peak_m, _, _, _ = fmin(S, self.k_perf(), xtol=0.01 / len(self.spheres), ftol=1.0,
                                               full_output=True)
         self.S_peak = -S_peak_m
+
+    def calc_four_peaks(self):
+        S = lambda k: -self.S(k)
+        self.four_peaks_k = []
+        self.four_peaks_S = []
+        k_radii = np.linalg.norm(self.k_perf())
+        for theta in [np.pi / 4 + n * np.pi / 2 for n in range(1, 4)]:
+            k_perf = k_radii * np.array([np.cos(theta), np.sin(theta)])
+            k_peak, S_peak_m, _, _, _ = fmin(S, k_perf, xtol=0.01 / len(self.spheres), ftol=1.0,
+                                             full_output=True)
 
     def write(self):
         self.op_vec = np.array(self.data)
@@ -496,6 +490,12 @@ class BraggStructure(OrderParameter):
     def calc_order_parameter(self):
         self.calc_peak()
         self.op_vec = self.calc_eikr(self.k_peak)
+        k1, k2 = np.linalg.norm(self.k_perf()), np.linalg.norm(self.k_peak)
+        m1, m2 = min([k1, k2]), max([k1, k2])
+        dm = m2 - m1
+        for k_radii in np.linspace(m1 - 10 * dm, m2 + 10 * dm, 12):
+            self.tour_on_circle(k_radii)
+        self.calc_four_peaks()
 
     def correlation(self, bin_width=0.2, low_memory=True, randomize=True, realizations=int(1e7), time_limit=172800):
         super().correlation(bin_width, False, low_memory, randomize, realizations, time_limit)
@@ -508,9 +508,12 @@ class MagneticBraggStructure(BraggStructure):
 
     def calc_eikr(self, k):
         # sum_n(z_n*e^(ikr_n))
-        return np.array([(2 * (r[2] - 1) / (self.event_2d_cells.l_z - 1) - 1) *  # z in [-1,1]
-                         np.exp(1j * (k[0] * r[0] + k[1] * r[1]))
-                         for r in self.spheres])
+        # z in [rad,lz-rad]-->z in [-1,1]: (z-lz/2)/(lz/2-rad)
+        # For z=rad we have (rad-lz/2)/(lz/2-rad)=-1
+        # For z=lz-rad we have (lz-rad-lz/2)/(lz/2-rad)=1.
+        rad, lz = 1.0, self.event_2d_cells.l_z
+        return np.array(
+            [(r[2] - lz / 2) / (lz / 2 - rad) * np.exp(1j * (k[0] * r[0] + k[1] * r[1])) for r in self.spheres])
 
     def k_perf(self):
         return super(MagneticBraggStructure, self).k_perf() / 2

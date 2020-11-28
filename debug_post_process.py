@@ -4,7 +4,7 @@ from time import time
 from mpl_toolkits import mplot3d
 
 t0 = time()
-post_process_path = 'C:\\Users\\Daniel Abutbul\\OneDrive - Technion\\post_process\\from_ATLAS2.0\\N=900_h=0.8_rhoH=0.81_AF_triangle_ECMC'
+post_process_path = 'C:\\Users\\Daniel Abutbul\\OneDrive - Technion\\post_process\\from_ATLAS3.0\\N=10000_h=0.8_rhoH=0.79_AF_square_ECMC'
 psi_op = PsiMN(post_process_path, 1, 4)
 psi_op.calc_order_parameter()
 t1 = time()
@@ -35,7 +35,7 @@ for data, lbl, sub in zip([braggM.data, bragg.data], ['$S_m$', '$S$'], [1, 2]):
     plt.figure(1)
     plt.subplot(211)
     ks = [np.sqrt(d[0] ** 2 + d[1] ** 2) for d in data]
-    S_values = [np.abs(d[2]) for d in data]
+    S_values = [d[2] for d in data]
     plt.plot(ks, S_values, 'o', linewidth=1.5, label=lbl)
     plt.xlabel('|k|')
     plt.legend()
@@ -50,17 +50,19 @@ for data, lbl, sub in zip([braggM.data, bragg.data], ['$S_m$', '$S$'], [1, 2]):
     ax.set_ylabel('$k_y$')
     ax.set_zlabel(lbl)
 # plt.show()
+
+reals = int(1e4)
 t3 = time()
-bragg.correlation(realizations=int(1e5))
+bragg.correlation(realizations=reals, randomize=True)
 t4 = time()
-print('Bragg Correlations elapsed time: ' + str(t4 - t3))
-braggM.correlation(realizations=int(1e5))
+print('Bragg Correlations pairs per sec: ' + str(reals/(t4 - t3)))
+braggM.correlation(realizations=reals, randomize=True)
 t5 = time()
-print('Magnetic Bragg Correlations elapsed time: ' + str(t5 - t4))
+print('Magnetic Bragg Correlations pairs per sec: ' + str(reals/(t5 - t4)))
 
 plt.figure()
-plt.loglog(bragg.corr_centers, bragg.op_corr, '.-', label='e^ikr correlation for k_peak of S(k)')
-plt.loglog(braggM.corr_centers, braggM.op_corr, '.-', label='z*e^ikr correlation for k_peak of $S_M$(k)')
+plt.loglog(bragg.corr_centers, np.abs(bragg.op_corr), '.-', label='e^ikr correlation for k_peak of S(k)')
+plt.loglog(braggM.corr_centers, np.abs(braggM.op_corr), '.-', label='z*e^ikr correlation for k_peak of $S_M$(k)')
 plt.legend()
 plt.xlabel('$\\Delta$r')
 plt.show()

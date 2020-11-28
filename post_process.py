@@ -70,7 +70,7 @@ class OrderParameter:
                     if realization % 1000 == 0 and time.time() - init_time > time_limit:
                         break
             else:
-                for i in range(len(self.event_2d_cells.all_centers)):
+                for i in range(N):
                     for j in range(i):  # j<i, j=i not interesting and j>i double counting accounted for in counts
                         phi_phi, k = self.__pair_corr__(i, j, bin_width)
                         counts[k] += 2  # r-r' and r'-r
@@ -175,6 +175,7 @@ class PositionalCorrelationFunction(OrderParameter):
         self.theta = theta
         self.rect_width = rect_width
         self.op_name = "positional_theta=" + str(theta)
+        # TODO rotate by theta change op name to pos and keep self.spheres with rotated spheres
         if calc_upper_lower:
             self.upper.op_name = "upper_" + self.op_name
             self.lower.op_name = "lower_" + self.op_name
@@ -182,7 +183,7 @@ class PositionalCorrelationFunction(OrderParameter):
     def correlation(self, bin_width=0.2, calc_upper_lower=False, low_memory=True, randomize=False,
                     realizations=int(1e7), time_limit=172800):
         theta, rect_width = self.theta, self.rect_width
-        v_hat = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
+        v_hat = np.array([np.cos(theta), np.sin(theta)])
         lx, ly = self.event_2d_cells.boundaries[:2]
         l = np.sqrt(lx ** 2 + ly ** 2) / 2
         bins_edges = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1)
@@ -190,31 +191,7 @@ class PositionalCorrelationFunction(OrderParameter):
         self.counts = np.zeros(len(self.corr_centers))
         init_time = time.time()
         N = len(self.event_2d_cells.all_centers)
-        if not low_memory:
-            x = np.array([r[0] for r in self.event_2d_cells.all_centers])
-            y = np.array([r[1] for r in self.event_2d_cells.all_centers])
-            dx = (x.reshape((len(x), 1)) - x.reshape((1, len(x)))).reshape(len(x) ** 2, )
-            dy = (y.reshape((len(y), 1)) - y.reshape((1, len(y)))).reshape(len(y) ** 2, )
-            A = np.transpose([dx, dx + lx, dx - lx])
-            I = np.argmin(np.abs(A), axis=1)
-            J = [i for i in range(len(I))]
-            dx = A[J, I]
-            A = np.transpose([dy, dy + ly, dy - ly])
-            I = np.argmin(np.abs(A), axis=1)
-            dy = A[J, I]
-
-            pairs_dr = np.transpose([dx, dy])
-
-            dist_vec = np.transpose(v_hat * np.transpose(pairs_dr * v_hat) - np.transpose(pairs_dr))
-            dist_to_line = np.linalg.norm(dist_vec, axis=1)
-            I = np.where(dist_to_line <= rect_width / 2)[0]
-            pairs_dr = pairs_dr[I]
-            J = np.where(pairs_dr * v_hat > 0)[0]
-            pairs_dr = pairs_dr[J]
-            rs = pairs_dr * v_hat
-            self.counts, _ = np.histogram(rs, bins_edges)
-            realization = N ** 2
-        else:
+        if low_memory:
             if randomize:
                 for realization in range(realizations):
                     i, j = random.randint(0, N - 1), random.randint(0, N - 1)
@@ -227,6 +204,32 @@ class PositionalCorrelationFunction(OrderParameter):
                     for r_ in self.event_2d_cells.all_centers:
                         self.__pair_dist__(r, r_, v_hat, rect_width)
                 realization = N * (N - 1) / 2
+        else:
+            x = np.array([r[0] for r in self.event_2d_cells.all_centers])
+            y = np.array([r[1] for r in self.event_2d_cells.all_centers])
+            N = len(x)
+            dx = (x.reshape((N, 1)) - x.reshape((1, N))).reshape(N ** 2, )
+            dy = (y.reshape((N, 1)) - y.reshape((1, N))).reshape(N ** 2, )
+            A = np.transpose([dx, dx + lx, dx - lx])
+            I = np.argmin(np.abs(A), axis=1)
+            J = [i for i in range(len(I))]
+            dx = A[J, I]
+            A = np.transpose([dy, dy + ly, dy - ly])
+            I = np.argmin(np.abs(A), axis=1)
+            dy = A[J, I]
+
+            pairs_dr = np.transpose([dx, dy])
+
+            m = lambda A, B: np.matmul(A, B)
+            dist_vec = m(v_hat.reshape(2, 1), m(pairs_dr, v_hat).reshape(1, N)).T - pairs_dr
+            dist_to_line = np.linalg.norm(dist_vec, axis=1)
+            I = np.where(dist_to_line <= rect_width / 2)[0]
+            pairs_dr = pairs_dr[I]
+            J = np.where(m(pairs_dr, v_hat) > 0)[0]
+            pairs_dr = pairs_dr[J]
+            rs = m(pairs_dr, v_hat)
+            self.counts, _ = np.histogram(rs, bins_edges)
+            realization = N ** 2
         print("\nTime Passed: " + str((time.time() - init_time) / 86400) + " days.\nSummed " + str(
             realization) + " pairs")
         self.op_corr = self.counts / np.nanmean(self.counts[np.where(self.counts > 0)])
@@ -250,7 +253,7 @@ class PositionalCorrelationFunction(OrderParameter):
         dy = dys[np.argmin(np.abs(dys))]
         dr = np.array([dx, dy])
         dist_on_line = float(np.dot(dr, v_hat))
-        dist_vec = v_hat * dist_on_line - np.transpose(np.matrix(dr))
+        dist_vec = v_hat * dist_on_line - dr
         dist_to_line = np.linalg.norm(dist_vec)
         if dist_to_line <= rect_width / 2 and dist_on_line > 0:
             k = int(np.floor(dist_on_line / rect_width))

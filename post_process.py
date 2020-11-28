@@ -232,12 +232,12 @@ class PositionalCorrelationFunction(OrderParameter):
         self.op_corr = self.counts / np.nanmean(self.counts[np.where(self.counts > 0)])
 
         if calc_upper_lower:
-            assert (self.upper is not None,
-                    "Failed calculating upper positional correlation because it was not initialized")
+            assert self.upper is not None, \
+                "Failed calculating upper positional correlation because it was not initialized"
             self.upper.correlation(bin_width=bin_width, low_memory=low_memory, randomize=randomize,
                                    realizations=realizations)
-            assert (self.upper is not None,
-                    "Failed calculating lower positional correlation because it was not initialized")
+            assert self.upper is not None, \
+                "Failed calculating lower positional correlation because it was not initialized"
             self.lower.correlation(bin_width=bin_width, low_memory=low_memory, randomize=randomize,
                                    realizations=realizations)
 

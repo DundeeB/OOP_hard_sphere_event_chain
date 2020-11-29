@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from time import time
 from mpl_toolkits import mplot3d
 
+# TODO: figure out why calculation time doesnt scale as O(N) worst (per realization should scale as O(1))
 t0 = time()
 post_process_path = 'C:\\Users\\Daniel Abutbul\\OneDrive - Technion\\post_process\\from_ATLAS3.0\\N=10000_h=0.8_rhoH=0.79_AF_square_ECMC'
 psi_op = PsiMN(post_process_path, 1, 4)
@@ -44,6 +45,7 @@ for data, lbl, sub in zip([braggM.data, bragg.data], ['$S_m$', '$S$'], [1, 2]):
     plt.plot(thetas, S_values, 'o', linewidth=1.5, label=lbl)
     plt.xlabel('$\\theta$')
     plt.legend()
+
     ax = fig2.add_subplot(2, 1, sub, projection='3d')
     ax.scatter([d[0] for d in data], [d[1] for d in data], S_values, '.')
     ax.set_xlabel('$k_x$')
@@ -55,10 +57,10 @@ reals = int(1e4)
 t3 = time()
 bragg.correlation(realizations=reals, randomize=True)
 t4 = time()
-print('Bragg Correlations pairs per sec: ' + str(reals/(t4 - t3)))
+print('Bragg Correlations pairs per sec: ' + str(reals / (t4 - t3)))
 braggM.correlation(realizations=reals, randomize=True)
 t5 = time()
-print('Magnetic Bragg Correlations pairs per sec: ' + str(reals/(t5 - t4)))
+print('Magnetic Bragg Correlations pairs per sec: ' + str(reals / (t5 - t4)))
 
 plt.figure()
 plt.loglog(bragg.corr_centers, np.abs(bragg.op_corr), '.-', label='e^ikr correlation for k_peak of S(k)')

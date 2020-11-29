@@ -1,7 +1,6 @@
 from run_functions import *
 import matplotlib.pyplot as plt
 
-# TODO: estimate ATLAS performence
 # t, d, r = [], [], []
 # for iterations in range(200, 1000, 200):
 iterations = 500

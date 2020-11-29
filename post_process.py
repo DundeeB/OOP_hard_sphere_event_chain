@@ -195,14 +195,20 @@ class PositionalCorrelationFunction(OrderParameter):
             if randomize:
                 for realization in range(realizations):
                     i, j = random.randint(0, N - 1), random.randint(0, N - 1)
-                    self.__pair_dist__(self.event_2d_cells.all_centers[i], self.event_2d_cells.all_centers[j], v_hat,
-                                       rect_width)
+                    k = self.__pair_dist__(self.event_2d_cells.all_centers[i], self.event_2d_cells.all_centers[j],
+                                           v_hat,
+                                           rect_width)
+                    if k is not None:
+                        self.counts[k] += 1
                     if realization % 1000 == 0 and time.time() - init_time > time_limit:
                         break
             else:
-                for r in self.event_2d_cells.all_centers:
-                    for r_ in self.event_2d_cells.all_centers:
-                        self.__pair_dist__(r, r_, v_hat, rect_width)
+                for i in range(N):
+                    for j in range(i):
+                        k = self.__pair_dist__(self.event_2d_cells.all_centers[i], self.event_2d_cells.all_centers[j],
+                                               v_hat, rect_width)
+                        if k is not None:
+                            self.counts[k] += 2
                 realization = N * (N - 1) / 2
         else:
             x = np.array([r[0] for r in self.event_2d_cells.all_centers])
@@ -257,7 +263,9 @@ class PositionalCorrelationFunction(OrderParameter):
         dist_to_line = np.linalg.norm(dist_vec)
         if dist_to_line <= rect_width / 2 and dist_on_line > 0:
             k = int(np.floor(dist_on_line / rect_width))
-            self.counts[k] += 1
+            return k
+        else:
+            return None
 
 
 class PsiUpPsiDown(PsiMN):
@@ -642,6 +650,7 @@ def main():
             i += 1
         sort_save(psis_path, reals, psis_mean)
     if calc_type.startswith("Bragg_S"):
+        # TODO: save vec and only than attempt to calc correlation in case correlation does not finish in time
         init_time = time.time()
         if calc_type.endswith("23"): psi = PsiMN(sim_path, 2, 3)
         if calc_type.endswith("16"): psi = PsiMN(sim_path, 1, 6)

@@ -86,10 +86,12 @@ class WriteOrLoad:
             v_hat = np.array([0, 0, 0])
             v_hat[step.direction.dim] = step.direction.sgn
             WriteOrLoad.plt_step(cloned_step.sphere, v_hat * step.total_step, 0.1)
-        for cell in array_of_cells.all_cells:
-            x, y = cell.site
-            rec = plt.Rectangle((x, y), cell.edges[0], cell.edges[1], fill=False)
-            plt.gca().add_patch(rec)
+        for i in range(len(self.cells)):
+            for j in range(len(self.cells[i])):
+                c = self.cells[i][j]
+                x, y = c.site
+                rec = plt.Rectangle((x, y), c.edges[0], c.edges[1], fill=False)
+                plt.gca().add_patch(rec)
         plt.savefig(os.path.join(self.output_dir, img_name + ".png"))
 
     def save_video(self, video_name, fps):

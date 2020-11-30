@@ -349,22 +349,7 @@ class ArrayOfCells:
         self.boundaries = boundaries
         self.n_rows = len(cells)
         self.n_columns = len(cells[0])
-
-    @property
-    def all_cells(self):
-        return [c for c in np.reshape(self.cells, -1)]
-
-    @property
-    def all_spheres(self):
-        """
-        :return: list of Sphere objects of all the spheres in the array
-        """
-        spheres = []
-        for cell in self.all_cells:
-            if cell == []: continue
-            for sphere in cell.spheres:
-                spheres.append(sphere)
-        return spheres
+        self.all_spheres = []
 
     @property
     def all_centers(self):
@@ -460,7 +445,7 @@ class ArrayOfCells:
         """
         :return: True if there are no overlapping spheres in the configuration
         """
-        if self.all_cells == []: return True
+        if self.cells == []: return True
         if self.dim != 2:
             raise (Exception('Only d=2 supported!'))
         n_rows, n_columns = self.n_rows, self.n_columns
@@ -493,29 +478,33 @@ class ArrayOfCells:
     def random_generate_spheres(self, n_spheres_per_cell, rad, l_z=3.0):
         if type(rad) != list: rad = n_spheres_per_cell * [rad]
         while True:
-            for cell in self.all_cells:
-                cell.random_generate_spheres(n_spheres_per_cell, rad, l_z)
+            for i in range(len(self.cells)):
+                for j in range(len(self.cells[i])):
+                    cell = self.cells[i][j]
+                    cell.random_generate_spheres(n_spheres_per_cell, rad, l_z)
             if self.legal_configuration():
                 return
 
     def generate_spheres_in_cubic_structure(self, n_spheres_per_cell, rad):
         if type(rad) != list: rad = n_spheres_per_cell * [rad]
-        for cell in self.all_cells:
-            dx, dy, dz = epsilon, epsilon, epsilon
-            x0, y0 = cell.site
-            max_r = 0
-            for i in range(n_spheres_per_cell):
-                r = rad[i]
-                if r > max_r: max_r = r
-                center = (x0 + dx + r, y0 + dy + r, dz + r)
-                cell.append(Sphere(center, r))
-                dx += 2 * r + epsilon
-                if (i < n_spheres_per_cell - 1) and (dx + 2 * rad[i + 1] > cell.edges[0]):
-                    dx = 0
-                    dy += 2 * max_r + epsilon
-                    max_r = 0
-                if (i < n_spheres_per_cell - 1) and (dy + 2 * rad[i + 1] > cell.edges[1]):
-                    break
+        for i in range(len(self.cells)):
+            for j in range(len(self.cells[i])):
+                cell = self.cells[i][j]
+                dx, dy, dz = epsilon, epsilon, epsilon
+                x0, y0 = cell.site
+                max_r = 0
+                for k in range(n_spheres_per_cell):
+                    r = rad[k]
+                    if r > max_r: max_r = r
+                    center = (x0 + dx + r, y0 + dy + r, dz + r)
+                    cell.append(Sphere(center, r))
+                    dx += 2 * r + epsilon
+                    if (k < n_spheres_per_cell - 1) and (dx + 2 * rad[k + 1] > cell.edges[0]):
+                        dx = 0
+                        dy += 2 * max_r + epsilon
+                        max_r = 0
+                    if (k < n_spheres_per_cell - 1) and (dy + 2 * rad[k + 1] > cell.edges[1]):
+                        break
         assert self.legal_configuration()
 
     def append_sphere(self, spheres):
@@ -524,13 +513,16 @@ class ArrayOfCells:
             spheres = [spheres]
         cells = []
         for sphere in spheres:
+            self.all_spheres.append(sphere)
             sp_added_to_cell = False
-            for c in self.all_cells:
-                if c.center_in_cell(sphere):
-                    c.append(sphere)
-                    cells.append(c)
-                    sp_added_to_cell = True
-                    break
+            for i in range(len(self.cells)):
+                for j in range(len(self.cells[i])):
+                    c = self.cells[i][j]
+                    if c.center_in_cell(sphere):
+                        c.append(sphere)
+                        cells.append(c)
+                        sp_added_to_cell = True
+                        break
             if not sp_added_to_cell:
                 raise ValueError("A sphere was not added to any of the cells")
         if len(cells) == 1:
@@ -563,12 +555,16 @@ class ArrayOfCells:
         """
         transferred_spheres = []
         vec = np.array(vec)
-        for c in self.all_cells:
-            for s in c.spheres:
-                for i in range(min(len(s.center), len(vec))):
-                    s.center[i] += vec[i]
-                transferred_spheres.append(s)
-        for c in self.all_cells:
-            c.spheres = []
+        for i in range(len(self.cells)):
+            for j in range(len(self.cells[i])):
+                c = self.cells[i][j]
+                for s in c.spheres:
+                    for k in range(min(len(s.center), len(vec))):
+                        s.center[k] += vec[k]
+                    transferred_spheres.append(s)
+        for i in range(len(self.cells)):
+            for j in range(len(self.cells[i])):
+                c = self.cells[i][j]
+                c.spheres = []
         # self.append_sphere(transferred_spheres)
         return transferred_spheres

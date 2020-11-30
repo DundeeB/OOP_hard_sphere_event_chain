@@ -103,6 +103,7 @@ class Event2DCells(ArrayOfCells):
             spheres = [spheres]
         cells = []
         for sphere in spheres:
+            self.all_spheres.append(sphere)
             cell = self.cell_of_sphere(sphere)
             cell.append(sphere)
             cells.append(cell)
@@ -259,11 +260,13 @@ class Event2DCells(ArrayOfCells):
         self.boundaries[0] *= factor
         self.boundaries[1] *= factor
         # not self.boundaries[2]
-        for c in self.all_cells:
-            c.site = [x * factor for x in c.site]
-            c.edges = [e * factor for e in c.edges]  # cell is 2D
-            for s in c.spheres:
-                s.center = [s.center[0] * factor, s.center[1] * factor, s.center[2]]
+        for i in range(len(self.cells)):
+            for j in range(len(self.cells[i])):
+                c = self.cells[i][j]
+                c.site = [x * factor for x in c.site]
+                c.edges = [e * factor for e in c.edges]  # cell is 2D
+                for s in c.spheres:
+                    s.center = [s.center[0] * factor, s.center[1] * factor, s.center[2]]
         assert self.legal_configuration(), "Scaling failed, illegal configuration"
 
     def quench(self, desired_rho):
@@ -275,13 +278,14 @@ class Event2DCells(ArrayOfCells):
         simulated Annealing is a bit more specific then that, I chose the name quench.
         :param desired_rho: density destination
         """
-        N = len(self.all_spheres)
-        rho = N * ((2 * self.all_spheres[0].rad) ** 3) / (self.l_x * self.l_y * self.l_z)
+        spheres = self.all_spheres
+        N = len(spheres)
+        rho = N * ((2 * spheres[0].rad) ** 3) / (self.l_x * self.l_y * self.l_z)
         while rho < desired_rho:  # we need to compress
-            min_x, i_min_x = min((s.center[0] - s.rad, i_sp) for (i_sp, s) in enumerate(self.all_spheres))
-            max_x, i_max_x = max((s.center[0] + s.rad, i_sp) for (i_sp, s) in enumerate(self.all_spheres))
-            min_y, i_min_y = min((s.center[1] - s.rad, i_sp) for (i_sp, s) in enumerate(self.all_spheres))
-            max_y, i_max_y = max((s.center[1] + s.rad, i_sp) for (i_sp, s) in enumerate(self.all_spheres))
+            min_x, i_min_x = min((s.center[0] - s.rad, i_sp) for (i_sp, s) in enumerate(spheres))
+            max_x, i_max_x = max((s.center[0] + s.rad, i_sp) for (i_sp, s) in enumerate(spheres))
+            min_y, i_min_y = min((s.center[1] - s.rad, i_sp) for (i_sp, s) in enumerate(spheres))
+            max_y, i_max_y = max((s.center[1] + s.rad, i_sp) for (i_sp, s) in enumerate(spheres))
             new_lx = max_x - min_x
             new_ly = max_y - min_y
             if new_lx < self.l_x or new_ly < self.l_y:  # we have some space to squizz

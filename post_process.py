@@ -28,6 +28,7 @@ class OrderParameter:
             centers, spheres_ind = write_or_load.last_spheres()
         self.spheres_ind = spheres_ind
         self.event_2d_cells.append_sphere([Sphere(c, rad) for c in centers])
+        self.spheres = self.event_2d_cells.all_centers
         self.write_or_load = WriteOrLoad(sim_path, self.event_2d_cells.boundaries)
         self.N = len(centers)
 
@@ -38,10 +39,8 @@ class OrderParameter:
 
         self.op_name = "phi"
         if calc_upper_lower:
-            upper_centers = [c for c in self.event_2d_cells.all_centers if
-                             c[2] >= self.event_2d_cells.boundaries[2] / 2]
-            lower_centers = [c for c in self.event_2d_cells.all_centers if
-                             c[2] < self.event_2d_cells.boundaries[2] / 2]
+            upper_centers = [c for c in self.spheres if c[2] >= self.event_2d_cells.boundaries[2] / 2]
+            lower_centers = [c for c in self.spheres if c[2] < self.event_2d_cells.boundaries[2] / 2]
             self.upper = type(self)(sim_path, centers=upper_centers, spheres_ind=self.spheres_ind,
                                     calc_upper_lower=False, **kwargs)
             self.lower = type(self)(sim_path, centers=lower_centers, spheres_ind=self.spheres_ind,
@@ -60,7 +59,7 @@ class OrderParameter:
         counts = np.zeros(len(centers))
         phiphi_hist = np.zeros(len(centers))
         init_time = time.time()
-        N = len(self.event_2d_cells.all_centers)
+        N = len(self.spheres)
         if low_memory:
             if randomize:
                 for realization in range(realizations):
@@ -81,8 +80,8 @@ class OrderParameter:
             N = len(self.op_vec)
             v = np.array(self.op_vec).reshape(1, N)
             phiphi_vec = (np.conj(v) * v.T).reshape((N ** 2,))
-            x = np.array([r[0] for r in self.event_2d_cells.all_centers])
-            y = np.array([r[1] for r in self.event_2d_cells.all_centers])
+            x = np.array([r[0] for r in self.spheres])
+            y = np.array([r[1] for r in self.spheres])
             dx = (x.reshape((len(x), 1)) - x.reshape((1, len(x)))).reshape(len(x) ** 2, )
             dy = (y.reshape((len(y), 1)) - y.reshape((1, len(y)))).reshape(len(y) ** 2, )
             dx = np.minimum(np.abs(dx), np.minimum(np.abs(dx + lx), np.abs(dx - lx)))
@@ -111,7 +110,7 @@ class OrderParameter:
 
     def __pair_corr__(self, i, j, bin_width):
         lx, ly = self.event_2d_cells.boundaries[:2]
-        r, r_ = self.event_2d_cells.all_centers[i], self.event_2d_cells.all_centers[j]
+        r, r_ = self.spheres[i], self.spheres[j]
         dr_vec = np.array(r) - r_
         dx = np.min(np.abs([dr_vec[0], dr_vec[0] + lx, dr_vec[0] - lx]))
         dy = np.min(np.abs([dr_vec[1], dr_vec[1] + ly, dr_vec[1] - ly]))
@@ -178,7 +177,7 @@ class PsiMN(OrderParameter):
         else:
             R = np.array([[np.cos(orientation), np.sin(orientation), 0], [-np.sin(orientation), np.cos(orientation), 0],
                           [0.0, 0.0, 1.0]])  # rotate back from orientation-->0
-            return orientation, [np.matmul(R, r) for r in self.event_2d_cells.all_centers]
+            return orientation, [np.matmul(R, r) for r in self.spheres]
 
 
 class PositionalCorrelationFunction(OrderParameter):
@@ -202,14 +201,12 @@ class PositionalCorrelationFunction(OrderParameter):
         self.corr_centers = bins_edges[:-1] + bin_width / 2
         self.counts = np.zeros(len(self.corr_centers))
         init_time = time.time()
-        N = len(self.event_2d_cells.all_centers)
+        N = len(self.spheres)
         if low_memory:
             if randomize:
                 for realization in range(realizations):
                     i, j = random.randint(0, N - 1), random.randint(0, N - 1)
-                    k = self.__pair_dist__(self.event_2d_cells.all_centers[i], self.event_2d_cells.all_centers[j],
-                                           v_hat,
-                                           rect_width)
+                    k = self.__pair_dist__(self.spheres[i], self.spheres[j], v_hat, rect_width)
                     if k is not None:
                         self.counts[k] += 1
                     if realization % 1000 == 0 and time.time() - init_time > time_limit:
@@ -217,14 +214,13 @@ class PositionalCorrelationFunction(OrderParameter):
             else:
                 for i in range(N):
                     for j in range(i):
-                        k = self.__pair_dist__(self.event_2d_cells.all_centers[i], self.event_2d_cells.all_centers[j],
-                                               v_hat, rect_width)
+                        k = self.__pair_dist__(self.spheres[i], self.spheres[j], v_hat, rect_width)
                         if k is not None:
                             self.counts[k] += 1
                 realization = N * (N - 1) / 2
         else:
-            x = np.array([r[0] for r in self.event_2d_cells.all_centers])
-            y = np.array([r[1] for r in self.event_2d_cells.all_centers])
+            x = np.array([r[0] for r in self.spheres])
+            y = np.array([r[1] for r in self.spheres])
             N = len(x)
             dx = (x.reshape((N, 1)) - x.reshape((1, N))).reshape(N ** 2, )
             dy = (y.reshape((N, 1)) - y.reshape((1, N))).reshape(N ** 2, )
@@ -367,10 +363,8 @@ class BurgerField(OrderParameter):
         self.psi = psi_op
         self.a1, self.a2 = a1, a2
         if calc_upper_lower:
-            upper_centers = [c for c in self.event_2d_cells.all_centers if
-                             c[2] >= self.event_2d_cells.boundaries[2] / 2]
-            lower_centers = [c for c in self.event_2d_cells.all_centers if
-                             c[2] < self.event_2d_cells.boundaries[2] / 2]
+            upper_centers = [c for c in self.spheres if c[2] >= self.event_2d_cells.boundaries[2] / 2]
+            lower_centers = [c for c in self.spheres if c[2] < self.event_2d_cells.boundaries[2] / 2]
             self.upper = BurgerField(sim_path, centers=upper_centers, spheres_ind=self.spheres_ind,
                                      a1=a1 + a2, a2=a1 - a2, psi_op=psi_op.upper)
             self.lower = BurgerField(sim_path, centers=lower_centers, spheres_ind=self.spheres_ind,
@@ -463,7 +457,7 @@ class BurgerField(OrderParameter):
 class BraggStructure(OrderParameter):
     def __init__(self, sim_path, psi_op: PsiMN, centers=None, spheres_ind=None):
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower=False)
-        _, self.spheres = psi_op.rotate_spheres(self.event_2d_cells.all_centers)
+        _, self.spheres = psi_op.rotate_spheres()
         self.op_name = "Bragg_S"
         self.k_peak = None
         self.data = []

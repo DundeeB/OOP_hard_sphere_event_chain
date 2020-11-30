@@ -118,7 +118,8 @@ class OrderParameter:
         k = int(np.floor(dr / bin_width))
         return self.op_vec[i] * np.conjugate(self.op_vec[j]), k
 
-    def write(self, write_correlation=True, write_vec=False, write_upper_lower=False):
+    def write(self, write_correlation=True, write_vec=False, write_upper_lower=False, vec_name="vec",
+              correlation_name="correlation"):
         join = lambda a, b: os.path.join(a, b)
         op_dir = join(self.sim_path, "OP")
         op_name_dir = join(op_dir, self.op_name)
@@ -127,10 +128,10 @@ class OrderParameter:
         if not os.path.exists(op_name_dir): os.mkdir(op_name_dir)
         if write_vec:
             if self.op_vec is None: raise (Exception("Should calculate correlation before writing"))
-            save_mat("vec", self.op_vec)
+            save_mat(vec_name, self.op_vec)
         if write_correlation:
             if self.op_corr is None: raise (Exception("Should calculate correlation before writing"))
-            save_mat("correlation", np.transpose([self.corr_centers, self.op_corr, self.counts]))
+            save_mat(correlation_name, np.transpose([self.corr_centers, self.op_corr, self.counts]))
         if write_upper_lower:
             self.lower.write(write_correlation, write_vec, write_upper_lower=False)
             self.upper.write(write_correlation, write_vec, write_upper_lower=False)
@@ -167,15 +168,25 @@ class PsiMN(OrderParameter):
             self.lower.calc_order_parameter()
             self.upper.calc_order_parameter()
 
+    def rotate_spheres(self, calc_spheres=True):
+        n_orientation = self.m * self.n
+        psi_avg = np.mean(self.op_vec)
+        orientation = np.imag(np.log(psi_avg)) / n_orientation
+        if not calc_spheres:
+            return orientation
+        else:
+            R = np.array([[np.cos(orientation), np.sin(orientation), 0], [-np.sin(orientation), np.cos(orientation), 0],
+                          [0.0, 0.0, 1.0]])  # rotate back from orientation-->0
+            return orientation, [np.matmul(R, r) for r in self.event_2d_cells.all_centers]
+
 
 class PositionalCorrelationFunction(OrderParameter):
 
-    def __init__(self, sim_path, theta=0, rect_width=0.2, centers=None, spheres_ind=None, calc_upper_lower=False):
-        super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, theta=theta, rect_width=rect_width)
-        self.theta = theta
+    def __init__(self, sim_path, psi_op, rect_width=0.2, centers=None, spheres_ind=None, calc_upper_lower=False):
+        super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, psi_op=psi_op, rect_width=rect_width)
+        self.theta = psi_op.rotate_spheres(calc_spheres=False)
         self.rect_width = rect_width
-        self.op_name = "positional_theta=" + str(theta)
-        # TODO rotate by theta change op name to pos and keep self.spheres with rotated spheres
+        self.op_name = "pos"
         if calc_upper_lower:
             self.upper.op_name = "upper_" + self.op_name
             self.lower.op_name = "lower_" + self.op_name
@@ -267,6 +278,10 @@ class PositionalCorrelationFunction(OrderParameter):
         else:
             return None
 
+    def write(self, write_correlation=True, write_vec=False, write_upper_lower=False):
+        super().write(write_correlation, write_vec, write_upper_lower,
+                      correlation_name="correlation_theta=" + str(self.theta))
+
 
 class PsiUpPsiDown(PsiMN):
     def __init__(self, sim_path, m, n, centers=None, spheres_ind=None):
@@ -345,11 +360,10 @@ class BurgerField(OrderParameter):
     def name():
         return "burger_vectors"
 
-    def __init__(self, sim_path, a1, a2, psi_op, centers=None, spheres_ind=None, calc_upper_lower=False):
+    def __init__(self, sim_path, a1, a2, psi_op: PsiMN, centers=None, spheres_ind=None, calc_upper_lower=False):
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower=False)
         self.op_name = BurgerField.name()
-        self.psi = psi_op.op_vec
-        self.n_orientation = psi_op.m * psi_op.n
+        self.psi = psi_op
         self.a1, self.a2 = a1, a2
         if calc_upper_lower:
             upper_centers = [c for c in self.event_2d_cells.all_centers if
@@ -365,8 +379,7 @@ class BurgerField(OrderParameter):
 
     def calc_order_parameter(self, calc_upper_lower=False):
         perfect_lattice_vectors = np.array([n * self.a1 + m * self.a2 for n in range(-3, 3) for m in range(-3, 3)])
-        psi_avg = np.mean(self.psi)
-        orientation = np.imag(np.log(psi_avg)) / self.n_orientation
+        orientation = self.psi.rotate_spheres(calc_spheres=False)
         R = np.array([[np.cos(orientation), -np.sin(orientation)], [np.sin(orientation), np.cos(orientation)]])
         perfect_lattice_vectors = np.array([np.matmul(R, p.T) for p in perfect_lattice_vectors])
         # rotate = lambda ps: np.matmul(R(-orientation), np.array(ps).T).T
@@ -447,15 +460,9 @@ class BurgerField(OrderParameter):
 
 
 class BraggStructure(OrderParameter):
-    def __init__(self, sim_path, psi_op, centers=None, spheres_ind=None):
+    def __init__(self, sim_path, psi_op: PsiMN, centers=None, spheres_ind=None):
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower=False)
-        n_orientation = psi_op.m * psi_op.n
-        psi_avg = np.mean(psi_op.op_vec)
-        orientation = np.imag(np.log(psi_avg)) / n_orientation
-        R = np.array(
-            [[np.cos(orientation), np.sin(orientation), 0], [-np.sin(orientation), np.cos(orientation), 0],
-             [0.0, 0.0, 1.0]])
-        self.spheres = [np.matmul(R, r) for r in self.event_2d_cells.all_centers]
+        _, self.spheres = psi_op.rotate_spheres(self.event_2d_cells.all_centers)
         self.op_name = "Bragg_S"
         self.k_peak = None
         self.data = []
@@ -498,11 +505,13 @@ class BraggStructure(OrderParameter):
             k_peak, S_peak_m, _, _, _ = fmin(S, k_perf, xtol=0.01 / len(self.spheres), ftol=1.0,
                                              full_output=True)
 
-    def write(self):
+    def write(self, write_vec=True):
+        op_vec = self.op_vec
         self.op_vec = np.array(self.data)
         # overrides the usless e^(ikr) vector for writing the important data in self.data, while self.op_corr has
         # already been calculated and saved
-        super().write(write_correlation=self.op_corr is not None, write_vec=True, write_upper_lower=False)
+        super().write(write_correlation=self.op_corr is not None, write_vec=write_vec, write_upper_lower=False)
+        self.op_vec = op_vec
 
     def calc_order_parameter(self):
         self.calc_peak()
@@ -650,7 +659,6 @@ def main():
             i += 1
         sort_save(psis_path, reals, psis_mean)
     if calc_type.startswith("Bragg_S"):
-        # TODO: save vec and only than attempt to calc correlation in case correlation does not finish in time
         init_time = time.time()
         if calc_type.endswith("23"): psi = PsiMN(sim_path, 2, 3)
         if calc_type.endswith("16"): psi = PsiMN(sim_path, 1, 6)
@@ -661,8 +669,9 @@ def main():
         else:
             bragg = BraggStructure(sim_path, psi)
         bragg.calc_order_parameter()
-        bragg.correlation(realizations=correlation_couples, time_limit=2 * day - (time.time() - init_time))
         bragg.write()
+        bragg.correlation(realizations=correlation_couples, time_limit=2 * day - (time.time() - init_time))
+        bragg.write(write_vec=False)
     if calc_type == "psi23mean": psi_mean(2, 3, sim_path)
     if calc_type == "psi14mean": psi_mean(1, 4, sim_path)
 

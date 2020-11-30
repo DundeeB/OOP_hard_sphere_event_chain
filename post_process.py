@@ -14,6 +14,7 @@ from scipy.optimize import fmin
 import time
 
 epsilon = 1e-8
+day = 86400  # sec
 
 
 class OrderParameter:
@@ -51,7 +52,7 @@ class OrderParameter:
         pass
 
     def correlation(self, bin_width=0.2, calc_upper_lower=False, low_memory=True, randomize=False,
-                    realizations=int(1e7), time_limit=172800):
+                    realizations=int(1e7), time_limit=2 * day):
         if self.op_vec is None: self.calc_order_parameter()
         lx, ly = self.event_2d_cells.boundaries[:2]
         l = np.sqrt(lx ** 2 + ly ** 2) / 2
@@ -65,8 +66,8 @@ class OrderParameter:
                 for realization in range(realizations):
                     i, j = random.randint(0, N - 1), random.randint(0, N - 1)
                     phi_phi, k = self.__pair_corr__(i, j, bin_width)
-                    counts[k] += 1
-                    phiphi_hist[k] += np.real(phi_phi)
+                    counts[k] += 2
+                    phiphi_hist[k] += 2 * np.real(phi_phi)
                     if realization % 1000 == 0 and time.time() - init_time > time_limit:
                         break
             else:
@@ -98,7 +99,7 @@ class OrderParameter:
                 phiphi_hist[i] += np.real(phiphi_vec[0, j])
                 counts[i] += 1
             realization = N ** 2
-        print("\nTime Passed: " + str((time.time() - init_time) / 86400) + " days.\nSummed " + str(
+        print("\nTime Passed: " + str((time.time() - init_time) / day) + " days.\nSummed " + str(
             realization) + " pairs")
         self.counts = counts
         self.op_corr = phiphi_hist / counts
@@ -192,7 +193,7 @@ class PositionalCorrelationFunction(OrderParameter):
             self.lower.op_name = "lower_" + self.op_name
 
     def correlation(self, bin_width=0.2, calc_upper_lower=False, low_memory=True, randomize=False,
-                    realizations=int(1e7), time_limit=172800):
+                    realizations=int(1e7), time_limit=2 * day):
         theta, rect_width = self.theta, self.rect_width
         v_hat = np.array([np.cos(theta), np.sin(theta)])
         lx, ly = self.event_2d_cells.boundaries[:2]
@@ -219,7 +220,7 @@ class PositionalCorrelationFunction(OrderParameter):
                         k = self.__pair_dist__(self.event_2d_cells.all_centers[i], self.event_2d_cells.all_centers[j],
                                                v_hat, rect_width)
                         if k is not None:
-                            self.counts[k] += 2
+                            self.counts[k] += 1
                 realization = N * (N - 1) / 2
         else:
             x = np.array([r[0] for r in self.event_2d_cells.all_centers])
@@ -247,7 +248,7 @@ class PositionalCorrelationFunction(OrderParameter):
             rs = m(pairs_dr, v_hat)
             self.counts, _ = np.histogram(rs, bins_edges)
             realization = N ** 2
-        print("\nTime Passed: " + str((time.time() - init_time) / 86400) + " days.\nSummed " + str(
+        print("\nTime Passed: " + str((time.time() - init_time) / day) + " days.\nSummed " + str(
             realization) + " pairs")
         self.op_corr = self.counts / np.nanmean(self.counts[np.where(self.counts > 0)])
 
@@ -523,7 +524,7 @@ class BraggStructure(OrderParameter):
             self.tour_on_circle(k_radii)
         self.calc_four_peaks()
 
-    def correlation(self, bin_width=0.2, low_memory=True, randomize=False, realizations=int(1e7), time_limit=172800):
+    def correlation(self, bin_width=0.2, low_memory=True, randomize=False, realizations=int(1e7), time_limit=2 * day):
         super().correlation(bin_width, False, low_memory, randomize, realizations, time_limit)
 
 
@@ -571,7 +572,6 @@ def psi_mean(m, n, sim_path):
 
     reals, psis_mean = if_exist_load(psis_path)
     init_time = time.time()
-    day = 86400  # sec
     i = 0
     realizations = load.realizations()
     while time.time() - init_time < 2 * day and i < len(realizations):
@@ -587,7 +587,7 @@ def psi_mean(m, n, sim_path):
 
 
 def main():
-    op_input = {'realizations': int(1e10), 'randomize': False, 'time_limit': 2 * 86400}
+    op_input = {'realizations': int(1e10), 'randomize': False, 'time_limit': 2 * day}
 
     correlation_couples = op_input['correlation_couples']
 

@@ -583,19 +583,19 @@ def psi_mean(m, n, sim_path):
 def main():
     op_input = {'realizations': int(1e10), 'randomize': False, 'time_limit': 2 * day}
 
-    correlation_couples = op_input['correlation_couples']
+    realizations = op_input['realizations']
 
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"
     sim_path = os.path.join(prefix, sys.argv[1])
     calc_type = sys.argv[2]
     N = int(re.split('_h=', re.split('N=', sys.argv[1])[1])[0])
-    # randomize = N ** 2 > correlation_couples
+    # randomize = N ** 2 > realizations
     op_dir = os.path.join(sim_path, "OP")
     if not os.path.exists(op_dir): os.mkdir(op_dir)
     log = os.path.join(op_dir, "log")
     sys.stdout = open(log, "a")
     print("\n\n\n-----------\nDate: " + str(date.today()) + "\nType: " + calc_type + "\nCorrelation couples: " + str(
-        correlation_couples), file=sys.stdout)
+        realizations), file=sys.stdout)
     if calc_type == "psi23":
         psi23 = PsiMN(sim_path, 2, 3)
         psi23.calc_order_parameter()

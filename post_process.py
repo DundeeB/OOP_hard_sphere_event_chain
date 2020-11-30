@@ -587,8 +587,9 @@ def psi_mean(m, n, sim_path):
 
 
 def main():
-    correlation_couples = int(1e10)
-    day = 86400  # sec
+    op_input = {'realizations': int(1e10), 'randomize': False, 'time_limit': 2 * 86400}
+
+    correlation_couples = op_input['correlation_couples']
 
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"
     sim_path = os.path.join(prefix, sys.argv[1])
@@ -605,19 +606,19 @@ def main():
         psi23 = PsiMN(sim_path, 2, 3)
         psi23.calc_order_parameter()
         psi23.write(write_correlation=False, write_vec=True)
-        psi23.correlation(realizations=correlation_couples)
+        psi23.correlation(**op_input)
         psi23.write()
     if calc_type == "psi14":
         psi14 = PsiMN(sim_path, 1, 4)
         psi14.calc_order_parameter()
         psi14.write(write_correlation=False, write_vec=True)
-        psi14.correlation(realizations=correlation_couples)
+        psi14.correlation(**op_input)
         psi14.write()
     if calc_type == "psi16":
         psi16 = PsiMN(sim_path, 1, 6)
         psi16.calc_order_parameter()
         psi16.write(write_correlation=False, write_vec=True)
-        psi16.correlation(realizations=correlation_couples)
+        psi16.correlation(**op_input)
         psi16.write()
     if calc_type == "pos":
         psi23, psi14, psi16 = PsiMN(sim_path, 2, 3), PsiMN(sim_path, 1, 4), PsiMN(sim_path, 1, 6)
@@ -626,7 +627,7 @@ def main():
         correct_psi = psis_mean[np.argmax(np.abs([np.sum(p) for p in psis_mean]))]
         theta = np.angle(np.sum(correct_psi))
         pos = PositionalCorrelationFunction(sim_path, theta)
-        pos.correlation(realizations=correlation_couples)
+        pos.correlation(**op_input)
         pos.write()
     if calc_type == "burger_square":
         load = WriteOrLoad(output_dir=sim_path)
@@ -645,7 +646,7 @@ def main():
         init_time = time.time()
         i = 0
         realizations = load.realizations()
-        while time.time() - init_time < 2 * day and i < len(realizations):
+        while time.time() - init_time < op_input['time_limit'] and i < len(realizations):
             sp_ind = realizations[i]
             if os.path.exists(os.path.join(burg_dir, 'vec_' + str(sp_ind) + '.txt')): continue
             centers = np.loadtxt(os.path.join(load.output_dir, str(sp_ind)))
@@ -670,7 +671,7 @@ def main():
             bragg = BraggStructure(sim_path, psi)
         bragg.calc_order_parameter()
         bragg.write()
-        bragg.correlation(realizations=correlation_couples, time_limit=2 * day - (time.time() - init_time))
+        bragg.correlation(**op_input)
         bragg.write(write_vec=False)
     if calc_type == "psi23mean": psi_mean(2, 3, sim_path)
     if calc_type == "psi14mean": psi_mean(1, 4, sim_path)

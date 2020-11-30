@@ -6,6 +6,7 @@ from mpl_toolkits import mplot3d
 # TODO: figure out why calculation time doesnt scale as O(N) worst (per realization should scale as O(1))
 t0 = time()
 post_process_path = 'C:\\Users\\Daniel Abutbul\\OneDrive - Technion\\post_process\\from_ATLAS3.0\\N=10000_h=0.8_rhoH=0.79_AF_square_ECMC'
+# post_process_path = 'C:\\Users\\Daniel Abutbul\\OneDrive - Technion\\post_process\\from_ATLAS2.0\\N=900_h=1.0_rhoH=0.5_AF_square_ECMC'
 psi_op = PsiMN(post_process_path, 1, 4)
 psi_op.calc_order_parameter()
 t1 = time()

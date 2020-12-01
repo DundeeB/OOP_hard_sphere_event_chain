@@ -103,7 +103,6 @@ class Event2DCells(ArrayOfCells):
             spheres = [spheres]
         cells = []
         for sphere in spheres:
-            self.all_spheres.append(sphere)
             cell = self.cell_of_sphere(sphere)
             cell.append(sphere)
             cells.append(cell)
@@ -219,6 +218,7 @@ class Event2DCells(ArrayOfCells):
             s.center = [cx, cy + ay * 2.0 / 3, l_z - rad - dr_max * np.random.random()]
             s.box_it(self.boundaries)
         self.append_sphere(spheres_down + spheres_up)
+        self.update_all_spheres()
         assert self.legal_configuration()
 
     def generate_spheres_in_AF_square(self, n_sp_row, n_sp_col, rad):
@@ -244,6 +244,7 @@ class Event2DCells(ArrayOfCells):
                 x, y, z = (j + 1 / 2) * ax, (i + 1 / 2) * ay, sign * (r + dr) + self.l_z * (1 - sign) / 2
                 spheres.append(Sphere([x, y, z], rad))
         self.append_sphere(spheres)
+        self.update_all_spheres()
         assert self.legal_configuration()
 
     def scale_xy(self, factor):

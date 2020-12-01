@@ -358,6 +358,14 @@ class ArrayOfCells:
         """
         return [sphere.center for sphere in self.all_spheres]
 
+    def update_all_spheres(self):
+        for i in range(len(self.cells)):
+            for j in range(len(self.cells[i])):
+                cell = self.cells[i][j]
+                if cell == []: continue
+                for sphere in cell.spheres:
+                    self.all_spheres.append(sphere)
+
     def overlap_2_cells(self, cell1: Cell, cell2: Cell):
         """
         Checks if the spheres in cell1 and cell2 are overlapping with each other. Does not check inside cell.
@@ -513,7 +521,6 @@ class ArrayOfCells:
             spheres = [spheres]
         cells = []
         for sphere in spheres:
-            self.all_spheres.append(sphere)
             sp_added_to_cell = False
             for i in range(len(self.cells)):
                 for j in range(len(self.cells[i])):

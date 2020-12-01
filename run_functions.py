@@ -9,6 +9,8 @@ from send_parametric_runs import *
 
 epsilon = 1e-8
 prefix = '/storage/ph_daniel/danielab/ECMC_simulation_results3.0/'
+
+
 # prefix = 'C:\\Users\\Daniel Abutbul\\OneDrive - Technion\\simulation-results'
 
 
@@ -92,6 +94,7 @@ def run_z_quench(origin_sim, desired_h):
     centers, ind = orig_sim_files_interface.last_spheres()
     assert initial_arr.edge > 2 * rad
     initial_arr.append_sphere([Sphere(c, rad) for c in centers])
+    initial_arr.update_all_spheres()
     assert initial_arr.legal_configuration()
     assert len(initial_arr.all_spheres) == N, "Some spheres are missing. number of spheres added: " + str(
         len(initial_arr.all_spheres))
@@ -127,6 +130,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
         # construct array of cells and fill with spheres
         arr = Event2DCells(edge=edge, n_rows=n_row, n_columns=n_col, l_z=l_z)
         arr.append_sphere(sp)
+        arr.update_all_spheres()
         sys.stdout = open(batch, "a")
         print("\n-----------\nSimulation with same parameters exist already, continuing from last file.\n",
               file=sys.stdout)

@@ -356,6 +356,8 @@ class ArrayOfCells:
         """
         :return: list of all the centers (d-dimension vectors) of all the Sphere objects in the simulation.
         """
+        if self.spheres == []:
+            self.update_all_spheres()
         return [sphere.center for sphere in self.all_spheres]
 
     def update_all_spheres(self):

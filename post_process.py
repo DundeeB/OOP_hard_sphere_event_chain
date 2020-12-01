@@ -56,6 +56,7 @@ class OrderParameter:
         lx, ly = self.event_2d_cells.boundaries[:2]
         l = np.sqrt(lx ** 2 + ly ** 2) / 2
         centers = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1) + bin_width / 2
+        kmax = len(centers) - 1
         counts = np.zeros(len(centers))
         phiphi_hist = np.zeros(len(centers))
         init_time = time.time()
@@ -65,6 +66,7 @@ class OrderParameter:
                 for realization in range(realizations):
                     i, j = random.randint(0, N - 1), random.randint(0, N - 1)
                     phi_phi, k = self.__pair_corr__(i, j, bin_width)
+                    k = min(k, kmax)
                     counts[k] += 2
                     phiphi_hist[k] += 2 * np.real(phi_phi)
                     if realization % 1000 == 0 and time.time() - init_time > time_limit:
@@ -73,6 +75,7 @@ class OrderParameter:
                 for i in range(N):
                     for j in range(i):  # j<i, j=i not interesting and j>i double counting accounted for in counts
                         phi_phi, k = self.__pair_corr__(i, j, bin_width)
+                        k = min(k, l)
                         counts[k] += 2  # r-r' and r'-r
                         phiphi_hist[k] += 2 * np.real(phi_phi)  # a+a'=2Re(a)
                 realization = N * (N - 1) / 2
@@ -198,6 +201,7 @@ class PositionalCorrelationFunction(OrderParameter):
         lx, ly = self.event_2d_cells.boundaries[:2]
         l = np.sqrt(lx ** 2 + ly ** 2) / 2
         bins_edges = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1)
+        kmax = len(bins_edges) - 1
         self.corr_centers = bins_edges[:-1] + bin_width / 2
         self.counts = np.zeros(len(self.corr_centers))
         init_time = time.time()
@@ -207,6 +211,7 @@ class PositionalCorrelationFunction(OrderParameter):
                 for realization in range(realizations):
                     i, j = random.randint(0, N - 1), random.randint(0, N - 1)
                     k = self.__pair_dist__(self.spheres[i], self.spheres[j], v_hat, rect_width)
+                    k = min(k, kmax)
                     if k is not None:
                         self.counts[k] += 1
                     if realization % 1000 == 0 and time.time() - init_time > time_limit:
@@ -215,6 +220,7 @@ class PositionalCorrelationFunction(OrderParameter):
                 for i in range(N):
                     for j in range(i):
                         k = self.__pair_dist__(self.spheres[i], self.spheres[j], v_hat, rect_width)
+                        k = min(k, kmax)
                         if k is not None:
                             self.counts[k] += 1
                 realization = N * (N - 1) / 2
@@ -619,8 +625,7 @@ def main():
         psi23.calc_order_parameter(), psi14.calc_order_parameter(), psi16.calc_order_parameter()
         psis_mean = [psi14.op_vec, psi23.op_vec, psi16.op_vec]
         correct_psi = psis_mean[np.argmax(np.abs([np.sum(p) for p in psis_mean]))]
-        theta = np.angle(np.sum(correct_psi))
-        pos = PositionalCorrelationFunction(sim_path, theta)
+        pos = PositionalCorrelationFunction(sim_path, correct_psi)
         pos.correlation(**op_input)
         pos.write()
     if calc_type == "burger_square":

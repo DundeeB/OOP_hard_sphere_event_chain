@@ -191,7 +191,6 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
         os.system('echo \'\nElapsed time is ' + str(time.time() - initial_time) + '\' >> TIME_LOG')
         os.chdir(code_dir)
         resend_flag = False
-        n_factor = int(np.sqrt(N))
         ic = re.split('_', sim_name)[4]
         if ic == 'square':
             return send_single_run_envelope(h, N, rho_H, 'square')

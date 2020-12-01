@@ -58,25 +58,22 @@ def resend_all_runs():
         N, h, rhoH, ic = params_from_name(d)
         if ic == 'triangle':
             ic = 'honeycomb'
-        send_single_run_envelope(h, int(np.sqrt(N)), int(np.sqrt(N)), rhoH, ic)
-        # n_row and n_col are used only when a new simulation is sent, otherwise only N=n_row*n_col is calculated,
-        # and the rest is read from the input file. Therefor, even if n_row and n_col are wrong here, the simulation
-        # will continue from last restart with the correct values.
+        send_single_run_envelope(h, N, rhoH, ic)
 
 
 def main():
-    # resend_all_runs()
+    resend_all_runs()
     # send_single_run_envelope(0.8, 100 ** 2, 0.7, 'honeycomb')
     # send_single_run_envelope(0.8, 100 ** 2, 0.7, 'square')
     # send_single_run_envelope(1.0, 100 ** 2, 0.75, 'honeycomb')
     # send_single_run_envelope(1.0, 100 ** 2, 0.75, 'square')
 
-    for N in [100 ** 2, 200 ** 2, 300 ** 2]:
-        for h in [0.8, 1.0]:
-            # for rhoH in np.round(np.linspace(0.75, 0.85, 11) if h == 0.8 else np.linspace(0.8, 0.9, 11), 2):
-            for rhoH in [0.775, 0.785, 0.795] if h == 0.8 else [0.845, 0.855, 0.865]:
-                send_single_run_envelope(h, N, rhoH, 'square')
-                send_single_run_envelope(h, N, rhoH, 'honeycomb')
+    # for N in [100 ** 2, 200 ** 2, 300 ** 2]:
+    #     for h in [0.8, 1.0]:
+    #         # for rhoH in np.round(np.linspace(0.75, 0.85, 11) if h == 0.8 else np.linspace(0.8, 0.9, 11), 2):
+    #         for rhoH in [0.775, 0.785, 0.795] if h == 0.8 else [0.845, 0.855, 0.865]:
+    #             send_single_run_envelope(h, N, rhoH, 'square')
+    #             send_single_run_envelope(h, N, rhoH, 'honeycomb')
 
 
 if __name__ == "__main__":

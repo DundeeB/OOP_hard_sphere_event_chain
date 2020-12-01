@@ -359,6 +359,7 @@ class ArrayOfCells:
         return [sphere.center for sphere in self.all_spheres]
 
     def update_all_spheres(self):
+        self.all_spheres = []
         for i in range(len(self.cells)):
             for j in range(len(self.cells[i])):
                 cell = self.cells[i][j]

@@ -623,8 +623,9 @@ def main():
     if calc_type == "pos":
         psi23, psi14, psi16 = PsiMN(sim_path, 2, 3), PsiMN(sim_path, 1, 4), PsiMN(sim_path, 1, 6)
         psi23.calc_order_parameter(), psi14.calc_order_parameter(), psi16.calc_order_parameter()
-        psis_mean = [psi14.op_vec, psi23.op_vec, psi16.op_vec]
-        correct_psi = psis_mean[np.argmax(np.abs([np.sum(p) for p in psis_mean]))]
+        psis = [psi14, psi23, psi16]
+        psis_mean = [psi.op_vec for psi in psis]
+        correct_psi = psis[np.argmax(np.abs([np.sum(p) for p in psis_mean]))]
         pos = PositionalCorrelationFunction(sim_path, correct_psi)
         pos.correlation(**op_input)
         pos.write()

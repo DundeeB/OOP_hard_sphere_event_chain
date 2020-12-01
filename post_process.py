@@ -66,7 +66,7 @@ class OrderParameter:
                 for realization in range(realizations):
                     i, j = random.randint(0, N - 1), random.randint(0, N - 1)
                     phi_phi, k = self.__pair_corr__(i, j, bin_width)
-                    k = min(k, kmax)
+                    k = int(min(k, kmax))
                     counts[k] += 2
                     phiphi_hist[k] += 2 * np.real(phi_phi)
                     if realization % 1000 == 0 and time.time() - init_time > time_limit:
@@ -75,7 +75,7 @@ class OrderParameter:
                 for i in range(N):
                     for j in range(i):  # j<i, j=i not interesting and j>i double counting accounted for in counts
                         phi_phi, k = self.__pair_corr__(i, j, bin_width)
-                        k = min(k, l)
+                        k = int(min(k, l))
                         counts[k] += 2  # r-r' and r'-r
                         phiphi_hist[k] += 2 * np.real(phi_phi)  # a+a'=2Re(a)
                 realization = N * (N - 1) / 2
@@ -211,7 +211,7 @@ class PositionalCorrelationFunction(OrderParameter):
                 for realization in range(realizations):
                     i, j = random.randint(0, N - 1), random.randint(0, N - 1)
                     k = self.__pair_dist__(self.spheres[i], self.spheres[j], v_hat, rect_width)
-                    k = min(k, kmax)
+                    k = int(min(k, kmax))
                     if k is not None:
                         self.counts[k] += 1
                     if realization % 1000 == 0 and time.time() - init_time > time_limit:
@@ -220,7 +220,7 @@ class PositionalCorrelationFunction(OrderParameter):
                 for i in range(N):
                     for j in range(i):
                         k = self.__pair_dist__(self.spheres[i], self.spheres[j], v_hat, rect_width)
-                        k = min(k, kmax)
+                        k = int(min(k, kmax))
                         if k is not None:
                             self.counts[k] += 1
                 realization = N * (N - 1) / 2

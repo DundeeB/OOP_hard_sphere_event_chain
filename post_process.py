@@ -211,8 +211,8 @@ class PositionalCorrelationFunction(OrderParameter):
                 for realization in range(realizations):
                     i, j = random.randint(0, N - 1), random.randint(0, N - 1)
                     k = self.__pair_dist__(self.spheres[i], self.spheres[j], v_hat, rect_width)
-                    k = int(min(k, kmax))
                     if k is not None:
+                        k = int(min(k, kmax))
                         self.counts[k] += 1
                     if realization % 1000 == 0 and time.time() - init_time > time_limit:
                         break
@@ -220,8 +220,8 @@ class PositionalCorrelationFunction(OrderParameter):
                 for i in range(N):
                     for j in range(i):
                         k = self.__pair_dist__(self.spheres[i], self.spheres[j], v_hat, rect_width)
-                        k = int(min(k, kmax))
                         if k is not None:
+                            k = int(min(k, kmax))
                             self.counts[k] += 1
                 realization = N * (N - 1) / 2
         else:
@@ -625,6 +625,7 @@ def main():
         psi23.calc_order_parameter(), psi14.calc_order_parameter(), psi16.calc_order_parameter()
         psis = [psi14, psi23, psi16]
         psis_mean = [psi.op_vec for psi in psis]
+        # TODO: fix the super weired bug I have here!!! See ATLAS
         correct_psi = psis[np.argmax(np.abs([np.sum(p) for p in psis_mean]))]
         pos = PositionalCorrelationFunction(sim_path, correct_psi)
         pos.correlation(**op_input)

@@ -79,13 +79,12 @@ def main():
     #             send_single_run_envelope(h, N, rhoH, 'square')
     #             send_single_run_envelope(h, N, rhoH, 'honeycomb')
 
-    for N in [100 ** 2]:  # , 200 ** 2, 300 ** 2]:
+    for N in [100 ** 2, 200 ** 2, 300 ** 2]:
         h = 0.1
         # Following DOI: 10.1039/c4sm00125g, at h=0.1 eta*sig/H=pi/4*rhoH phase transition at 0.64-0.67, that is rhoH at
         # 0.81-0.85
-        for rhoH in [0.9]:  # np.round(np.linspace(0.78, 0.88, 11), 2):
+        for rhoH in np.round(np.linspace(0.78, 0.88, 11), 2):
             send_single_run_envelope(h, N, rhoH, 'triangle')
-            # TODO: write triangle initial conditions
 
 
 if __name__ == "__main__":

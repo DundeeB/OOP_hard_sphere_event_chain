@@ -62,7 +62,8 @@ def resend_all_runs():
 
 
 def main():
-    resend_all_runs()
+    # resend_all_runs()
+
     # send_single_run_envelope(0.8, 100 ** 2, 0.7, 'honeycomb')
     # send_single_run_envelope(0.8, 100 ** 2, 0.7, 'square')
     # send_single_run_envelope(1.0, 100 ** 2, 0.75, 'honeycomb')
@@ -74,6 +75,14 @@ def main():
     #         for rhoH in [0.775, 0.785, 0.795] if h == 0.8 else [0.845, 0.855, 0.865]:
     #             send_single_run_envelope(h, N, rhoH, 'square')
     #             send_single_run_envelope(h, N, rhoH, 'honeycomb')
+
+    for N in [100 ** 2, 200 ** 2, 300 ** 2]:
+        h = 0.1
+        # Following DOI: 10.1039/c4sm00125g, at h=0.1 eta*sig/H=pi/4*rhoH phase transition at 0.64-0.67, that is rhoH at
+        # 0.81-0.85
+        for rhoH in np.round(np.linspace(0.78, 0.88, 11), 2):
+            send_single_run_envelope(h, N, rhoH, 'square')
+            send_single_run_envelope(h, N, rhoH, 'honeycomb')
 
 
 if __name__ == "__main__":

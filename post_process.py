@@ -307,16 +307,13 @@ class RealizationsAveragedOP:
         :param op_type: OrderParameter. Example: op_type = PsiMn
         :param op_args: Example: (sim_path,m,n,...)
         """
-        self.sim_path = op_args[0]
-        files = os.listdir(self.sim_path)
-        numbered_files = sorted([int(f) for f in files if re.findall("^\d+$", f)])
-        numbered_files.reverse()
-        self.op_type, self.op_args = op_type, op_args
-        self.numbered_files = numbered_files[:num_realizations]
+        self.op = op_type(*op_args)
+        self.reals = sorted(
+            [int(f) for f in os.listdir(self.op.sim_path) if re.findall("^\d+$", f)]).reverse()[:num_realizations]
 
     def calc_write(self, bin_width=0.2, calc_upper_lower=True):
         # TODO: read exisiting data and save expensive calculation time
-        op_type, op_args, numbered_files = self.op_type, self.op_args, self.numbered_files
+        op_type, op_args, numbered_files = self.op_type, self.op_args, self.reals
         op = op_type(*op_args)  # starts with the last realization by default
         op.write(bin_width=bin_width)
         counts, op_corr = op.counts, op.op_corr * op.counts
@@ -625,7 +622,6 @@ def main():
         psi23.calc_order_parameter(), psi14.calc_order_parameter(), psi16.calc_order_parameter()
         psis = [psi14, psi23, psi16]
         psis_mean = [psi.op_vec for psi in psis]
-        # TODO: fix the super weired bug I have here!!! See ATLAS
         correct_psi = psis[np.argmax(np.abs([np.sum(p) for p in psis_mean]))]
         pos = PositionalCorrelationFunction(sim_path, correct_psi)
         pos.correlation(**op_input)

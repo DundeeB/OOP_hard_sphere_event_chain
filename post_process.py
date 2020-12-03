@@ -544,44 +544,45 @@ class MagneticBraggStructure(BraggStructure):
         return super(MagneticBraggStructure, self).k_perf() / 2
 
 
-def if_exist_load(path):
-    if os.path.exists(path):
-        mat = np.loadtxt(path, dtype=complex)
-        return [int(r) for r in mat[:, 0]], [p for p in mat[:, 1]]
-    else:
-        return [], []
+class PsiMean:
+    def __init__(self, m, n, sim_path):
+        op_dir = os.path.join(sim_path, "OP")
+        if not os.path.exists(op_dir): os.mkdir(op_dir)
+        psi_dir = os.path.join(op_dir, 'psi_' + str(m) + str(n))
+        if not os.path.exists(psi_dir): os.mkdir(psi_dir)
+        self.psis_mean_path = os.path.join(psi_dir, 'mean_vs_real.txt')
+        self.load = WriteOrLoad(output_dir=sim_path)
+        self.m, self.n = m, n
+        path = self.psis_mean_path
+        if os.path.exists(path):
+            mat = np.loadtxt(path, dtype=complex)
+            self.reals = [int(r) for r in mat[:, 0]]
+            self.psis_mean = [p for p in mat[:, 1]]
+        else:
+            self.reals, self.psis_mean = [], []
 
-
-def sort_save(path, reals, psis):
-    I = np.argsort(reals)
-    reals = np.array(reals)[I]
-    psis_mean = np.array(psis)[I]
-    np.savetxt(path, np.array([reals, psis_mean]).T)
-
-
-def psi_mean(m, n, sim_path):
-    op_dir = os.path.join(sim_path, "OP")
-    if not os.path.exists(op_dir): os.mkdir(op_dir)
-    op_name_dir = os.path.join(op_dir, 'psi_' + str(m) + str(n))
-    if not os.path.exists(op_name_dir): os.mkdir(op_name_dir)
-    psis_path = os.path.join(op_name_dir, 'mean_vs_real.txt')
-
-    load = WriteOrLoad(output_dir=sim_path)
-
-    reals, psis_mean = if_exist_load(psis_path)
-    init_time = time.time()
-    i = 0
-    realizations = load.realizations()
-    while time.time() - init_time < 2 * day and i < len(realizations):
-        sp_ind = realizations[i]
-        if sp_ind in reals: continue
-        centers = np.loadtxt(os.path.join(load.output_dir, str(sp_ind)))
-        psi = PsiMN(sim_path, m, n, spheres_ind=sp_ind, centers=centers)
-        psi.calc_order_parameter()
-        reals.append(sp_ind)
-        psis_mean.append(np.mean(psi.op_vec))
-        i += 1
-    sort_save(psis_path, reals, psis_mean)
+    def calc_all_realization(self, write=True):
+        init_time = time.time()
+        i = 0
+        realizations = self.load.realizations()
+        realizations.append(0)
+        while time.time() - init_time < 2 * day and i < len(realizations):
+            sp_ind = realizations[i]
+            if sp_ind in self.reals: continue
+            if sp_ind != 0:
+                centers = np.loadtxt(os.path.join(self.load.output_dir, str(sp_ind)))
+            else:
+                centers = np.loadtxt(os.path.join(self.load.output_dir, 'Initial Conditions'))
+            psi = PsiMN(self.load.output_dir, self.m, self.n, spheres_ind=sp_ind, centers=centers)
+            psi.calc_order_parameter()
+            self.reals.append(sp_ind)
+            self.psis.append(np.mean(psi.op_vec))
+            i += 1
+        I = np.argsort(self.reals)
+        self.reals = np.array(self.reals)[I]
+        self.psis = np.array(self.psis)[I]
+        if write:
+            np.savetxt(self.psis_mean_path, np.array([self.reals, self.psis]).T)
 
 
 def main():
@@ -637,10 +638,8 @@ def main():
         psi_dir_name = os.path.join(op_dir, 'psi_14')
         if not os.path.exists(psi_dir_name): os.mkdir(psi_dir_name)
         psis_path = os.path.join(psi_dir_name, 'mean_vs_real.txt')
-        reals, psis_mean = if_exist_load(psis_path)
-
+        psi_mean_op = PsiMean(1, 4, sim_path)
         burg_dir = os.path.join(op_dir, BurgerField.name())
-
         init_time = time.time()
         i = 0
         realizations = load.realizations()
@@ -653,10 +652,10 @@ def main():
             burger = BurgerField(sim_path, a1, a2, psi14, spheres_ind=sp_ind, centers=centers)
             burger.calc_order_parameter()
             burger.write()
-            reals.append(sp_ind)
-            psis_mean.append(np.mean(psi14.op_vec))
+            psi_mean_op.reals.append(sp_ind)
+            psi_mean_op.psis_mean.append(np.mean(psi14.op_vec))
             i += 1
-        sort_save(psis_path, reals, psis_mean)
+        psi_mean_op.calc_all_realization()
     if calc_type.startswith("Bragg_S"):
         init_time = time.time()
         if calc_type.endswith("23"): psi = PsiMN(sim_path, 2, 3)
@@ -671,8 +670,12 @@ def main():
         bragg.write()
         bragg.correlation(**op_input)
         bragg.write(write_vec=False)
-    if calc_type == "psi23mean": psi_mean(2, 3, sim_path)
-    if calc_type == "psi14mean": psi_mean(1, 4, sim_path)
+    if calc_type == "psi23mean":
+        psi_mean = PsiMean(2, 3, sim_path)
+        psi_mean.calc_all_realization()
+    if calc_type == "psi14mean":
+        psi_mean = PsiMean(1, 4, sim_path)
+        psi_mean.calc_all_realization()
 
 
 if __name__ == "__main__":

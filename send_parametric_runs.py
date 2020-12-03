@@ -16,8 +16,11 @@ def send_single_run_envelope(h, N, rhoH, initial_conditions):
         if initial_conditions == 'square':
             init_name_in_dir = 'AF_square_ECMC'
         else:
-            raise NotImplementedError(
-                "Implemented initial conditions are: square, honeycomb. No " + initial_conditions + " implemented")
+            if initial_conditions == 'triangle':
+                init_name_in_dir = "triangle_ECMC"
+            else:
+                raise NotImplementedError(
+                    "Implemented initial conditions are: square, honeycomb. No " + initial_conditions + " implemented")
     sim_name = "N=" + str(N) + "_h=" + str(h) + "_rhoH=" + str(rhoH) + "_" + init_name_in_dir
     out_pwd = prefix + "out/" + sim_name + ".out"
     err_pwd = prefix + "out/" + sim_name + ".err"
@@ -76,13 +79,13 @@ def main():
     #             send_single_run_envelope(h, N, rhoH, 'square')
     #             send_single_run_envelope(h, N, rhoH, 'honeycomb')
 
-    for N in [100 ** 2, 200 ** 2, 300 ** 2]:
+    for N in [100 ** 2]:  # , 200 ** 2, 300 ** 2]:
         h = 0.1
         # Following DOI: 10.1039/c4sm00125g, at h=0.1 eta*sig/H=pi/4*rhoH phase transition at 0.64-0.67, that is rhoH at
         # 0.81-0.85
-        for rhoH in np.round(np.linspace(0.78, 0.88, 11), 2):
-            send_single_run_envelope(h, N, rhoH, 'square')
-            send_single_run_envelope(h, N, rhoH, 'honeycomb')
+        for rhoH in [0.9]:  # np.round(np.linspace(0.78, 0.88, 11), 2):
+            send_single_run_envelope(h, N, rhoH, 'triangle')
+            # TODO: write triangle initial conditions
 
 
 if __name__ == "__main__":

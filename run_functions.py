@@ -109,6 +109,30 @@ def run_z_quench(origin_sim, desired_h):
     return run_sim(initial_arr, N, desired_h, desired_rho, sim_name)
 
 
+def run_triangle(h, N, rho_H, **kwargs):
+    # More physical properties calculated from Input
+    sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_triangle_ECMC'
+    output_dir = prefix + sim_name
+    if os.path.exists(output_dir):
+        return run_sim(np.nan, N, h, rho_H, sim_name, **kwargs)
+        # when continuing from restart there shouldn't be use of initial arr
+    else:
+        n_row = int(np.sqrt(N))
+        n_col = n_row
+        r, sig = 1.0, 2.0
+        A = N * sig ** 2 / (rho_H * (1 + h))
+        a = np.sqrt(A / N)
+        n_row_cells, n_col_cells = int(np.sqrt(A) / (a * np.sqrt(2))), int(np.sqrt(A) / (a * np.sqrt(2)))
+        e = np.sqrt(A / (n_row_cells * n_col_cells))
+        assert e > sig, "Edge of cell is: " + str(e) + ", which is smaller than sigma."
+        initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells, l_z=(h + 1) * sig)
+        spheres = ArrayOfCells.spheres_in_triangular(n_row, n_col, r, initial_arr.l_x, initial_arr.l_y)
+        initial_arr.append_sphere(spheres)
+        initial_arr.update_all_spheres()
+        assert initial_arr.legal_configuration()
+        return run_sim(initial_arr, N, h, rho_H, sim_name, **kwargs)
+
+
 def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displacements=False, write=True):
     if iterations is None:
         iterations = int(N * 1e4)
@@ -217,6 +241,9 @@ def main():
         else:
             if args[-1] == 'honeycomb':
                 run_honeycomb(h, N, rho_H)
+            else:
+                if args[-1] == 'triangle':
+                    run_triangle(h, N, rho_H)
     else:
         action, other_sim_dir, desired_h = args[0], args[1], float(args[2])
         if action == 'zquench':

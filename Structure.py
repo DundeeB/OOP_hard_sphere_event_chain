@@ -554,7 +554,7 @@ class ArrayOfCells:
                 else:
                     xj = (1 + epsilon) * rad + ax * (j + 1 / 2)  # cos(pi / 3) = 1 / 2
                 yi = (1 + epsilon) * rad + ay * i
-                spheres.append(Sphere([xj, yi, rad], rad))
+                spheres.append(Sphere([xj, yi, rad * (1 + epsilon)], rad))
         return spheres
 
     def translate(self, vec):

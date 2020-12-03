@@ -313,6 +313,7 @@ class RealizationsAveragedOP:
 
     def calc_write(self, bin_width=0.2, calc_upper_lower=True):
         # TODO: read exisiting data and save expensive calculation time
+        # TODO: implement and send runs see if get clearer data with smart averaging...
         op_type, op_args, numbered_files = self.op_type, self.op_args, self.reals
         op = op_type(*op_args)  # starts with the last realization by default
         op.write(bin_width=bin_width)

@@ -219,11 +219,14 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
         os.system('echo \'\nElapsed time is ' + str(time.time() - initial_time) + '\' >> TIME_LOG')
         os.chdir(code_dir)
         resend_flag = False
-        ic = re.split('_', sim_name)[4]
-        if ic == 'square':
+        ic = re.split('_', sim_name)
+        if ic[-2] == 'square':
             return send_single_run_envelope(h, N, rho_H, 'square')
-        if ic == 'triangle':
-            return send_single_run_envelope(h, N, rho_H, 'honeycomb')
+        if ic[-2] == 'triangle':
+            if ic[-3] == 'AF':
+                return send_single_run_envelope(h, N, rho_H, 'honeycomb')
+            else:
+                return send_single_run_envelope(h, N, rho_H, 'triangle')
         if ic == 'zquench':
             return quench_single_run_envelope('zquench', sim_name,
                                               desired_rho_or_h=h)  # notice run sim is sent after z-quench has succeeded

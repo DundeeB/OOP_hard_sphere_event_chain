@@ -227,7 +227,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
                 return send_single_run_envelope(h, N, rho_H, 'honeycomb')
             else:
                 return send_single_run_envelope(h, N, rho_H, 'triangle')
-        if ic == 'zquench':
+        if ic[-2] == 'zquench':
             return quench_single_run_envelope('zquench', sim_name,
                                               desired_rho_or_h=h)  # notice run sim is sent after z-quench has succeeded
         assert resend_flag, "Simulation did not resend. Initial conditions: " + ic

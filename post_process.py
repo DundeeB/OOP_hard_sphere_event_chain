@@ -433,6 +433,7 @@ class BurgerField(OrderParameter):
             psi.op_vec = np.loadtxt(psi_path, dtype=complex)
         else:
             psi.calc_order_parameter(calc_upper_lower)
+            psi.write(write_correlation=False, write_vec=True)
         orientation = psi.rotate_spheres(calc_spheres=False)
         R = np.array([[np.cos(orientation), -np.sin(orientation)], [np.sin(orientation), np.cos(orientation)]])
         perfect_lattice_vectors = np.array([np.matmul(R, p.T) for p in perfect_lattice_vectors])

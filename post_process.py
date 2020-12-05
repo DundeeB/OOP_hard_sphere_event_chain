@@ -156,8 +156,8 @@ class OrderParameter:
         if not os.path.exists(op_dir): os.mkdir(op_dir)
         mean_vs_real_path = os.path.join(op_dir, 'mean_vs_real.txt')
         if os.path.exists(mean_vs_real_path):
-            mat = np.loadtxt(mean_vs_real_path)
-            mean_vs_real_reals = [int(r) for r in mat[:, 0]]
+            mat = np.loadtxt(mean_vs_real_path, dtype=complex)
+            mean_vs_real_reals = [int(np.real(r)) for r in mat[:, 0]]
             mean_vs_real_mean = [p for p in mat[:, 1]]
         else:
             mean_vs_real_reals, mean_vs_real_mean = [], []

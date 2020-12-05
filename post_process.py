@@ -155,12 +155,12 @@ class OrderParameter:
         op_dir = os.path.join(op_father_dir, self.op_name)
         if not os.path.exists(op_dir): os.mkdir(op_dir)
         mean_vs_real_path = os.path.join(op_dir, 'mean_vs_real.txt')
+        mean_vs_real_reals, mean_vs_real_mean = [], []
         if os.path.exists(mean_vs_real_path):
             mat = np.loadtxt(mean_vs_real_path, dtype=complex)
-            mean_vs_real_reals = [int(np.real(r)) for r in mat[:, 0]]
-            mean_vs_real_mean = [p for p in mat[:, 1]]
-        else:
-            mean_vs_real_reals, mean_vs_real_mean = [], []
+            if not mat.shape==(2,):
+                mean_vs_real_reals = [int(np.real(r)) for r in mat[:, 0]]
+                mean_vs_real_mean = [p for p in mat[:, 1]]
         i = 0
         realizations = self.write_or_load.realizations()
         realizations.append(0)

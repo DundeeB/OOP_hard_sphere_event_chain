@@ -248,6 +248,7 @@ class PositionalCorrelationFunction(OrderParameter):
     def correlation(self, bin_width=0.1, calc_upper_lower=False, low_memory=True, randomize=False,
                     realizations=int(1e7), time_limit=2 * day):
         psi = PsiMN(self.sim_path, self.m, self.n, centers=self.spheres, spheres_ind=self.spheres_ind)
+        psi.calc_order_parameter()
         self.theta = psi.rotate_spheres(calc_spheres=False)
         self.correlation_name = "correlation_theta=" + str(self.theta)
         theta, rect_width = self.theta, self.rect_width

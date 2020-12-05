@@ -167,9 +167,9 @@ class OrderParameter:
         while time.time() - init_time < 2 * day and i < len(realizations):
             sp_ind = realizations[i]
             if sp_ind != 0:
-                centers = np.loadtxt(os.path.join(self.load.output_dir, str(sp_ind)))
+                centers = np.loadtxt(os.path.join(self.write_or_load.output_dir, str(sp_ind)))
             else:
-                centers = np.loadtxt(os.path.join(self.load.output_dir, 'Initial Conditions'))
+                centers = np.loadtxt(os.path.join(self.write_or_load.output_dir, 'Initial Conditions'))
             # if sp_ind in mean_vs_real_mean: continue
             self.update_centers(centers, sp_ind)
             vec_path = os.path.join(op_dir, self.vec_name + "_" + str(sp_ind))

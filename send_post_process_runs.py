@@ -27,8 +27,10 @@ def params_from_name(name):
             h = float(ss[i + 1])
         if s == 'rhoH':
             rhoH = float(ss[i + 1])
-        if s == 'AF':
-            ic = ss[i + 1]
+        if s == 'triangle' or s == 'square':
+            ic = s
+            if ss[i - 1] == 'AF' and s == 'triangle':
+                ic = 'honeycomb'
     return N, h, rhoH, ic
 
 

@@ -599,16 +599,11 @@ class MagneticBraggStructure(BraggStructure):
 
 
 def main():
-    # correlation_kwargs = {'realizations': int(1e10), 'randomize': False, 'time_limit': 2 * day}
-    correlation_kwargs = {'realizations': int(10), 'randomize': True, 'time_limit': 2 * day}
-
-    realizations = correlation_kwargs['realizations']
+    correlation_kwargs = {'randomize': False, 'time_limit': 2 * day}
 
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"
     sim_path = os.path.join(prefix, sys.argv[1])
     calc_type = sys.argv[2]
-    N = int(re.split('_h=', re.split('N=', sys.argv[1])[1])[0])
-    # randomize = N ** 2 > realizations
     op_dir = os.path.join(sim_path, "OP")
     if not os.path.exists(op_dir): os.mkdir(op_dir)
     log = os.path.join(op_dir, "log")

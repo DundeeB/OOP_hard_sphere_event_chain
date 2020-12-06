@@ -37,7 +37,7 @@ def params_from_name(name):
 def main():
     sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
     for sim_name in sims:
-        N, h, rhoH, ic = params_from_name(sim_name)
+        _, h, _, _ = params_from_name(sim_name)
         if h >= 1.0:
             send_specific_run(sim_name, ["psi23", "Bragg_S23", "Bragg_Sm23", "pos23"])
         if h == 0.8:

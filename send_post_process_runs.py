@@ -47,4 +47,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    send_specific_run("N=10000_h=0.8_rhoH=0.85_AF_square_ECMC", ["psi14"])

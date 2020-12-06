@@ -85,7 +85,7 @@ class OrderParameter:
                 for i in range(N):
                     for j in range(i):  # j<i, j=i not interesting and j>i double counting accounted for in counts
                         phi_phi, k = self.__pair_corr__(i, j, bin_width)
-                        k = int(min(k, l))
+                        k = int(min(k, kmax))
                         counts[k] += 2  # r-r' and r'-r
                         phiphi_hist[k] += 2 * np.real(phi_phi)  # a+a'=2Re(a)
                 realization = N * (N - 1) / 2
@@ -167,10 +167,9 @@ class OrderParameter:
         while time.time() - init_time < 2 * day and i < len(realizations):
             sp_ind = realizations[i]
             if sp_ind != 0:
-                centers = np.loadtxt(os.path.join(self.write_or_load.output_dir, str(sp_ind)))
+                centers = np.loadtxt(os.path.join(self.sim_path, str(sp_ind)))
             else:
-                centers = np.loadtxt(os.path.join(self.write_or_load.output_dir, 'Initial Conditions'))
-            # if sp_ind in mean_vs_real_mean: continue
+                centers = np.loadtxt(os.path.join(self.sim_path, 'Initial Conditions'))
             self.update_centers(centers, sp_ind)
             vec_path = os.path.join(op_dir, self.vec_name + "_" + str(sp_ind))
             if not os.path.exists(vec_path):
@@ -559,8 +558,8 @@ class BraggStructure(OrderParameter):
     def write(self, write_vec=True, write_correlations=True):
         op_vec = self.op_vec
         self.op_vec = np.array(self.data)
-        # overrides the usless e^(ikr) vector for writing the important data in self.data, while self.op_corr has
-        # already been calculated and saved
+        # overrides the usless e^(ikr) vector for writing the important data in self.data. self.op_corr has already been
+        # calculated.
         super().write(write_correlations=write_correlations, write_vec=write_vec, write_upper_lower=False)
         self.op_vec = op_vec
 
@@ -600,7 +599,8 @@ class MagneticBraggStructure(BraggStructure):
 
 
 def main():
-    correlation_kwargs = {'realizations': int(1e10), 'randomize': False, 'time_limit': 2 * day}
+    # correlation_kwargs = {'realizations': int(1e10), 'randomize': False, 'time_limit': 2 * day}
+    correlation_kwargs = {'realizations': int(10), 'randomize': True, 'time_limit': 2 * day}
 
     realizations = correlation_kwargs['realizations']
 

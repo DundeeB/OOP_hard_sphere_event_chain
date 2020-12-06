@@ -17,8 +17,6 @@ epsilon = 1e-8
 day = 86400  # sec
 
 
-# TODO make something that calcs op for all realization, reorganize psi_mn mean and burger accordingly
-
 class OrderParameter:
 
     def __init__(self, sim_path, centers=None, spheres_ind=None, calc_upper_lower=False, vec_name="vec",
@@ -347,64 +345,6 @@ class PsiUpPsiDown(PsiMN):
         self.op_orig = self.op_vec
 
 
-class RealizationsAveragedOP:
-
-    def __init__(self, num_realizations, op_type, op_args):
-        """
-
-        :type sim_path: str
-        :type num_realizations: int
-        :param op_type: OrderParameter. Example: op_type = PsiMn
-        :param op_args: Example: (sim_path,m,n,...)
-        """
-        self.op = op_type(*op_args)
-        self.reals = sorted(
-            [int(f) for f in os.listdir(self.op.sim_path) if re.findall("^\d+$", f)]).reverse()[:num_realizations]
-
-    def calc_write(self, bin_width=0.1, calc_upper_lower=True):
-        # TODO: read exisiting data and save expensive calculation time
-        # TODO: implement and send runs see if get clearer data with smart averaging...
-        op_type, op_args, numbered_files = self.op_type, self.op_args, self.reals
-        op = op_type(*op_args)  # starts with the last realization by default
-        op.write(bin_width=bin_width)
-        counts, op_corr = op.counts, op.op_corr * op.counts
-        if calc_upper_lower:
-            lower_counts, upper_counts, lower_op_corr, upper_op_corr = \
-                op.lower.counts, op.upper.counts, op.lower.op_corr * op.lower.counts, op.upper.op_corr * op.upper.counts
-        op_corr[counts == 0] = 0  # remove nans
-        for i in numbered_files[1:]:  # from one before last forward
-            op = op_type(*op_args, centers=np.loadtxt(os.path.join(self.sim_path, str(i))), spheres_ind=i)
-            op.write(bin_width=bin_width, write_upper_lower=calc_upper_lower)
-            counts += op.counts
-            if op_type is not PositionalCorrelationFunction:
-                I = np.where(op.counts > 0)
-                op_corr[I] += op.op_corr[I] * op.counts[I]  # add psi where it is not nan
-            if calc_upper_lower:
-                lower_counts += op.lower.counts
-                upper_counts += op.upper.counts
-                if op_type is not PositionalCorrelationFunction:
-                    I = np.where(op.lower.counts > 0)
-                    lower_op_corr[I] += op.lower.op_corr[I] * op.lower.counts[I]  # add psi where it is not nan
-                    I = np.where(op.upper.counts > 0)
-                    upper_op_corr[I] += op.upper.op_corr[I] * op.upper.counts[I]  # add psi where it is not nan
-        op.spheres_ind = str(numbered_files[-1]) + "-" + str(numbered_files[0])
-        op.op_corr = op_corr / counts if op_type is not PositionalCorrelationFunction else counts / np.nanmean(
-            counts[np.where(counts > 0)])
-        op.counts = counts
-        op.op_name = op.op_name + "_" + str(len(numbered_files)) + "_averaged"
-        if calc_upper_lower:
-            op.lower.op_corr = lower_op_corr / lower_counts if op_type is not PositionalCorrelationFunction else \
-                lower_counts / np.nanmean(lower_counts[np.where(lower_counts > 0)])
-            op.lower.counts = lower_counts
-            op.lower.op_name = op.lower.op_name + "_" + str(len(numbered_files) + 1) + "_averaged"
-
-            op.upper.op_corr = upper_op_corr / upper_counts if op_type is not PositionalCorrelationFunction else \
-                upper_counts / np.nanmean(upper_counts[np.where(upper_counts > 0)])
-            op.upper.counts = upper_counts
-            op.upper.op_name = op.upper.op_name + "_" + str(len(numbered_files) + 1) + "_averaged"
-        op.write(bin_width=bin_width, write_vec=False, write_upper_lower=calc_upper_lower)
-
-
 class BurgerField(OrderParameter):
 
     @staticmethod
@@ -536,8 +476,8 @@ class BraggStructure(OrderParameter):
             self.S(k_radii * np.array([np.cos(t), np.sin(t)]))
 
     def k_perf(self):
-        return 2 * np.pi / np.sqrt(self.event_2d_cells.l_x * self.event_2d_cells.l_y / len(
-            self.spheres)) * np.array([1, 1])  # rotate self.spheres by orientation before so peak is at [1, 1]
+        a = np.sqrt(self.event_2d_cells.l_x * self.event_2d_cells.l_y / len(self.spheres))
+        return 2 * np.pi / a * np.array([1, 0])  # rotate self.spheres by orientation before so peak is at [1, 0]
 
     def calc_peak(self):
         S = lambda k: -self.S(k)
@@ -545,15 +485,19 @@ class BraggStructure(OrderParameter):
                                               full_output=True)
         self.S_peak = -S_peak_m
 
+    def peaks_other_angles(self):
+        return [n * np.pi / 2 for n in range(1, 4)]
+
     def calc_four_peaks(self):
         S = lambda k: -self.S(k)
-        self.four_peaks_k = []
-        self.four_peaks_S = []
-        k_radii = np.linalg.norm(self.k_perf())
-        for theta in [np.pi / 4 + n * np.pi / 2 for n in range(1, 4)]:
+        self.four_peaks_k = [self.k_peak]
+        self.four_peaks_S = [self.S_peak]
+        k_radii = np.linalg.norm(self.k_perf())  # k_perf is overwritten in magnetic bragg
+        for theta in self.peaks_other_angles():  # peaks_other_angles is overwritten in magnetic bragg
             k_perf = k_radii * np.array([np.cos(theta), np.sin(theta)])
-            k_peak, S_peak_m, _, _, _ = fmin(S, k_perf, xtol=0.01 / len(self.spheres), ftol=1.0,
-                                             full_output=True)
+            k_peak, S_peak_m, _, _, _ = fmin(S, k_perf, xtol=0.01 / len(self.spheres), ftol=1.0, full_output=True)
+            self.four_peaks_k.append(k_peak)
+            self.four_peaks_S.append(S_peak_m)
 
     def write(self, write_vec=True, write_correlations=True):
         op_vec = self.op_vec
@@ -595,7 +539,11 @@ class MagneticBraggStructure(BraggStructure):
             [(r[2] - lz / 2) / (lz / 2 - rad) * np.exp(1j * (k[0] * r[0] + k[1] * r[1])) for r in self.spheres])
 
     def k_perf(self):
-        return super(MagneticBraggStructure, self).k_perf() / 2
+        a = np.sqrt(self.event_2d_cells.l_x * self.event_2d_cells.l_y / len(self.spheres))
+        return np.pi / a * np.array([1, 1])  # rotate self.spheres by orientation before so peak is at [1, 1]
+
+    def peaks_other_angles(self):
+        return [np.pi / 4 + n * np.pi / 2 for n in range(1, 4)]
 
 
 def main():

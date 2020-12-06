@@ -148,7 +148,7 @@ class OrderParameter:
             self.lower.write(write_correlations, write_vec, write_upper_lower=False)
             self.upper.write(write_correlations, write_vec, write_upper_lower=False)
 
-    def calc_for_all_realizations(self, calc_mean=True, calc_correlation=True, **correlation_kwargs):
+    def calc_for_all_realizations(self, calc_mean=True, calc_correlations=True, **correlation_kwargs):
         init_time = time.time()
         op_father_dir = os.path.join(self.sim_path, "OP")
         if not os.path.exists(op_father_dir): os.mkdir(op_father_dir)
@@ -158,7 +158,7 @@ class OrderParameter:
         mean_vs_real_reals, mean_vs_real_mean = [], []
         if os.path.exists(mean_vs_real_path):
             mat = np.loadtxt(mean_vs_real_path, dtype=complex)
-            if not mat.shape==(2,):
+            if not mat.shape == (2,):
                 mean_vs_real_reals = [int(np.real(r)) for r in mat[:, 0]]
                 mean_vs_real_mean = [p for p in mat[:, 1]]
         i = 0
@@ -186,7 +186,7 @@ class OrderParameter:
                 sorted_mean = np.array(mean_vs_real_mean)[I]
                 np.savetxt(mean_vs_real_path, np.array([sorted_reals, sorted_mean]).T)
             corr_path = os.path.join(op_dir, self.correlation_name + "_" + str(sp_ind))
-            if not os.path.exists(corr_path) and calc_correlation:
+            if (not os.path.exists(corr_path)) and calc_correlations:
                 self.correlation(**correlation_kwargs)
                 self.write(write_correlations=True, write_vec=False)
             i += 1
@@ -613,8 +613,6 @@ def main():
     if not os.path.exists(op_dir): os.mkdir(op_dir)
     log = os.path.join(op_dir, "log")
     sys.stdout = open(log, "a")
-    print("\n\n\n-----------\nDate: " + str(date.today()) + "\nType: " + calc_type + "\nCorrelation couples: " + str(
-        realizations), file=sys.stdout)
     if calc_type.endswith("23"):
         m, n = 2, 3
     if calc_type.endswith("14"):
@@ -637,7 +635,10 @@ def main():
             op = MagneticBraggStructure(sim_path, m, n)
         else:
             op = BraggStructure(sim_path, m, n)
-    op.calc_for_all_realizations(calc_correlation=calc_correlations, calc_mean=calc_mean, **correlation_kwargs)
+    print("\n\n\n-----------\nDate: " + str(date.today()) + "\nType: " + calc_type + "\nCorrelation arguments:" + str(
+        correlation_kwargs) + "\nCalc correlations: " + str(calc_correlations) + "\nCalc mean: " + str(calc_mean),
+          file=sys.stdout)
+    op.calc_for_all_realizations(calc_correlations=calc_correlations, calc_mean=calc_mean, **correlation_kwargs)
 
 
 if __name__ == "__main__":

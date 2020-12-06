@@ -37,11 +37,11 @@ def main():
     for sim_name in sims:
         N, h, rhoH, ic = params_from_name(sim_name)
         if h >= 1.0:
-            send_specific_run(sim_name, ["psi23", "Bragg_S23", "Bragg_Sm23", "pos23"])
+            send_specific_run(sim_name, ["psi23"])  # , "Bragg_S23", "Bragg_Sm23", "pos23"])
         if h == 0.8:
-            send_specific_run(sim_name, ["burger_square", "Bragg_S14", "Bragg_Sm14", "pos14"])
+            send_specific_run(sim_name, ["psi14"])  # , "burger_square", "Bragg_S14", "Bragg_Sm14", "pos14"])
         if h <= 0.4:
-            send_specific_run(sim_name, ["psi16", "Bragg_S16", "Bragg_Sm16", "pos16"])
+            send_specific_run(sim_name, ["psi16"])  # , "Bragg_S16", "Bragg_Sm16", "pos16"])
 
 
 if __name__ == "__main__":

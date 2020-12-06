@@ -50,8 +50,10 @@ def params_from_name(name):
             h = float(ss[i + 1])
         if s == 'rhoH':
             rhoH = float(ss[i + 1])
-        if s == 'AF':
-            ic = ss[i + 1]
+        if s == 'triangle' or s == 'square':
+            ic = s
+            if ss[i - 1] == 'AF' and s == 'triangle':
+                ic = 'honeycomb'
     return N, h, rhoH, ic
 
 
@@ -59,13 +61,11 @@ def resend_all_runs():
     sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
     for d in sims:
         N, h, rhoH, ic = params_from_name(d)
-        if ic == 'triangle':
-            ic = 'honeycomb'
         send_single_run_envelope(h, N, rhoH, ic)
 
 
 def main():
-    # resend_all_runs()
+    resend_all_runs()
 
     # send_single_run_envelope(0.8, 100 ** 2, 0.7, 'honeycomb')
     # send_single_run_envelope(0.8, 100 ** 2, 0.7, 'square')
@@ -79,12 +79,12 @@ def main():
     #             send_single_run_envelope(h, N, rhoH, 'square')
     #             send_single_run_envelope(h, N, rhoH, 'honeycomb')
 
-    for N in [100 ** 2, 200 ** 2, 300 ** 2]:
-        h = 0.1
-        # Following DOI: 10.1039/c4sm00125g, at h=0.1 eta*sig/H=pi/4*rhoH phase transition at 0.64-0.67, that is rhoH at
-        # 0.81-0.85
-        for rhoH in np.round(np.linspace(0.78, 0.88, 11), 2):
-            send_single_run_envelope(h, N, rhoH, 'triangle')
+    # for N in [100 ** 2, 200 ** 2, 300 ** 2]:
+    #     h = 0.1
+    # Following DOI: 10.1039/c4sm00125g, at h=0.1 eta*sig/H=pi/4*rhoH phase transition at 0.64-0.67, that is rhoH at
+    # 0.81-0.85
+    # for rhoH in np.round(np.linspace(0.78, 0.88, 11), 2):
+    #     send_single_run_envelope(h, N, rhoH, 'triangle')
 
 
 if __name__ == "__main__":

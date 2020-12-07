@@ -173,7 +173,7 @@ class OrderParameter:
                 self.write(write_correlations=False, write_vec=type(self) is not PositionalCorrelationFunction)
             else:
                 self.op_vec = np.loadtxt(vec_path, dtype=complex)
-            if sp_ind not in mean_vs_real_reals and calc_mean:
+            if calc_mean and (sp_ind not in mean_vs_real_reals):
                 mean_vs_real_reals.append(sp_ind)
                 mean_vs_real_mean.append(np.mean(self.op_vec))
                 I = np.argsort(mean_vs_real_reals)

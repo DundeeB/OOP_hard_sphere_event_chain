@@ -22,17 +22,12 @@ class OrderParameter:
     def __init__(self, sim_path, centers=None, spheres_ind=None, calc_upper_lower=False, vec_name="vec",
                  correlation_name="correlation", **kwargs):
         self.sim_path = sim_path
-        write_or_load = WriteOrLoad(sim_path)
-        l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = write_or_load.load_Input()
-        self.event_2d_cells = Event2DCells(edge, n_row, n_col, l_z)
-        if centers is None or spheres_ind is None:
-            centers, spheres_ind = write_or_load.last_spheres()
+        self.write_or_load = WriteOrLoad(sim_path)
         self.update_centers(centers, spheres_ind)
         self.op_vec = None
         self.op_corr = None
         self.corr_centers = None
         self.counts = None
-
         self.op_name = "phi"
         self.vec_name = vec_name
         self.correlation_name = correlation_name
@@ -47,11 +42,14 @@ class OrderParameter:
             self.lower.op_name = "lower_" + self.op_name
 
     def update_centers(self, centers, spheres_ind):
-        rad = 1
+        if centers is None or spheres_ind is None:
+            centers, spheres_ind = self.write_or_load.last_spheres()
         self.spheres_ind = spheres_ind
+        l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = self.write_or_load.load_Input()
+        self.event_2d_cells = Event2DCells(edge, n_row, n_col, l_z)
         self.event_2d_cells.append_sphere([Sphere(c, rad) for c in centers])
+        self.event_2d_cells.update_all_spheres()
         self.spheres = self.event_2d_cells.all_centers
-        self.write_or_load = WriteOrLoad(self.sim_path, self.event_2d_cells.boundaries)
         self.N = len(centers)
 
     def calc_order_parameter(self, calc_upper_lower=False):
@@ -174,7 +172,7 @@ class OrderParameter:
                 self.calc_order_parameter()
                 self.write(write_correlations=False, write_vec=type(self) is not PositionalCorrelationFunction)
             else:
-                self.op_vec = np.loadtxt(os.path.join(vec_path), dtype=complex)
+                self.op_vec = np.loadtxt(vec_path, dtype=complex)
             if sp_ind not in mean_vs_real_reals and calc_mean:
                 mean_vs_real_reals.append(sp_ind)
                 mean_vs_real_mean.append(np.mean(self.op_vec))
@@ -547,7 +545,8 @@ class MagneticBraggStructure(BraggStructure):
 
 
 def main():
-    correlation_kwargs = {'randomize': False, 'time_limit': 2 * day}
+    # correlation_kwargs = {'randomize': False, 'time_limit': 2 * day}
+    correlation_kwargs = {'randomize': True, 'realizations': 10, 'time_limit': 2 * day}
 
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"
     sim_path = os.path.join(prefix, sys.argv[1])

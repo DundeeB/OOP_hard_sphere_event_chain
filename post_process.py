@@ -144,6 +144,9 @@ class OrderParameter:
             self.lower.write(write_correlations, write_vec, write_upper_lower=False)
             self.upper.write(write_correlations, write_vec, write_upper_lower=False)
 
+    def read_vec(self, vec_path):
+        self.op_vec = np.loadtxt(vec_path, dtype=complex)
+
     def calc_for_all_realizations(self, calc_mean=True, calc_correlations=True, **correlation_kwargs):
         init_time = time.time()
         op_father_dir = os.path.join(self.sim_path, "OP")
@@ -172,7 +175,7 @@ class OrderParameter:
                 self.calc_order_parameter()
                 self.write(write_correlations=False, write_vec=type(self) is not PositionalCorrelationFunction)
             else:
-                self.op_vec = np.loadtxt(vec_path, dtype=complex)
+                self.read_vec(vec_path)
             if calc_mean and (sp_ind not in mean_vs_real_reals):
                 mean_vs_real_reals.append(sp_ind)
                 mean_vs_real_mean.append(np.mean(self.op_vec))
@@ -210,11 +213,7 @@ class PsiMN(OrderParameter):
         return psimn_vec, graph
 
     def calc_order_parameter(self, calc_upper_lower=False):
-        psi_path = os.path.join(self.sim_path, "OP/psi_14", self.vec_name + str(self.spheres_ind))
-        if os.path.exists(psi_path):
-            self.op_vec = np.loadtxt(psi_path, dtype=complex)
-        else:
-            self.op_vec, _ = PsiMN.psi_m_n(self.event_2d_cells, self.m, self.n)
+        self.op_vec, _ = PsiMN.psi_m_n(self.event_2d_cells, self.m, self.n)
         if calc_upper_lower:
             # TODO: they will not read exisiting psi file because of names handeling
             self.lower.calc_order_parameter()
@@ -520,6 +519,14 @@ class BraggStructure(OrderParameter):
 
     def correlation(self, bin_width=0.1, low_memory=True, randomize=False, realizations=int(1e7), time_limit=2 * day):
         super().correlation(bin_width, False, low_memory, randomize, realizations, time_limit)
+
+    def read_vec(self, vec_path):
+        self.data = np.loadtxt(vec_path, dtype=complex)
+        S = [d[2] for d in self.data]
+        i = np.argmax(S)
+        self.S_peak = S[i]
+        self.k_peak = [self.data[i][0], self.data[i][1]]
+        self.op_vec = self.calc_eikr(self.k_peak)
 
 
 class MagneticBraggStructure(BraggStructure):

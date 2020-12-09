@@ -233,7 +233,7 @@ class PsiMN(OrderParameter):
 
 class PositionalCorrelationFunction(OrderParameter):
 
-    def __init__(self, sim_path, m, n, rect_width=0.2, centers=None, spheres_ind=None, calc_upper_lower=False):
+    def __init__(self, sim_path, m, n, rect_width=0.1, centers=None, spheres_ind=None, calc_upper_lower=False):
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, rect_width=rect_width)
         self.rect_width = rect_width
         self.m, self.n = m, n
@@ -259,7 +259,8 @@ class PositionalCorrelationFunction(OrderParameter):
             if randomize:
                 for realization in range(realizations):
                     i, j = random.randint(0, N - 1), random.randint(0, N - 1)
-                    k = self.__pair_dist__(self.spheres[i], self.spheres[j], v_hat, rect_width)
+                    if i == j: continue
+                    k = self.__pair_dist__(self.spheres[i], self.spheres[j], v_hat, rect_width, bin_width)
                     if k is not None:
                         k = int(min(k, kmax))
                         self.counts[k] += 1
@@ -267,12 +268,13 @@ class PositionalCorrelationFunction(OrderParameter):
                         break
             else:
                 for i in range(N):
-                    for j in range(i):
-                        k = self.__pair_dist__(self.spheres[i], self.spheres[j], v_hat, rect_width)
+                    for j in range(N):
+                        if j == i: continue
+                        k = self.__pair_dist__(self.spheres[i], self.spheres[j], v_hat, rect_width, bin_width)
                         if k is not None:
                             k = int(min(k, kmax))
                             self.counts[k] += 1
-                realization = N * (N - 1) / 2
+                realization = N * (N - 1)
         else:
             x = np.array([r[0] for r in self.spheres])
             y = np.array([r[1] for r in self.spheres])
@@ -301,7 +303,12 @@ class PositionalCorrelationFunction(OrderParameter):
             realization = N ** 2
         print("\nTime Passed: " + str((time.time() - init_time) / day) + " days.\nSummed " + str(
             realization) + " pairs")
-        self.op_corr = self.counts / np.nanmean(self.counts[np.where(self.counts > 0)])
+
+        # normalize counts
+        l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = self.write_or_load.load_Input()
+        rho2D = self.N / (l_x * l_y)
+        # counts --> counts*N*(N-1)/realization-->counts*(N*(N-1)/realization)*(1/(rho*a*N))
+        self.op_corr = self.counts / (rho2D * bin_width * rect_width * realization / (self.N - 1))
 
         if calc_upper_lower:
             assert self.upper is not None, \
@@ -313,7 +320,7 @@ class PositionalCorrelationFunction(OrderParameter):
             self.lower.correlation(bin_width=bin_width, low_memory=low_memory, randomize=randomize,
                                    realizations=realizations)
 
-    def __pair_dist__(self, r, r_, v_hat, rect_width):
+    def __pair_dist__(self, r, r_, v_hat, rect_width, bin_width):
         lx, ly = self.event_2d_cells.boundaries[:2]
         dr = np.array(r) - r_
         dxs = [dr[0], dr[0] + lx, dr[0] - lx]
@@ -325,7 +332,7 @@ class PositionalCorrelationFunction(OrderParameter):
         dist_vec = v_hat * dist_on_line - dr
         dist_to_line = np.linalg.norm(dist_vec)
         if dist_to_line <= rect_width / 2 and dist_on_line > 0:
-            k = int(np.floor(dist_on_line / rect_width))
+            k = int(np.floor(dist_on_line / bin_width))
             return k
         else:
             return None

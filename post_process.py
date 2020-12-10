@@ -480,7 +480,16 @@ class BraggStructure(OrderParameter):
             self.S(k_radii * np.array([np.cos(t), np.sin(t)]))
 
     def k_perf(self):
-        a = np.sqrt(self.event_2d_cells.l_x * self.event_2d_cells.l_y / len(self.spheres))
+        a = None
+        l = np.sqrt(self.event_2d_cells.l_x * self.event_2d_cells.l_y / len(self.spheres))
+        if self.m == 1 and self.n == 4:
+            a = l
+        if self.m == 1 and self.n == 6:
+            a = np.sqrt(2.0 / np.sqrt(3)) * l
+        if self.m == 2 and self.n == 3:
+            a = np.sqrt(4.0 / np.sqrt(3)) * l
+        if a is None:
+            raise NotImplementedError
         return 2 * np.pi / a * np.array([1, 0])  # rotate self.spheres by orientation before so peak is at [1, 0]
 
     def calc_peak(self):
@@ -490,18 +499,20 @@ class BraggStructure(OrderParameter):
         self.S_peak = -S_peak_m
 
     def peaks_other_angles(self):
-        return [n * np.pi / 2 for n in range(1, 4)]
+        mn = self.m * self.n
+        theta0 = np.arctan2(self.k_perf()[1], self.k_perf()[0])  # k_perf is overwritten in magnetic bragg
+        return [theta0 + n * 2 * np.pi / mn for n in range(1, mn)]
 
-    def calc_four_peaks(self):
+    def calc_other_peaks(self):
         S = lambda k: -self.S(k)
-        self.four_peaks_k = [self.k_peak]
-        self.four_peaks_S = [self.S_peak]
+        self.other_peaks_k = [self.k_peak]
+        self.other_peaks_S = [self.S_peak]
         k_radii = np.linalg.norm(self.k_perf())  # k_perf is overwritten in magnetic bragg
-        for theta in self.peaks_other_angles():  # peaks_other_angles is overwritten in magnetic bragg
+        for theta in self.peaks_other_angles():
             k_perf = k_radii * np.array([np.cos(theta), np.sin(theta)])
             k_peak, S_peak_m, _, _, _ = fmin(S, k_perf, xtol=0.01 / len(self.spheres), ftol=1.0, full_output=True)
-            self.four_peaks_k.append(k_peak)
-            self.four_peaks_S.append(S_peak_m)
+            self.other_peaks_k.append(k_peak)
+            self.other_peaks_S.append(S_peak_m)
 
     def write(self, write_vec=True, write_correlations=True):
         op_vec = self.op_vec
@@ -522,7 +533,7 @@ class BraggStructure(OrderParameter):
         dm = m2 - m1
         for k_radii in np.linspace(m1 - 10 * dm, m2 + 10 * dm, 12):
             self.tour_on_circle(k_radii)
-        self.calc_four_peaks()
+        self.calc_other_peaks()
 
     def correlation(self, bin_width=0.1, low_memory=True, randomize=False, realizations=int(1e7), time_limit=2 * day):
         super().correlation(bin_width, False, low_memory, randomize, realizations, time_limit)
@@ -551,11 +562,14 @@ class MagneticBraggStructure(BraggStructure):
             [(r[2] - lz / 2) / (lz / 2 - rad) * np.exp(1j * (k[0] * r[0] + k[1] * r[1])) for r in self.spheres])
 
     def k_perf(self):
-        a = np.sqrt(self.event_2d_cells.l_x * self.event_2d_cells.l_y / len(self.spheres))
-        return np.pi / a * np.array([1, 1])  # rotate self.spheres by orientation before so peak is at [1, 1]
-
-    def peaks_other_angles(self):
-        return [np.pi / 4 + n * np.pi / 2 for n in range(1, 4)]
+        l = np.sqrt(self.event_2d_cells.l_x * self.event_2d_cells.l_y / len(self.spheres))
+        if self.m == 1 and self.n == 4:
+            a = l * np.sqrt(2)
+            return 2 * np.pi / a * np.array([1 / np.sqrt(2), 1 / np.sqrt(2)])
+        if (self.m == 1 and self.n == 6) or (self.m == 2 and self.n == 3):
+            a = np.sqrt(4.0 / np.sqrt(3)) * l
+            return 2 * np.pi / a * np.array([1, 0])
+        raise NotImplementedError
 
 
 def main():

@@ -480,17 +480,17 @@ class BraggStructure(OrderParameter):
             self.S(k_radii * np.array([np.cos(t), np.sin(t)]))
 
     def k_perf(self):
-        a = None
+        # rotate self.spheres by orientation before so peak is at for square [1, 0]
         l = np.sqrt(self.event_2d_cells.l_x * self.event_2d_cells.l_y / len(self.spheres))
         if self.m == 1 and self.n == 4:
-            a = l
+            return 2 * np.pi / l * np.array([1, 0])
         if self.m == 1 and self.n == 6:
             a = np.sqrt(2.0 / np.sqrt(3)) * l
+            return 2 * np.pi / a * np.array([1.0, -1.0 / np.sqrt(3)])
         if self.m == 2 and self.n == 3:
             a = np.sqrt(4.0 / np.sqrt(3)) * l
-        if a is None:
-            raise NotImplementedError
-        return 2 * np.pi / a * np.array([1, 0])  # rotate self.spheres by orientation before so peak is at [1, 0]
+            return 2 * np.pi / a * np.array([1.0, -1.0 / np.sqrt(3)])
+        raise NotImplementedError
 
     def calc_peak(self):
         S = lambda k: -self.S(k)
@@ -564,11 +564,13 @@ class MagneticBraggStructure(BraggStructure):
     def k_perf(self):
         l = np.sqrt(self.event_2d_cells.l_x * self.event_2d_cells.l_y / len(self.spheres))
         if self.m == 1 and self.n == 4:
-            a = l * np.sqrt(2)
-            return 2 * np.pi / a * np.array([1 / np.sqrt(2), 1 / np.sqrt(2)])
-        if (self.m == 1 and self.n == 6) or (self.m == 2 and self.n == 3):
+            return np.pi / l * np.array([1, 1])
+        if self.m == 1 and self.n == 6:
+            a = np.sqrt(2.0 / np.sqrt(3)) * l
+            return 2 * np.pi / a * np.array([1.0 / 2.0, 1.0 / (2 * np.sqrt(3))])
+        if self.m == 2 and self.n == 3:
             a = np.sqrt(4.0 / np.sqrt(3)) * l
-            return 2 * np.pi / a * np.array([1, 0])
+            return 2 * np.pi / a * np.array([1, -1.0 / np.sqrt(3)])
         raise NotImplementedError
 
 

@@ -489,7 +489,7 @@ class BraggStructure(OrderParameter):
             return 2 * np.pi / a * np.array([1.0, -1.0 / np.sqrt(3)])
         if self.m == 2 and self.n == 3:
             a = np.sqrt(4.0 / np.sqrt(3)) * l
-            return 2 * np.pi / a * np.array([1.0, -1.0 / np.sqrt(3)])
+            return 2 * np.pi / a * np.array([0, 2])
         raise NotImplementedError
 
     def calc_peak(self):
@@ -567,10 +567,10 @@ class MagneticBraggStructure(BraggStructure):
             return np.pi / l * np.array([1, 1])
         if self.m == 1 and self.n == 6:
             a = np.sqrt(2.0 / np.sqrt(3)) * l
-            return 2 * np.pi / a * np.array([1.0 / 2.0, 1.0 / (2 * np.sqrt(3))])
+            return np.pi / a * np.array([1.0, 1.0 / np.sqrt(3)])
         if self.m == 2 and self.n == 3:
             a = np.sqrt(4.0 / np.sqrt(3)) * l
-            return 2 * np.pi / a * np.array([1, -1.0 / np.sqrt(3)])
+            return np.pi / a * np.array([2.0, 2.0])
         raise NotImplementedError
 
 

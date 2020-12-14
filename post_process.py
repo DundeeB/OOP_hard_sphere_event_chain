@@ -31,6 +31,7 @@ class OrderParameter:
         self.op_name = "phi"
         self.vec_name = vec_name
         self.correlation_name = correlation_name
+        self.op_father_dir = os.path.join(self.sim_path, "OP")
         if calc_upper_lower:
             upper_centers = [c for c in self.spheres if c[2] >= self.event_2d_cells.boundaries[2] / 2]
             lower_centers = [c for c in self.spheres if c[2] < self.event_2d_cells.boundaries[2] / 2]
@@ -40,6 +41,22 @@ class OrderParameter:
                                     calc_upper_lower=False, **kwargs)
             self.upper.op_name = "upper_" + self.op_name
             self.lower.op_name = "lower_" + self.op_name
+
+    @property
+    def op_dir_path(self):
+        return os.path.join(self.op_father_dir, self.op_name)
+
+    @property
+    def mean_vs_real_path(self):
+        return os.path.join(self.op_dir_path, 'mean_vs_real.txt')
+
+    @property
+    def vec_path(self):
+        return os.path.join(self.op_dir_path, self.vec_name + "_" + str(self.spheres_ind) + '.txt')
+
+    @property
+    def corr_path(self):
+        return os.path.join(self.op_dir_path, self.correlation_name + "_" + str(self.spheres_ind) + '.txt')
 
     def update_centers(self, centers, spheres_ind):
         if centers is None or spheres_ind is None:
@@ -128,24 +145,27 @@ class OrderParameter:
         return self.op_vec[i] * np.conjugate(self.op_vec[j]), k
 
     def write(self, write_correlations=True, write_vec=False, write_upper_lower=False):
-        join = lambda a, b: os.path.join(a, b)
-        op_dir = join(self.sim_path, "OP")
-        op_name_dir = join(op_dir, self.op_name)
-        save_mat = lambda name, mat: np.savetxt(join(op_name_dir, name + "_" + str(self.spheres_ind) + ".txt"), mat)
-        if not os.path.exists(op_dir): os.mkdir(op_dir)
-        if not os.path.exists(op_name_dir): os.mkdir(op_name_dir)
+        if not os.path.exists(self.op_father_dir): os.mkdir(self.op_father_dir)
+        if not os.path.exists(self.op_dir_path): os.mkdir(self.op_dir_path)
         if write_vec:
             if self.op_vec is None: raise (Exception("Should calculate vec before writing"))
-            save_mat(self.vec_name, self.op_vec)
+            np.savetxt(self.vec_path, self.op_vec)
         if write_correlations:
             if self.op_corr is None: raise (Exception("Should calculate correlation before writing"))
-            save_mat(self.correlation_name, np.transpose([self.corr_centers, self.op_corr, self.counts]))
+            np.savetxt(self.corr_path, np.transpose([self.corr_centers, self.op_corr, self.counts]))
         if write_upper_lower:
             self.lower.write(write_correlations, write_vec, write_upper_lower=False)
             self.upper.write(write_correlations, write_vec, write_upper_lower=False)
 
-    def read_vec(self, vec_path):
-        self.op_vec = np.loadtxt(vec_path, dtype=complex)
+    def read_vec(self):
+        self.op_vec = np.loadtxt(self.vec_path, dtype=complex)
+
+    def read_or_calc_write(self, **calc_order_parameter_args):
+        if os.path.exists(self.vec_path):
+            self.read_vec()
+        else:
+            self.calc_order_parameter(**calc_order_parameter_args)
+            self.write(write_correlations=False, write_vec=True)
 
     def calc_for_all_realizations(self, calc_mean=True, calc_correlations=True, **correlation_kwargs):
         init_time = time.time()
@@ -153,10 +173,9 @@ class OrderParameter:
         if not os.path.exists(op_father_dir): os.mkdir(op_father_dir)
         op_dir = os.path.join(op_father_dir, self.op_name)
         if not os.path.exists(op_dir): os.mkdir(op_dir)
-        mean_vs_real_path = os.path.join(op_dir, 'mean_vs_real.txt')
         mean_vs_real_reals, mean_vs_real_mean = [], []
-        if os.path.exists(mean_vs_real_path):
-            mat = np.loadtxt(mean_vs_real_path, dtype=complex)
+        if os.path.exists(self.mean_vs_real_path):
+            mat = np.loadtxt(self.mean_vs_real_path, dtype=complex)
             if not mat.shape == (2,):
                 mean_vs_real_reals = [int(np.real(r)) for r in mat[:, 0]]
                 mean_vs_real_mean = [p for p in mat[:, 1]]
@@ -170,21 +189,16 @@ class OrderParameter:
             else:
                 centers = np.loadtxt(os.path.join(self.sim_path, 'Initial Conditions'))
             self.update_centers(centers, sp_ind)
-            vec_path = os.path.join(op_dir, self.vec_name + "_" + str(sp_ind))
-            if not os.path.exists(vec_path):
-                self.calc_order_parameter()
-                self.write(write_correlations=False, write_vec=type(self) is not PositionalCorrelationFunction)
-            else:
-                self.read_vec(vec_path)
+            if type(self) is not PositionalCorrelationFunction:
+                self.read_or_calc_write()
             if calc_mean and (sp_ind not in mean_vs_real_reals):
                 mean_vs_real_reals.append(sp_ind)
                 mean_vs_real_mean.append(np.mean(self.op_vec))
                 I = np.argsort(mean_vs_real_reals)
                 sorted_reals = np.array(mean_vs_real_reals)[I]
                 sorted_mean = np.array(mean_vs_real_mean)[I]
-                np.savetxt(mean_vs_real_path, np.array([sorted_reals, sorted_mean]).T)
-            corr_path = os.path.join(op_dir, self.correlation_name + "_" + str(sp_ind))
-            if (not os.path.exists(corr_path)) and calc_correlations:
+                np.savetxt(self.mean_vs_real_path, np.array([sorted_reals, sorted_mean]).T)
+            if (not os.path.exists(self.corr_path)) and calc_correlations:
                 self.correlation(**correlation_kwargs)
                 self.write(write_correlations=True, write_vec=False)
             i += 1
@@ -338,49 +352,31 @@ class PositionalCorrelationFunction(OrderParameter):
             return None
 
 
-class PsiUpPsiDown(PsiMN):
-    def __init__(self, sim_path, m, n, centers=None, spheres_ind=None):
-        super().__init__(sim_path, m, n, centers, spheres_ind, calc_upper_lower=True)
-        self.op_orig = self.op_name
-        self.op_name = "psiup_psidown_" + str(m) + str(n)
-
-    def calc_order_parameter(self):
-        super().calc_order_parameter(calc_upper_lower=True)
-        self.op_orig = self.op_vec
-
-
 class BurgerField(OrderParameter):
 
-    @staticmethod
-    def name():
-        return "burger_vectors"
-
-    def __init__(self, sim_path, a1=None, a2=None, centers=None, spheres_ind=None, calc_upper_lower=False):
+    def __init__(self, sim_path, centers=None, spheres_ind=None, calc_upper_lower=False):
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower=False)
-        self.op_name = BurgerField.name()
-        if a1 is None or a2 is None:
-            l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = self.write_or_load.load_Input()
-            a = np.sqrt(l_x * l_y / len(self.spheres))
-            a1 = np.array([a, 0])
-            a2 = np.array([0, a])
-        self.a1, self.a2 = a1, a2
+        self.op_name = "burger_vectors"
         if calc_upper_lower:
             upper_centers = [c for c in self.spheres if c[2] >= self.event_2d_cells.boundaries[2] / 2]
             lower_centers = [c for c in self.spheres if c[2] < self.event_2d_cells.boundaries[2] / 2]
-            self.upper = BurgerField(sim_path, centers=upper_centers, spheres_ind=self.spheres_ind,
-                                     a1=a1 + a2, a2=a1 - a2)
-            self.lower = BurgerField(sim_path, centers=lower_centers, spheres_ind=self.spheres_ind,
-                                     a1=a1 + a2, a2=a1 - a2)
-            self.upper.op_name = "upper_" + BurgerField.name()
-            self.lower.op_name = "lower_" + BurgerField.name()
+            self.upper = BurgerField(sim_path, centers=upper_centers, spheres_ind=self.spheres_ind)
+            self.lower = BurgerField(sim_path, centers=lower_centers, spheres_ind=self.spheres_ind)
+            self.upper.op_name = "upper_" + self.op_name
+            self.lower.op_name = "lower_" + self.op_name
 
     def calc_order_parameter(self, calc_upper_lower=False):
-        perfect_lattice_vectors = np.array([n * self.a1 + m * self.a2 for n in range(-3, 3) for m in range(-3, 3)])
         psi = PsiMN(self.sim_path, 1, 4, centers=self.spheres, spheres_ind=self.spheres_ind)
-        psi.calc_order_parameter(calc_upper_lower)
-        psi.write(write_correlations=False, write_vec=True)
+        psi.read_or_calc_write()
         orientation = psi.rotate_spheres(calc_spheres=False)
         R = np.array([[np.cos(orientation), -np.sin(orientation)], [np.sin(orientation), np.cos(orientation)]])
+
+        bragg = BraggStructure(self.sim_path, 1, 4, self.spheres, self.spheres_ind)
+        bragg.read_or_calc_write(psi=psi)
+        a = 2 * np.pi / np.linalg.norm(bragg.k_peak)
+        a1, a2 = np.array([a, 0]), np.array([0, a])
+
+        perfect_lattice_vectors = np.array([n * a1 + m * a2 for n in range(-3, 3) for m in range(-3, 3)])
         perfect_lattice_vectors = np.array([np.matmul(R, p.T) for p in perfect_lattice_vectors])
         # rotate = lambda ps: np.matmul(R(-orientation), np.array(ps).T).T
         disloc_burger, disloc_location = BurgerField.calc_burger_vector(self.event_2d_cells, perfect_lattice_vectors)
@@ -522,9 +518,10 @@ class BraggStructure(OrderParameter):
         super().write(write_correlations=write_correlations, write_vec=write_vec, write_upper_lower=False)
         self.op_vec = op_vec
 
-    def calc_order_parameter(self):
-        psi = PsiMN(self.sim_path, self.m, self.n, centers=self.spheres, spheres_ind=self.spheres_ind)
-        psi.calc_order_parameter(calc_upper_lower=False)  # NotImplemented
+    def calc_order_parameter(self, psi=None):
+        if psi is None:
+            psi = PsiMN(self.sim_path, self.m, self.n, centers=self.spheres, spheres_ind=self.spheres_ind)
+            psi.read_or_calc_write()
         _, self.spheres = psi.rotate_spheres()
         self.calc_peak()
         self.op_vec = self.calc_eikr(self.k_peak)

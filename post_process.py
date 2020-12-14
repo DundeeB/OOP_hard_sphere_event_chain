@@ -535,8 +535,8 @@ class BraggStructure(OrderParameter):
     def correlation(self, bin_width=0.1, low_memory=True, randomize=False, realizations=int(1e7), time_limit=2 * day):
         super().correlation(bin_width, False, low_memory, randomize, realizations, time_limit)
 
-    def read_vec(self, vec_path):
-        self.data = np.loadtxt(vec_path, dtype=complex)
+    def read_vec(self):
+        self.data = np.loadtxt(self.vec_path, dtype=complex)
         S = [d[2] for d in self.data]
         i = np.argmax(S)
         self.S_peak = S[i]

@@ -159,7 +159,7 @@ class Metric:
     @staticmethod
     def cyclic_vec(boundaries, sphere1, sphere2):
         """
-        :return: vector pointing from sphere2 to sphere1 ("sphere2-sphere1") shortest through cyclic boundaries
+        :return: vector pointing from sphere2 to sphere1 ("sphere1-sphere2") shortest through cyclic boundaries
         """
         dx = np.array(sphere1.center) - sphere2.center  # direct vector
         vec = np.zeros(len(dx))

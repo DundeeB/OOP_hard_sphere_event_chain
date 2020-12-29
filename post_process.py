@@ -17,6 +17,8 @@ epsilon = 1e-8
 day = 86400  # sec
 
 
+# TODO: Add topological distance(steps in graph) magnetic correlation
+
 class OrderParameter:
 
     def __init__(self, sim_path, centers=None, spheres_ind=None, calc_upper_lower=False, vec_name="vec",
@@ -223,12 +225,13 @@ class PsiMN(OrderParameter):
     @staticmethod
     def psi_m_n(event_2d_cells, m, n):
         centers = event_2d_cells.all_centers
-        cyc = lambda p1, p2: Metric.cyclic_dist(event_2d_cells.boundaries, Sphere([x for x in p1] + [0], 1),
-                                                Sphere([x for x in p2] + [0], 1))
+        s = lambda c: Sphere([x for x in c] + [0], 1)
+        cyc = lambda p1, p2: Metric.cyclic_dist(event_2d_cells.boundaries, s(p1), s(p2))
         graph = kneighbors_graph([p[:2] for p in centers], n_neighbors=n, metric=cyc)
         psimn_vec = np.zeros(len(centers), dtype=np.complex)
         for i in range(len(centers)):
-            dr = [np.array(centers[i]) - centers[j] for j in graph.getrow(i).indices]
+            dr = [Metric.cyclic_vec(event_2d_cells.boundaries, s(centers[i]), s(centers[j])) for j in
+                  graph.getrow(i).indices]
             t = np.arctan2([r[1] for r in dr], [r[0] for r in dr])
             psi_n = np.mean(np.exp(1j * n * t))
             psimn_vec[i] = np.abs(psi_n) * np.exp(1j * m * np.angle(psi_n))

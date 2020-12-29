@@ -216,15 +216,23 @@ class PsiMN(OrderParameter):
         self.op_name = "psi_" + str(m) + str(n)
 
     @staticmethod
+    def cast_sphere(c, r=1, z=0):
+        return Sphere([x for x in c] + [z], r)
+
+    @staticmethod
+    def kgraph(centers, k, boundaries):
+        cyc = lambda p1, p2: Metric.cyclic_dist(boundaries, PsiMN.cast_sphere(p1), PsiMN.cast_sphere(p2))
+        graph = kneighbors_graph([p[:2] for p in centers], n_neighbors=k, metric=cyc)
+        return graph
+
+    @staticmethod
     def psi_m_n(event_2d_cells, m, n):
         centers = event_2d_cells.all_centers
-        s = lambda c: Sphere([x for x in c] + [0], 1)
-        cyc = lambda p1, p2: Metric.cyclic_dist(event_2d_cells.boundaries, s(p1), s(p2))
-        graph = kneighbors_graph([p[:2] for p in centers], n_neighbors=n, metric=cyc)
+        graph = PsiMN.kgraph(centers, n, event_2d_cells.boundaries)
         psimn_vec = np.zeros(len(centers), dtype=np.complex)
         for i in range(len(centers)):
-            dr = [Metric.cyclic_vec(event_2d_cells.boundaries, s(centers[i]), s(centers[j])) for j in
-                  graph.getrow(i).indices]
+            dr = [Metric.cyclic_vec(event_2d_cells.boundaries, PsiMN.cast_sphere(centers[i]),
+                                    PsiMN.cast_sphere(centers[j])) for j in graph.getrow(i).indices]
             t = np.arctan2([r[1] for r in dr], [r[0] for r in dr])
             psi_n = np.mean(np.exp(1j * n * t))
             psimn_vec[i] = np.abs(psi_n) * np.exp(1j * m * np.angle(psi_n))

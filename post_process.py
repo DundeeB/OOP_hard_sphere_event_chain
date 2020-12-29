@@ -161,21 +161,14 @@ class OrderParameter:
 
     def read_vec(self):
         self.op_vec = np.loadtxt(self.vec_path, dtype=complex)
-        if len(self.op_vec) == 0:
-            print("Empty file was found, deleting it")
-            os.remove(self.vec_path)
-        raise ValueError("EmptyVecFile")
 
     def read_or_calc_write(self, **calc_order_parameter_args):
         if os.path.exists(self.vec_path):
-            try:
-                self.read_vec()
-            except ValueError as err:
-                assert err.__str__() == "EmptyVecFile"
-                self.read_or_calc_write(**calc_order_parameter_args)  # vec file was deleted
-        else:
-            self.calc_order_parameter(**calc_order_parameter_args)
-            self.write(write_correlations=False, write_vec=True)
+            self.read_vec()
+        if len(self.op_vec) > 0:
+            return
+        self.calc_order_parameter(**calc_order_parameter_args)
+        self.write(write_correlations=False, write_vec=True)
 
     def calc_for_all_realizations(self, calc_mean=True, calc_correlations=True, **correlation_kwargs):
         init_time = time.time()

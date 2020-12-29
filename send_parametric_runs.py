@@ -65,7 +65,7 @@ def resend_all_runs():
 
 
 def main():
-    # resend_all_runs()
+    resend_all_runs()
 
     # send_single_run_envelope(0.8, 100 ** 2, 0.7, 'honeycomb')
     # send_single_run_envelope(0.8, 100 ** 2, 0.7, 'square')
@@ -87,10 +87,10 @@ def main():
     # for rhoH in np.round(np.linspace(0.78, 0.88, 11), 2):
     #     send_single_run_envelope(h, N, rhoH, 'triangle')
 
-    for N in [100 ** 2, 200 ** 2, 300 ** 2]:
-        for h in [0.6]:
-            for rhoH in np.round(np.linspace(0.73, 0.83, 11), 2):
-                send_single_run_envelope(h, N, rhoH, 'square')
+    # for N in [100 ** 2, 200 ** 2, 300 ** 2]:
+    #     for h in [0.6]:
+    #         for rhoH in np.round(np.linspace(0.73, 0.83, 11), 2):
+    #             send_single_run_envelope(h, N, rhoH, 'square')
 
 
 if __name__ == "__main__":

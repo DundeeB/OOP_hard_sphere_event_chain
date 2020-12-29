@@ -231,7 +231,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
             return quench_single_run_envelope('zquench', sim_name,
                                               desired_rho_or_h=h)  # notice run sim is sent after z-quench has succeeded
         assert resend_flag, "Simulation did not resend. Initial conditions: " + ic
-    return 0 if not record_displacements else realizations, displacements
+    return 0 if (not record_displacements) else (realizations, displacements)
 
 
 def main():

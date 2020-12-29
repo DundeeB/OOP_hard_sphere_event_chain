@@ -72,13 +72,13 @@ def main():
     # send_single_run_envelope(1.0, 100 ** 2, 0.75, 'honeycomb')
     # send_single_run_envelope(1.0, 100 ** 2, 0.75, 'square')
 
-    for N in [100 ** 2, 200 ** 2, 300 ** 2]:
-        for h in [0.8]:  # , 1.0]:
-            #         # for rhoH in np.round(np.linspace(0.75, 0.85, 11) if h == 0.8 else np.linspace(0.8, 0.9, 11), 2):
-            #         for rhoH in [0.775, 0.785, 0.795] if h == 0.8 else [0.845, 0.855, 0.865]:
-            for rhoH in [0.86, 0.87, 0.88, 0.89, 0.90]:
-                send_single_run_envelope(h, N, rhoH, 'square')
-                send_single_run_envelope(h, N, rhoH, 'honeycomb')
+    # for N in [100 ** 2, 200 ** 2, 300 ** 2]:
+    #     for h in [0.8]:  # , 1.0]:
+                    # for rhoH in np.round(np.linspace(0.75, 0.85, 11) if h == 0.8 else np.linspace(0.8, 0.9, 11), 2):
+                    # for rhoH in [0.775, 0.785, 0.795] if h == 0.8 else [0.845, 0.855, 0.865]:
+            # for rhoH in [0.86, 0.87, 0.88, 0.89, 0.90]:
+            #     send_single_run_envelope(h, N, rhoH, 'square')
+            #     send_single_run_envelope(h, N, rhoH, 'honeycomb')
 
     # for N in [100 ** 2, 200 ** 2, 300 ** 2]:
     #     h = 0.1
@@ -86,6 +86,12 @@ def main():
     # 0.81-0.85
     # for rhoH in np.round(np.linspace(0.78, 0.88, 11), 2):
     #     send_single_run_envelope(h, N, rhoH, 'triangle')
+
+    for N in [100 ** 2, 200 ** 2, 300 ** 2]:
+        for h in [0.6]:
+            for rhoH in np.round(np.linspace(0.73, 0.83, 11), 2):
+                send_single_run_envelope(h, N, rhoH, 'square')
+                send_single_run_envelope(h, N, rhoH, 'honeycomb')
 
 
 if __name__ == "__main__":

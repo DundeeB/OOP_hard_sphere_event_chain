@@ -91,7 +91,7 @@ def main():
         for h in [0.6]:
             for rhoH in np.round(np.linspace(0.73, 0.83, 11), 2):
                 send_single_run_envelope(h, N, rhoH, 'square')
-                send_single_run_envelope(h, N, rhoH, 'honeycomb')
+                send_single_run_envelope(h, N, rhoH, 'triangle')
 
 
 if __name__ == "__main__":

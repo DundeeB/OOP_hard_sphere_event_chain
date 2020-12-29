@@ -165,7 +165,7 @@ class OrderParameter:
     def read_or_calc_write(self, **calc_order_parameter_args):
         if os.path.exists(self.vec_path):
             self.read_vec()
-        if len(self.op_vec) > 0:
+        if (self.op_vec is not None) and (len(self.op_vec) > 0):
             return
         self.calc_order_parameter(**calc_order_parameter_args)
         self.write(write_correlations=False, write_vec=True)

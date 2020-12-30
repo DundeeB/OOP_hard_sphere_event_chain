@@ -38,12 +38,12 @@ def main():
     sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
     for sim_name in sims:
         _, h, _, _ = params_from_name(sim_name)
-        default_op = ["gM", "psi", "Bragg_S", "Bragg_Sm", "pos"]
+        default_op = ["gM"]  #, "psi", "Bragg_S", "Bragg_Sm", "pos"]
         if h > 0.85:
             mn = "23"
         if 0.55 <= h <= 0.85:
             mn = "14"
-            send_specific_run(sim_name, ["burger_square"])
+            # send_specific_run(sim_name, ["burger_square"])
         if h < 0.55:
             mn = "16"
         send_specific_run(sim_name, [op + mn for op in default_op])

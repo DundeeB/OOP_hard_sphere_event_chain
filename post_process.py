@@ -606,7 +606,10 @@ class MagneticTopologicalCorr(OrderParameter):
             # Complicated implementation because the simple one returns NxN matrix, and another simple option of node to
             # node shortest path required additional libs and sklearn was already installed for me
             for j in range(N):
-                k = int(shortest_paths_from_i[j])
+                try:
+                    k = int(shortest_paths_from_i[j])
+                except KeyError:  # j is not in a connected component of i
+                    continue
                 if k > kmax: kmax = k
                 phi_phi = (-1) ** k * self.s[i] * self.s[j]
                 counts[k] += 1

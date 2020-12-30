@@ -3,11 +3,11 @@ import numpy as np
 from SnapShot import *
 from Structure import *
 from EventChainActions import *
-from sklearn.neighbors import *
+from sklearn.neighbors import kneighbors_graph
+from sklearn.utils.graph_shortest_path import graph_shortest_path
 import os
 import sys
 import random
-import re
 from datetime import date
 from scipy.spatial import Delaunay
 from scipy.optimize import fmin
@@ -192,7 +192,7 @@ class OrderParameter:
             else:
                 centers = np.loadtxt(os.path.join(self.sim_path, 'Initial Conditions'))
             self.update_centers(centers, sp_ind)
-            if type(self) is not PositionalCorrelationFunction:
+            if (type(self) is not PositionalCorrelationFunction) and type(self) is not MagneticTopologicalCorr:
                 self.read_or_calc_write()
             if calc_mean and (sp_ind not in mean_vs_real_reals):
                 mean_vs_real_reals.append(sp_ind)
@@ -583,6 +583,54 @@ class MagneticBraggStructure(BraggStructure):
         raise NotImplementedError
 
 
+class MagneticTopologicalCorr(OrderParameter):
+    def __init__(self, sim_path, k_nearest_neighbors, centers=None, spheres_ind=None, calc_upper_lower=False):
+        single_layer_k = 4 if k_nearest_neighbors == 4 else 6
+        super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, k_nearest_neighbors=single_layer_k)
+        # extra argument k_nearest_neighbors goes to upper and lower layers
+        self.k = k_nearest_neighbors
+        self.op_name = "gM_k=" + str(k_nearest_neighbors)
+        self.graph = PsiMN.kgraph(self.spheres, k_nearest_neighbors, self.event_2d_cells.boundaries)
+        self.dist = graph_shortest_path(self.graph)
+        rad, lz = 1.0, self.event_2d_cells.l_z
+        self.s = [(r[2] - lz / 2) / (lz / 2 - rad) for r in self.spheres]
+
+    def correlation(self, calc_upper_lower=False, randomize=False, realizations=int(1e7)):
+        kmax = int(self.dist.max())
+        counts = np.zeros(kmax + 1)
+        phiphi_hist = np.zeros(kmax + 1)
+        init_time = time.time()
+        N = len(self.spheres)
+        if randomize:
+            for realization in range(realizations):
+                i, j = random.randint(0, N - 1), random.randint(0, N - 1)
+                phi_phi, k = self.__pair_corr__(i, j)
+                k = int(min(k, kmax))
+                counts[k] += 1
+                phiphi_hist[k] += phi_phi
+        else:
+            for i in range(N):
+                for j in range(N):  # j<i, j=i not interesting and j>i double counting accounted for in counts
+                    phi_phi, k = self.__pair_corr__(i, j)
+                    k = int(min(k, kmax))
+                    counts[k] += 1
+                    phiphi_hist[k] += phi_phi
+            realization = N ** 2
+        print("\nTime Passed: " + str((time.time() - init_time) / day) + " days.\nSummed " + str(
+            realization) + " pairs")
+        self.counts = counts
+        self.op_corr = phiphi_hist / counts
+        self.corr_centers = np.array(range(kmax))
+
+        if calc_upper_lower:
+            self.lower.correlation(randomize=randomize, realizations=realizations)
+            self.upper.correlation(randomize=randomize, realizations=realizations)
+
+    def __pair_corr__(self, i, j):
+        k = int(self.dist[i, j])  # dist from i-->j (directed graph, dist[i,j] != dist[j,i])
+        return (-1) ** k * self.s[i] * self.s[j], k
+
+
 def main():
     correlation_kwargs = {'randomize': False, 'time_limit': 2 * day}
 
@@ -615,6 +663,10 @@ def main():
             op = MagneticBraggStructure(sim_path, m, n)
         else:
             op = BraggStructure(sim_path, m, n)
+    if calc_type.startswith("gM"):
+        op = MagneticTopologicalCorr(sim_path, k_nearest_neighbors=n)
+        calc_mean = False
+        correlation_kwargs = {'randomize': correlation_kwargs['randomize']}
     print("\n\n\n-----------\nDate: " + str(date.today()) + "\nType: " + calc_type + "\nCorrelation arguments:" + str(
         correlation_kwargs) + "\nCalc correlations: " + str(calc_correlations) + "\nCalc mean: " + str(calc_mean),
           file=sys.stdout)

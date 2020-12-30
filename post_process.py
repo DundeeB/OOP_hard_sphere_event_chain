@@ -159,16 +159,23 @@ class OrderParameter:
             self.lower.write(write_correlations, write_vec, write_upper_lower=False)
             self.upper.write(write_correlations, write_vec, write_upper_lower=False)
 
+    @staticmethod
+    def exists(file_path):
+        if not os.path.exists(file_path): return False
+        A = np.loadtxt(file_path, dtype=complex)  # complex most general so this part would not raise error
+        if A is None: return False
+        if len(A) == 0: return False
+        return True
+
     def read_vec(self):
         self.op_vec = np.loadtxt(self.vec_path, dtype=complex)
 
     def read_or_calc_write(self, **calc_order_parameter_args):
-        if os.path.exists(self.vec_path):
+        if OrderParameter.exists(self.vec_path):
             self.read_vec()
-        if (self.op_vec is not None) and (len(self.op_vec) > 0):
-            return
-        self.calc_order_parameter(**calc_order_parameter_args)
-        self.write(write_correlations=False, write_vec=True)
+        else:
+            self.calc_order_parameter(**calc_order_parameter_args)
+            self.write(write_correlations=False, write_vec=True)
 
     def calc_for_all_realizations(self, calc_mean=True, calc_correlations=True, **correlation_kwargs):
         init_time = time.time()
@@ -185,6 +192,7 @@ class OrderParameter:
         i = 0
         realizations = self.write_or_load.realizations()
         realizations.append(0)
+
         while time.time() - init_time < 2 * day and i < len(realizations):
             sp_ind = realizations[i]
             if sp_ind != 0:
@@ -201,7 +209,7 @@ class OrderParameter:
                 sorted_reals = np.array(mean_vs_real_reals)[I]
                 sorted_mean = np.array(mean_vs_real_mean)[I]
                 np.savetxt(self.mean_vs_real_path, np.array([sorted_reals, sorted_mean]).T)
-            if (not os.path.exists(self.corr_path)) and calc_correlations:
+            if (not OrderParameter.exists(self.corr_path)) and calc_correlations:
                 self.correlation(**correlation_kwargs)
                 self.write(write_correlations=True, write_vec=False)
             i += 1

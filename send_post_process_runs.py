@@ -41,7 +41,7 @@ def main():
         default_op = ["gM"]  # , "psi", "Bragg_S", "Bragg_Sm", "pos"]
         if h >= 1.0:
             mn = "23"
-        if h == 0.8:
+        if h >= 0.55 or h <= 0.85:
             mn = "14"
             send_specific_run(sim_name, ["burger_square"])
         if h <= 0.4:

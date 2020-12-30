@@ -605,14 +605,12 @@ class MagneticTopologicalCorr(OrderParameter):
             for realization in range(realizations):
                 i, j = random.randint(0, N - 1), random.randint(0, N - 1)
                 phi_phi, k = self.__pair_corr__(i, j)
-                k = int(min(k, kmax))
                 counts[k] += 1
                 phiphi_hist[k] += phi_phi
         else:
             for i in range(N):
                 for j in range(N):  # j<i, j=i not interesting and j>i double counting accounted for in counts
                     phi_phi, k = self.__pair_corr__(i, j)
-                    k = int(min(k, kmax))
                     counts[k] += 1
                     phiphi_hist[k] += phi_phi
             realization = N ** 2
@@ -620,7 +618,7 @@ class MagneticTopologicalCorr(OrderParameter):
             realization) + " pairs")
         self.counts = counts
         self.op_corr = phiphi_hist / counts
-        self.corr_centers = np.array(range(kmax))
+        self.corr_centers = np.array(range(kmax + 1))
 
         if calc_upper_lower:
             self.lower.correlation(randomize=randomize, realizations=realizations)

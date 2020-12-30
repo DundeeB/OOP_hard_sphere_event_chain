@@ -4,7 +4,7 @@ from SnapShot import *
 from Structure import *
 from EventChainActions import *
 from sklearn.neighbors import kneighbors_graph
-from sklearn.utils.graph_shortest_path import graph_shortest_path
+from sklearn.utils.graph import single_source_shortest_path_length
 import os
 import sys
 import random
@@ -591,42 +591,38 @@ class MagneticTopologicalCorr(OrderParameter):
         self.k = k_nearest_neighbors
         self.op_name = "gM_k=" + str(k_nearest_neighbors)
         self.graph = PsiMN.kgraph(self.spheres, k_nearest_neighbors, self.event_2d_cells.boundaries)
-        self.dist = graph_shortest_path(self.graph)
         rad, lz = 1.0, self.event_2d_cells.l_z
         self.s = [(r[2] - lz / 2) / (lz / 2 - rad) for r in self.spheres]
 
-    def correlation(self, calc_upper_lower=False, randomize=False, realizations=int(1e7)):
-        kmax = int(self.dist.max())
-        counts = np.zeros(kmax + 1)
-        phiphi_hist = np.zeros(kmax + 1)
-        init_time = time.time()
+    def correlation(self, calc_upper_lower=False):
         N = len(self.spheres)
-        if randomize:
-            for realization in range(realizations):
-                i, j = random.randint(0, N - 1), random.randint(0, N - 1)
-                phi_phi, k = self.__pair_corr__(i, j)
+        kbound = N  # eassier than finding graph's diameter
+        kmax = 0
+        counts = np.zeros(kbound + 1)
+        phiphi_hist = np.zeros(kbound + 1)
+        init_time = time.time()
+        for i in range(N):
+            shortest_paths_from_i = single_source_shortest_path_length(self.graph, i)
+            # Complicated implementation because the simple one returns NxN matrix, and another simple option of node to
+            # node shortest path required additional libs and sklearn was already installed for me
+            for j in range(N):
+                k = int(shortest_paths_from_i[j])
+                if k > kmax: kmax = k
+                phi_phi = (-1) ** k * self.s[i] * self.s[j]
                 counts[k] += 1
                 phiphi_hist[k] += phi_phi
-        else:
-            for i in range(N):
-                for j in range(N):  # j<i, j=i not interesting and j>i double counting accounted for in counts
-                    phi_phi, k = self.__pair_corr__(i, j)
-                    counts[k] += 1
-                    phiphi_hist[k] += phi_phi
-            realization = N ** 2
+        realization = N ** 2
         print("\nTime Passed: " + str((time.time() - init_time) / day) + " days.\nSummed " + str(
             realization) + " pairs")
+        counts = counts[:kmax + 1]
+        phiphi_hist = phiphi_hist[:kmax + 1]
         self.counts = counts
         self.op_corr = phiphi_hist / counts
         self.corr_centers = np.array(range(kmax + 1))
 
         if calc_upper_lower:
-            self.lower.correlation(randomize=randomize, realizations=realizations)
-            self.upper.correlation(randomize=randomize, realizations=realizations)
-
-    def __pair_corr__(self, i, j):
-        k = int(self.dist[i, j])  # dist from i-->j (directed graph, dist[i,j] != dist[j,i])
-        return (-1) ** k * self.s[i] * self.s[j], k
+            self.lower.correlation()
+            self.upper.correlation()
 
 
 def main():
@@ -664,7 +660,7 @@ def main():
     if calc_type.startswith("gM"):
         op = MagneticTopologicalCorr(sim_path, k_nearest_neighbors=n)
         calc_mean = False
-        correlation_kwargs = {'randomize': correlation_kwargs['randomize']}
+        correlation_kwargs = {}
     print("\n\n\n-----------\nDate: " + str(date.today()) + "\nType: " + calc_type + "\nCorrelation arguments:" + str(
         correlation_kwargs) + "\nCalc correlations: " + str(calc_correlations) + "\nCalc mean: " + str(calc_mean),
           file=sys.stdout)

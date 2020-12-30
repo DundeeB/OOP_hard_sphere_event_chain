@@ -39,12 +39,12 @@ def main():
     for sim_name in sims:
         _, h, _, _ = params_from_name(sim_name)
         default_op = ["gM"]  # , "psi", "Bragg_S", "Bragg_Sm", "pos"]
-        if h >= 1.0:
+        if h > 0.85:
             mn = "23"
-        if h >= 0.55 or h <= 0.85:
+        if 0.55 <= h <= 0.85:
             mn = "14"
             send_specific_run(sim_name, ["burger_square"])
-        if h <= 0.4:
+        if h < 0.55:
             mn = "16"
         send_specific_run(sim_name, [op + mn for op in default_op])
 

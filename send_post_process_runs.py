@@ -50,5 +50,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
-    send_specific_run("N=10000_h=0.8_rhoH=0.8_AF_square_ECMC", ["gM14"])
+    main()

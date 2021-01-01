@@ -11,6 +11,7 @@ import random
 from datetime import date
 from scipy.spatial import Delaunay
 from scipy.optimize import fmin
+import scipy.sparse
 import time
 
 epsilon = 1e-8
@@ -592,13 +593,25 @@ class MagneticBraggStructure(BraggStructure):
 
 
 class MagneticTopologicalCorr(OrderParameter):
-    def __init__(self, sim_path, k_nearest_neighbors, centers=None, spheres_ind=None, calc_upper_lower=False):
+    def __init__(self, sim_path, k_nearest_neighbors, directed=False, centers=None, spheres_ind=None,
+                 calc_upper_lower=False):
         single_layer_k = 4 if k_nearest_neighbors == 4 else 6
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, k_nearest_neighbors=single_layer_k)
         # extra argument k_nearest_neighbors goes to upper and lower layers
         self.k = k_nearest_neighbors
-        self.op_name = "gM_k=" + str(k_nearest_neighbors)
+        self.op_name = "gM_k=" + str(k_nearest_neighbors) + ("_directed" if directed else "_undirected")
         self.graph = PsiMN.kgraph(self.spheres, k_nearest_neighbors, self.event_2d_cells.boundaries)
+        if not directed:
+            I, J, _ = scipy.sparse.find(self.graph)[:]
+            Ed = [(i, j) for (i, j) in zip(I, J)]
+            Eud = []
+            udgraph = scipy.sparse.csr_matrix((self.N, self.N))
+            for i, j in Ed:
+                if ((j, i) in Ed) and ((i, j) not in Eud) and ((j, i) not in Eud):
+                    Eud.append((i, j))
+                    udgraph[i, j] = 1
+                    udgraph[j, i] = 1
+            self.graph = udgraph
         rad, lz = 1.0, self.event_2d_cells.l_z
         self.s = [(r[2] - lz / 2) / (lz / 2 - rad) for r in self.spheres]
 

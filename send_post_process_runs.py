@@ -1,4 +1,4 @@
-#!/Local/cmp/anaconda3/bin/python -u
+#!/Local/ph_daniel/anaconda3/bin/python -u
 import os
 import time
 # from send_parametric_runs import params_from_name

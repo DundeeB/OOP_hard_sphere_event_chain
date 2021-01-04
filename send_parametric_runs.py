@@ -1,4 +1,4 @@
-#!/Local/cmp/anaconda3/bin/python -u
+#!/Local/ph_daniel/anaconda3/bin/python -u
 import os
 import numpy as np
 import time
@@ -62,6 +62,7 @@ def resend_all_runs():
     for d in sims:
         N, h, rhoH, ic = params_from_name(d)
         send_single_run_envelope(h, N, rhoH, ic)
+#     TODO: move code to HTCondor
 
 
 def main():

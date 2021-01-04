@@ -1,4 +1,4 @@
-#!/Local/cmp/anaconda3/bin/python -u
+#!/Local/ph_daniel/anaconda3/bin/python -u
 import numpy as np
 from SnapShot import *
 from Structure import *
@@ -18,7 +18,7 @@ epsilon = 1e-8
 day = 86400  # sec
 
 
-# TODO: Add topological distance(steps in graph) magnetic correlation
+# TODO: resend topological distance magnetic correlation and assert it updates for different realizations
 
 class OrderParameter:
 
@@ -201,7 +201,7 @@ class OrderParameter:
             else:
                 centers = np.loadtxt(os.path.join(self.sim_path, 'Initial Conditions'))
             self.update_centers(centers, sp_ind)
-            if (type(self) is not PositionalCorrelationFunction) and type(self) is not MagneticTopologicalCorr:
+            if (type(self) is not PositionalCorrelationFunction):
                 self.read_or_calc_write()
             if calc_mean and (sp_ind not in mean_vs_real_reals):
                 mean_vs_real_reals.append(sp_ind)
@@ -600,8 +600,11 @@ class MagneticTopologicalCorr(OrderParameter):
         # extra argument k_nearest_neighbors goes to upper and lower layers
         self.k = k_nearest_neighbors
         self.op_name = "gM_k=" + str(k_nearest_neighbors) + ("_directed" if directed else "_undirected")
-        self.graph = PsiMN.kgraph(self.spheres, k_nearest_neighbors, self.event_2d_cells.boundaries)
-        if not directed:
+        self.directed = directed
+
+    def calc_order_parameter(self, calc_upper_lower=False):
+        self.graph = PsiMN.kgraph(self.spheres, self.k, self.event_2d_cells.boundaries)
+        if not self.directed:
             I, J, _ = scipy.sparse.find(self.graph)[:]
             Ed = [(i, j) for (i, j) in zip(I, J)]
             Eud = []
@@ -613,7 +616,7 @@ class MagneticTopologicalCorr(OrderParameter):
                     udgraph[j, i] = 1
             self.graph = udgraph
         rad, lz = 1.0, self.event_2d_cells.l_z
-        self.s = [(r[2] - lz / 2) / (lz / 2 - rad) for r in self.spheres]
+        self.op_vec = [(r[2] - lz / 2) / (lz / 2 - rad) for r in self.spheres]
 
     def correlation(self, calc_upper_lower=False):
         N = len(self.spheres)
@@ -632,7 +635,7 @@ class MagneticTopologicalCorr(OrderParameter):
                 except KeyError:  # j is not in a connected component of i
                     continue
                 if k > kmax: kmax = k
-                phi_phi = (-1) ** k * self.s[i] * self.s[j]
+                phi_phi = (-1) ** k * self.op_vec[i] * self.op_vec[j]
                 counts[k] += 1
                 phiphi_hist[k] += phi_phi
         realization = N ** 2

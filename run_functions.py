@@ -221,36 +221,25 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
         resend_flag = False
         ic = re.split('_', sim_name)
         if ic[-2] == 'square':
-            return send_single_run_envelope(h, N, rho_H, 'square')
+            return send_runs_envelope([sim_name(h, N, rho_H, 'square')])
         if ic[-2] == 'triangle':
             if ic[-3] == 'AF':
-                return send_single_run_envelope(h, N, rho_H, 'honeycomb')
+                return send_runs_envelope([sim_name(h, N, rho_H, 'honeycomb')])
             else:
-                return send_single_run_envelope(h, N, rho_H, 'triangle')
-        if ic[-2] == 'zquench':
-            return quench_single_run_envelope('zquench', sim_name,
-                                              desired_rho_or_h=h)  # notice run sim is sent after z-quench has succeeded
+                return send_runs_envelope([sim_name(h, N, rho_H, 'triangle')])
         assert resend_flag, "Simulation did not resend. Initial conditions: " + ic
     return 0 if (not record_displacements) else (realizations, displacements)
 
 
 def main():
-    args = sys.argv[1:]
-    if len(args) == 4:
-        h, N, rho_H = [float(x) for x in args[0:3]]
-        N = int(N)
-        if args[-1] == 'square':
-            run_square(h, N, rho_H)
-        else:
-            if args[-1] == 'honeycomb':
-                run_honeycomb(h, N, rho_H)
-            else:
-                if args[-1] == 'triangle':
-                    run_triangle(h, N, rho_H)
-    else:
-        action, other_sim_dir, desired_h = args[0], args[1], float(args[2])
-        if action == 'zquench':
-            run_z_quench(other_sim_dir, desired_h)
+    sim_name = sys.argv[1]
+    N, h, rhoH, ic = params_from_name(sim_name)
+    if ic == 'square':
+        run_square(h, N, rhoH)
+    if ic == 'honeycomb':
+        run_honeycomb(h, N, rhoH)
+    if ic == 'triangle':
+        run_triangle(h, N, rhoH)
 
 
 if __name__ == "__main__":

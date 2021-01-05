@@ -57,13 +57,12 @@ def params_from_name(name):
 
 def main():
     runs = []
-    runs.append(sim_name(100 ** 2, 0.8, 0.6, 'honeycomb'))
 
     # All runs - usefull for rerunning everything
-    # for d in os.listdir(prefix):
-    #     if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d)):
-    #         continue
-    #     runs.append(d)
+    for d in os.listdir(prefix):
+        if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d)):
+            runs.append(d)
+
 
     # Specific low density runs
     # runs.append(sim_name(100 ** 2,0.8, 0.7, 'honeycomb'))

@@ -175,8 +175,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
 
     # Run loops
     initial_time = time.time()
-    # day = 86400  # seconds
-    day = 60  # seconds
+    day = 86400  # seconds
     i = last_ind
     if record_displacements:
         displacements = [0]

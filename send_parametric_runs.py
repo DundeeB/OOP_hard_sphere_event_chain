@@ -29,7 +29,7 @@ def send_runs_envelope(sims_names):
     try:
         writer = csv.writer(f, lineterminator='\n')
         for sim_name in sims_names:
-            writer.writerow(sim_name)
+            writer.writerow([sim_name])
     finally:
         f.close()
         os.system("condor_submit ECMC.sub")

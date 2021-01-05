@@ -652,12 +652,11 @@ class MagneticTopologicalCorr(OrderParameter):
             self.upper.correlation()
 
 
-def main():
+def perform_calc_for_sim(sim_name, calc_type):
     correlation_kwargs = {'randomize': False, 'time_limit': 2 * day}
 
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"
-    sim_path = os.path.join(prefix, sys.argv[1])
-    calc_type = sys.argv[2]
+    sim_path = os.path.join(prefix, sim_name)
     op_dir = os.path.join(sim_path, "OP")
     if not os.path.exists(op_dir): os.mkdir(op_dir)
     log = os.path.join(op_dir, "log")
@@ -692,6 +691,10 @@ def main():
         correlation_kwargs) + "\nCalc correlations: " + str(calc_correlations) + "\nCalc mean: " + str(calc_mean),
           file=sys.stdout)
     op.calc_for_all_realizations(calc_correlations=calc_correlations, calc_mean=calc_mean, **correlation_kwargs)
+
+
+def main():
+    perform_calc_for_sim(sim_name=sys.argv[1], calc_type=sys.argv[2])
 
 
 if __name__ == "__main__":

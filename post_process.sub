@@ -1,12 +1,12 @@
 # Unix submit description file
-# count_lines.sub -- simple count_lines job
-executable = count_lines.sh
-log = l.log
-output = $(file).out
-error = e.errors
+# post_process.sub -- calculate order parameters and correlations for all simulations
+executable = post_process_env.sh
+log = /storage/ph_daniel/danielab/ECMC_simulation_results3.0/$(sim_name)/OP/log
+output = /storage/ph_daniel/danielab/ECMC_simulation_results3.0/out/post_process_$(sim_name).out
+error = /storage/ph_daniel/danielab/ECMC_simulation_results3.0/out/post_process_$(sim_name).err
 request_cpus = 1
-# Initialdir = /srv01/technion/danielab/bash_send_examples/move2HTCondor/count_lines
-Arguments = $(file)
-RequestMemory = 50MB
+# Initialdir = /storage/ph_daniel/danielab/ECMC_simulation_results3.0
+Arguments = $(sim_path) $(calc_type)
+RequestMemory = 2GB
 universe = vanilla
-queue file matching ../*
+queue sim_name,calc_type from post_process_list.txt

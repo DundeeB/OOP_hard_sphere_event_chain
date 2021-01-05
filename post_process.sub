@@ -6,7 +6,7 @@ output = /storage/ph_daniel/danielab/ECMC_simulation_results3.0/out/post_process
 error = /storage/ph_daniel/danielab/ECMC_simulation_results3.0/out/post_process_$(sim_name).err
 request_cpus = 1
 # Initialdir = /storage/ph_daniel/danielab/ECMC_simulation_results3.0
-Arguments = $(sim_path) $(calc_type)
+Arguments = $(sim_name) $(calc_type)
 RequestMemory = 2GB
 universe = vanilla
 queue sim_name,calc_type from post_process_list.txt

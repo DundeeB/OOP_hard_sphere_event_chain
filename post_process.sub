@@ -1,0 +1,12 @@
+# Unix submit description file
+# count_lines.sub -- simple count_lines job
+executable = count_lines.sh
+log = l.log
+output = $(file).out
+error = e.errors
+request_cpus = 1
+# Initialdir = /srv01/technion/danielab/bash_send_examples/move2HTCondor/count_lines
+Arguments = $(file)
+RequestMemory = 50MB
+universe = vanilla
+queue file matching ../*

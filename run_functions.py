@@ -175,7 +175,8 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
 
     # Run loops
     initial_time = time.time()
-    day = 86400  # seconds
+    # day = 86400  # seconds
+    day = 60  # seconds
     i = last_ind
     if record_displacements:
         displacements = [0]
@@ -218,16 +219,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
     else:  # resend the simulation
         os.system('echo \'\nElapsed time is ' + str(time.time() - initial_time) + '\' >> TIME_LOG')
         os.chdir(code_dir)
-        resend_flag = False
-        ic = re.split('_', sim_name)
-        if ic[-2] == 'square':
-            return send_runs_envelope([sim_name(h, N, rho_H, 'square')])
-        if ic[-2] == 'triangle':
-            if ic[-3] == 'AF':
-                return send_runs_envelope([sim_name(h, N, rho_H, 'honeycomb')])
-            else:
-                return send_runs_envelope([sim_name(h, N, rho_H, 'triangle')])
-        assert resend_flag, "Simulation did not resend. Initial conditions: " + ic
+        sys.exit(7)  # any !=0 number
     return 0 if (not record_displacements) else (realizations, displacements)
 
 

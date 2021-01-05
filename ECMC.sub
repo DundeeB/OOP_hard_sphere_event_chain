@@ -1,7 +1,7 @@
 # Unix submit description file
 # ECMC.sub - sends Event Chain Monte Carlo simulations for simulations names and definition given in ecmc_list.txt
 executable = py_env.sh
-log = /storage/ph_daniel/danielab/ECMC_simulation_results3.0/$(sim_name)/batch
+log = /storage/ph_daniel/danielab/ECMC_simulation_results3.0/out/$(sim_name).out
 output = /storage/ph_daniel/danielab/ECMC_simulation_results3.0/out/$(sim_name).out
 error = /storage/ph_daniel/danielab/ECMC_simulation_results3.0/out/$(sim_name).err
 request_cpus = 1

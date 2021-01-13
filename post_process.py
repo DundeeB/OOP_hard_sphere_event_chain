@@ -656,6 +656,7 @@ class MagneticTopologicalCorr(OrderParameter):
 class Ising(OrderParameter):
     def __init__(self, sim_path, k_nearest_neighbors, directed=False, centers=None, spheres_ind=None, J=None):
         super().__init__(sim_path, centers, spheres_ind, correlation_name="Annealing_history")
+        self.op_name = "Ising"
         magnetic_top_corr = MagneticTopologicalCorr(sim_path, k_nearest_neighbors, directed, centers, spheres_ind)
         magnetic_top_corr.calc_order_parameter()
         self.z_spins = [1 if s > 0 else -1 for s in magnetic_top_corr.op_vec]
@@ -666,7 +667,7 @@ class Ising(OrderParameter):
     def initialize(self, random_initialization=True, J=None):
         if J is not None:
             self.J = J
-        self.op_vec = [(2 * random.randint(0, 1) - 1) if random_initialization else s for s in self.z_spins]
+        self.op_vec = [((2 * random.randint(0, 1) - 1) if random_initialization else z) for z in self.z_spins]
         self.calc_EM()
 
     def calc_EM(self):
@@ -714,32 +715,31 @@ class Ising(OrderParameter):
                              random_initialization=True):
         # Jc = 1 / 2.269
         if iterations is None:
-            # iterations = self.N * int(1e5)
-            iterations = 1000
+            iterations = self.N * int(1e5)
         diter_save = int(iterations / samples)
         minE = float('inf')
         minEconfig = None
-        Es, Ms = [], []
+        frustration, Ms = [], []
         bonds_num = 0
         for i in range(self.N):
             for _ in self.nearest_neighbors[i]:
                 bonds_num += 1
         bonds_num /= 2
-        normE = lambda E, J: np.array(E) / (-bonds_num * np.array(J))
+        frustrated_bonds = lambda E, J: 1 / 2 * (1 - np.array(E) / (bonds_num * np.array(J)))
         for i in range(realizations):
             self.initialize(random_initialization=random_initialization, J=J_range[0])
             E, J, M = self.anneal(iterations, diter_save=diter_save,
                                   dTditer=-(1 / J_range[1] - 1 / J_range[0]) / iterations)
-            Es.append(E)
+            frustration.append(frustrated_bonds(E, J))
             Ms.append(M)
-            mE = min(normE(E, J))
+            mE = min(frustrated_bonds(E, J))
             if mE < minE:
                 minE = mE
                 minEconfig = self.op_vec
         self.op_vec = minEconfig
         self.local_freeze()
         annel_path = os.path.join(self.op_dir_path, "anneal_" + str(self.spheres_ind) + '.txt')
-        np.savetxt(annel_path, np.transpose([J] + Es + Ms))
+        np.savetxt(annel_path, np.transpose([J] + frustration + Ms))
 
 
 def main(sim_name, calc_type):

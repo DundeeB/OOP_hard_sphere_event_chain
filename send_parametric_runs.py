@@ -52,9 +52,6 @@ def params_from_name(name):
     return N, h, rhoH, ic
 
 
-#     TODO: move code to HTCondor
-
-
 def main():
     runs = []
 
@@ -62,7 +59,6 @@ def main():
     for d in os.listdir(prefix):
         if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d)):
             runs.append(d)
-
 
     # Specific low density runs
     # runs.append(sim_name(100 ** 2,0.8, 0.7, 'honeycomb'))

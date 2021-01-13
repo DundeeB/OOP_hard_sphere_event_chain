@@ -18,7 +18,8 @@ epsilon = 1e-8
 day = 86400  # sec
 
 
-# TODO: resend topological distance magnetic correlation and assert it updates for different realizations
+# TODO: ising temprature driven ground state
+# TODO: local rho
 
 class OrderParameter:
 
@@ -210,7 +211,7 @@ class OrderParameter:
                 sorted_reals = np.array(mean_vs_real_reals)[I]
                 sorted_mean = np.array(mean_vs_real_mean)[I]
                 np.savetxt(self.mean_vs_real_path, np.array([sorted_reals, sorted_mean]).T)
-            if (not OrderParameter.exists(self.corr_path)) and calc_correlations:
+            if calc_correlations and (not OrderParameter.exists(self.corr_path)):
                 self.correlation(**correlation_kwargs)
                 self.write(write_correlations=True, write_vec=False)
             i += 1
@@ -250,7 +251,6 @@ class PsiMN(OrderParameter):
     def calc_order_parameter(self, calc_upper_lower=False):
         self.op_vec, _ = PsiMN.psi_m_n(self.event_2d_cells, self.m, self.n)
         if calc_upper_lower:
-            # TODO: they will not read exisiting psi file because of names handeling
             self.lower.calc_order_parameter()
             self.upper.calc_order_parameter()
 
@@ -583,6 +583,7 @@ class MagneticBraggStructure(BraggStructure):
         l = np.sqrt(self.event_2d_cells.l_x * self.event_2d_cells.l_y / len(self.spheres))
         if self.m == 1 and self.n == 4:
             return np.pi / l * np.array([1, 1])
+        # TODO: update by k*a_AB
         if self.m == 1 and self.n == 6:
             a = np.sqrt(2.0 / np.sqrt(3)) * l
             return np.pi / a * np.array([1.0, 1.0 / np.sqrt(3)])
@@ -652,7 +653,95 @@ class MagneticTopologicalCorr(OrderParameter):
             self.upper.correlation()
 
 
-def perform_calc_for_sim(sim_name, calc_type):
+class Ising(OrderParameter):
+    def __init__(self, sim_path, k_nearest_neighbors, directed=False, centers=None, spheres_ind=None, J=None):
+        super().__init__(sim_path, centers, spheres_ind, correlation_name="Annealing_history")
+        magnetic_top_corr = MagneticTopologicalCorr(sim_path, k_nearest_neighbors, directed, centers, spheres_ind)
+        magnetic_top_corr.calc_order_parameter()
+        self.z_spins = [1 if s > 0 else -1 for s in magnetic_top_corr.op_vec]
+        self.graph = magnetic_top_corr.graph
+        self.nearest_neighbors = [[j for j in self.graph.getrow(i).indices] for i in range(self.N)]
+        self.J = J
+
+    def initialize(self, random_initialization=True, J=None):
+        if J is not None:
+            self.J = J
+        self.op_vec = [(2 * random.randint(0, 1) - 1) if random_initialization else s for s in self.z_spins]
+        self.calc_EM()
+
+    def calc_EM(self):
+        self.E = 0
+        for i in range(self.N):
+            for j in self.nearest_neighbors[i]:
+                self.E -= self.J / 2 * self.op_vec[i] * self.op_vec[j]  # double counting bonds
+        self.M = 0  # Magnetization is if op_vec, ising spins, is corr or anti corr to up down initial partition
+        for s, z in zip(self.op_vec, self.z_spins):
+            self.M += s * z
+
+    def Metropolis_flip(self, i=None):
+        if i is None:
+            i = random.randint(0, self.N - 1)
+        de = 0.0
+        for j in self.nearest_neighbors[i]:
+            de += 2 * self.J * self.op_vec[i] * self.op_vec[j]
+        A = min(1, np.exp(-de))
+        u = random.random()
+        if u <= A:
+            self.op_vec[i] *= -1
+
+    def anneal(self, iterations, dTditer=0, diter_save=1):
+        M, E, J = [], [], []
+        T = -1 / self.J
+        for i in range(iterations):
+            if i % diter_save == 0:
+                self.calc_EM()
+                M.append(self.M)
+                E.append(self.E)
+                J.append(self.J)
+            self.Metropolis_flip()
+            T += dTditer
+            self.J = -1 / T
+        return E, J, M
+
+    def local_freeze(self):
+        current_J = self.J
+        self.J = -100
+        for i in range(self.N):
+            self.Metropolis_flip(i)
+        self.J = current_J
+
+    def calc_order_parameter(self, J_range=(-0.5, -6), iterations=None, realizations=10, samples=100,
+                             random_initialization=True):
+        # Jc = 1 / 2.269
+        if iterations is None:
+            iterations = self.N * int(1e5)
+        diter_save = int(iterations / samples)
+        minE = float('inf')
+        minEconfig = None
+        Es, Ms = [], []
+        bonds_num = 0
+        for i in range(self.N):
+            for _ in self.nearest_neighbors[i]:
+                bonds_num += 1
+        bonds_num /= 2
+        normE = lambda E, J: np.array(E) / (-bonds_num * np.array(J))
+        for i in range(realizations):
+            self.initialize(random_initialization=random_initialization, J=J_range[0])
+            E, J, M = self.anneal(iterations, diter_save=diter_save,
+                                  dTditer=-(1 / J_range[1] - 1 / J_range[0]) / iterations)
+            Es.append(E)
+            Ms.append(M)
+            mE = min(normE(E, J))
+            if mE < minE:
+                minE = mE
+                minEconfig = self.op_vec
+        self.op_vec = minEconfig
+        self.local_freeze()
+        annel_path = os.path.join(self.op_dir_path, "anneal_" + str(self.spheres_ind) + '.txt')
+        np.savetxt(annel_path, np.transpose([J] + Es + Ms))
+
+
+def main(sim_name, calc_type):
     correlation_kwargs = {'randomize': False, 'time_limit': 2 * day}
 
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"
@@ -687,15 +776,15 @@ def perform_calc_for_sim(sim_name, calc_type):
         op = MagneticTopologicalCorr(sim_path, k_nearest_neighbors=n)
         calc_mean = False
         correlation_kwargs = {}
+    if calc_type.startswith('Ising'):
+        op = Ising(sim_path, k_nearest_neighbors=n)
+        calc_mean = False
+        calc_correlations = False
     print("\n\n\n-----------\nDate: " + str(date.today()) + "\nType: " + calc_type + "\nCorrelation arguments:" + str(
         correlation_kwargs) + "\nCalc correlations: " + str(calc_correlations) + "\nCalc mean: " + str(calc_mean),
           file=sys.stdout)
     op.calc_for_all_realizations(calc_correlations=calc_correlations, calc_mean=calc_mean, **correlation_kwargs)
 
 
-def main():
-    perform_calc_for_sim(sim_name=sys.argv[1], calc_type=sys.argv[2])
-
-
 if __name__ == "__main__":
-    main()
+    main(sim_name=sys.argv[1], calc_type=sys.argv[2])

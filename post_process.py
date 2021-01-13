@@ -710,11 +710,12 @@ class Ising(OrderParameter):
             self.Metropolis_flip(i)
         self.J = current_J
 
-    def calc_order_parameter(self, J_range=(-0.5, -6), iterations=None, realizations=10, samples=100,
+    def calc_order_parameter(self, J_range=(-0.5, -6), iterations=None, realizations=10, samples=1000,
                              random_initialization=True):
         # Jc = 1 / 2.269
         if iterations is None:
-            iterations = self.N * int(1e5)
+            # iterations = self.N * int(1e5)
+            iterations = 1000
         diter_save = int(iterations / samples)
         minE = float('inf')
         minEconfig = None

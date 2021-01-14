@@ -18,7 +18,6 @@ epsilon = 1e-8
 day = 86400  # sec
 
 
-# TODO: ising temprature dependence and critical energy density
 # TODO: local rho
 
 class OrderParameter:
@@ -740,10 +739,10 @@ class Ising(Graph):
     def frustrated_bonds(self, E, J):
         return 1 / 2 * (1 - np.array(E) / (self.bonds_num * np.array(J)))
 
-    def calc_order_parameter(self, J_range=(-0.5, -4), iterations=None, realizations=10, samples=1000,
+    def calc_order_parameter(self, J_range=(-0.5, -2), iterations=None, realizations=10, samples=1000,
                              random_initialization=True, save_annealing=True, localy_freeze=True):
         if iterations is None:
-            iterations = self.N * int(1e4)
+            iterations = self.N * int(4e4)
         diter_save = int(iterations / samples)
         minE = float('inf')
         minEconfig = None

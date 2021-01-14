@@ -744,7 +744,8 @@ class Ising(Graph):
     def calc_order_parameter(self, J_range=(-0.5, -4), iterations=None, realizations=10, samples=1000,
                              random_initialization=True, save_annealing=True, localy_freeze=True):
         if iterations is None:
-            iterations = self.N * int(1e4)
+            # iterations = self.N * int(1e4)
+            iterations = self.N * int(1e1)
         diter_save = int(iterations / samples)
         minE = float('inf')
         minEconfig = None
@@ -766,7 +767,8 @@ class Ising(Graph):
 
     def correlation(self, J_range=(-0.1, -1), iterations=None, realizations=1, dJ=0.05):
         if iterations is None:
-            iterations = self.N * int(1e4)
+            # iterations = self.N * int(1e4)
+            iterations = self.N * int(1e1)
         Jc = -1 / 2.269
         Jarr = np.linspace(J_range[0], J_range[1], int(np.abs(J_range[1] - J_range[0]) / dJ) + 1)
         Jarr = np.sort([J for J in Jarr] + [Jc])

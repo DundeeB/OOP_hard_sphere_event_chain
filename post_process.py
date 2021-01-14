@@ -711,11 +711,11 @@ class Ising(OrderParameter):
             self.Metropolis_flip(i)
         self.J = current_J
 
-    def calc_order_parameter(self, J_range=(-0.5, -6), iterations=None, realizations=10, samples=1000,
+    def calc_order_parameter(self, J_range=(-0.5, -4), iterations=None, realizations=10, samples=1000,
                              random_initialization=True):
         # Jc = 1 / 2.269
         if iterations is None:
-            iterations = self.N * int(1e5)
+            iterations = self.N * int(1e4)
         diter_save = int(iterations / samples)
         minE = float('inf')
         minEconfig = None
@@ -731,7 +731,7 @@ class Ising(OrderParameter):
             E, J, M = self.anneal(iterations, diter_save=diter_save,
                                   dTditer=-(1 / J_range[1] - 1 / J_range[0]) / iterations)
             frustration.append(frustrated_bonds(E, J))
-            Ms.append(M)
+            Ms.append(M / self.N)
             mE = min(frustrated_bonds(E, J))
             if mE < minE:
                 minE = mE

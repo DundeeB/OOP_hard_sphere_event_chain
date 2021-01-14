@@ -764,7 +764,7 @@ class Ising(Graph):
 
     def correlation(self, J_range=(-0.1, -1), iterations=None, realizations=1, dJ=0.05):
         if iterations is None:
-            iterations = self.N * int(1e4)
+            iterations = self.N * int(1e4)  # E equilibrate faster than M
         Jc = -1 / 2.269
         Jarr = np.linspace(J_range[0], J_range[1], int(np.abs(J_range[1] - J_range[0]) / dJ) + 1)
         Jarr = np.sort([J for J in Jarr] + [Jc])

@@ -18,7 +18,7 @@ epsilon = 1e-8
 day = 86400  # sec
 
 
-# TODO: ising temprature driven ground state
+# TODO: ising temprature dependence and critical energy density
 # TODO: local rho
 
 class OrderParameter:
@@ -217,39 +217,75 @@ class OrderParameter:
             i += 1
 
 
-class PsiMN(OrderParameter):
+class Graph(OrderParameter):
+    def __init__(self, sim_path, k_nearest_neighbors, directed=False, centers=None, spheres_ind=None,
+                 calc_upper_lower=False, **kwargs):
+        single_layer_k = 4 if k_nearest_neighbors == 4 else 6
+        super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, k_nearest_neighbors=single_layer_k, **kwargs)
+        # extra argument k_nearest_neighbors goes to upper and lower layers
+        self.k = k_nearest_neighbors
+        self.directed = directed
+        self.graph_father_path = os.path.join(self.op_father_dir, "Graph")
+
+    @property
+    def direc_str(self):
+        return "k=" + str(self.k) + ("_directed" if self.directed else "_undirected")
+
+    @property
+    def graph_file_path(self):
+        return os.path.join(self.graph_father_path, self.direc_str + "_" + str(self.spheres_ind) + ".npz")
+
+    def calc_graph(self):
+        if not os.path.exists(self.graph_father_path): os.mkdir(self.graph_father_path)
+        recalc_graph = True
+        if os.path.exists(self.graph_file_path):
+            recalc_graph = False
+            self.graph = scipy.sparse.load_npz(self.graph_file_path)
+            if self.graph.shape != (self.N, self.N):
+                recalc_graph = True
+        if recalc_graph:
+            cast_sphere = lambda c, r=1, z=0: Sphere([x for x in c] + [z], r)
+            cyc = lambda p1, p2: Metric.cyclic_dist(self.event_2d_cells.boundaries, cast_sphere(p1), cast_sphere(p2))
+            self.graph = kneighbors_graph([p[:2] for p in self.spheres], n_neighbors=self.k, metric=cyc)
+            if not self.directed:
+                I, J, _ = scipy.sparse.find(self.graph)[:]
+                Ed = [(i, j) for (i, j) in zip(I, J)]
+                Eud = []
+                udgraph = scipy.sparse.csr_matrix((self.N, self.N))
+                for i, j in Ed:
+                    if ((j, i) in Ed) and ((i, j) not in Eud) and ((j, i) not in Eud):
+                        Eud.append((i, j))
+                        udgraph[i, j] = 1
+                        udgraph[j, i] = 1
+                self.graph = udgraph
+            scipy.sparse.save_npz(self.graph_file_path, self.graph)
+        self.nearest_neighbors = [[j for j in self.graph.getrow(i).indices] for i in range(self.N)]
+        self.bonds_num = 0
+        for i in range(self.N):
+            self.bonds_num += len(self.nearest_neighbors[i])
+        self.bonds_num /= 2
+
+
+class PsiMN(Graph):
 
     def __init__(self, sim_path, m, n, centers=None, spheres_ind=None, calc_upper_lower=False):
-        super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, m=1, n=m * n)
+        super().__init__(sim_path, k_nearest_neighbors=n, directed=True, centers=centers, spheres_ind=spheres_ind,
+                         calc_upper_lower=calc_upper_lower, m=1, n=m * n)
         # extra args m,n goes to upper and lower layers
         self.m, self.n = m, n
         self.op_name = "psi_" + str(m) + str(n)
 
-    @staticmethod
-    def cast_sphere(c, r=1, z=0):
-        return Sphere([x for x in c] + [z], r)
-
-    @staticmethod
-    def kgraph(centers, k, boundaries):
-        cyc = lambda p1, p2: Metric.cyclic_dist(boundaries, PsiMN.cast_sphere(p1), PsiMN.cast_sphere(p2))
-        graph = kneighbors_graph([p[:2] for p in centers], n_neighbors=k, metric=cyc)
-        return graph
-
-    @staticmethod
-    def psi_m_n(event_2d_cells, m, n):
-        centers = event_2d_cells.all_centers
-        graph = PsiMN.kgraph(centers, n, event_2d_cells.boundaries)
+    def calc_order_parameter(self, calc_upper_lower=False):
+        self.calc_graph()
+        event_2d_cells, n, centers, graph = self.event_2d_cells, self.n, self.event_2d_cells.all_centers, self.graph
         psimn_vec = np.zeros(len(centers), dtype=np.complex)
         for i in range(len(centers)):
             dr = [Metric.cyclic_vec(event_2d_cells.boundaries, PsiMN.cast_sphere(centers[i]),
-                                    PsiMN.cast_sphere(centers[j])) for j in graph.getrow(i).indices]
+                                    PsiMN.cast_sphere(centers[j])) for j in self.nearest_neighbors[i]]
             t = np.arctan2([r[1] for r in dr], [r[0] for r in dr])
             psi_n = np.mean(np.exp(1j * n * t))
-            psimn_vec[i] = np.abs(psi_n) * np.exp(1j * m * np.angle(psi_n))
-        return psimn_vec, graph
-
-    def calc_order_parameter(self, calc_upper_lower=False):
-        self.op_vec, _ = PsiMN.psi_m_n(self.event_2d_cells, self.m, self.n)
+            psimn_vec[i] = np.abs(psi_n) * np.exp(1j * self.m * np.angle(psi_n))
+        self.op_vec = psimn_vec
         if calc_upper_lower:
             self.lower.calc_order_parameter()
             self.upper.calc_order_parameter()
@@ -593,29 +629,17 @@ class MagneticBraggStructure(BraggStructure):
         raise NotImplementedError
 
 
-class MagneticTopologicalCorr(OrderParameter):
+class MagneticTopologicalCorr(Graph):
     def __init__(self, sim_path, k_nearest_neighbors, directed=False, centers=None, spheres_ind=None,
                  calc_upper_lower=False):
-        single_layer_k = 4 if k_nearest_neighbors == 4 else 6
-        super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, k_nearest_neighbors=single_layer_k)
-        # extra argument k_nearest_neighbors goes to upper and lower layers
-        self.k = k_nearest_neighbors
-        self.op_name = "gM_k=" + str(k_nearest_neighbors) + ("_directed" if directed else "_undirected")
-        self.directed = directed
+        super().__init__(sim_path, k_nearest_neighbors, directed, centers, spheres_ind, calc_upper_lower)
 
-    def calc_order_parameter(self, calc_upper_lower=False):
-        self.graph = PsiMN.kgraph(self.spheres, self.k, self.event_2d_cells.boundaries)
-        if not self.directed:
-            I, J, _ = scipy.sparse.find(self.graph)[:]
-            Ed = [(i, j) for (i, j) in zip(I, J)]
-            Eud = []
-            udgraph = scipy.sparse.csr_matrix((self.N, self.N))
-            for i, j in Ed:
-                if ((j, i) in Ed) and ((i, j) not in Eud) and ((j, i) not in Eud):
-                    Eud.append((i, j))
-                    udgraph[i, j] = 1
-                    udgraph[j, i] = 1
-            self.graph = udgraph
+    @property
+    def op_name(self):
+        return "gM_" + self.direc_str
+
+    def calc_order_parameter(self):
+        self.calc_graph()
         rad, lz = 1.0, self.event_2d_cells.l_z
         self.op_vec = [(r[2] - lz / 2) / (lz / 2 - rad) for r in self.spheres]
 
@@ -653,16 +677,18 @@ class MagneticTopologicalCorr(OrderParameter):
             self.upper.correlation()
 
 
-class Ising(OrderParameter):
+class Ising(Graph):
     def __init__(self, sim_path, k_nearest_neighbors, directed=False, centers=None, spheres_ind=None, J=None):
-        super().__init__(sim_path, centers, spheres_ind, correlation_name="Annealing_history")
-        self.op_name = "Ising"
-        magnetic_top_corr = MagneticTopologicalCorr(sim_path, k_nearest_neighbors, directed, centers, spheres_ind)
-        magnetic_top_corr.calc_order_parameter()
-        self.z_spins = [1 if s > 0 else -1 for s in magnetic_top_corr.op_vec]
-        self.graph = magnetic_top_corr.graph
-        self.nearest_neighbors = [[j for j in self.graph.getrow(i).indices] for i in range(self.N)]
+        super().__init__(sim_path, k_nearest_neighbors, directed, centers, spheres_ind, vec_name="ground_state",
+                         correlation_name="E_vs_J")
+        l_y = self.event_2d_cells.boundaries[2]
+        self.z_spins = [(1 if p[2] > l_y / 2 else -1) for p in self.spheres]
+        self.calc_graph()
         self.J = J
+
+    @property
+    def op_name(self):
+        return "Ising_" + self.direc_str
 
     def initialize(self, random_initialization=True, J=None):
         if J is not None:
@@ -694,7 +720,7 @@ class Ising(OrderParameter):
         M, E, J = [], [], []
         T = -1 / self.J
         for i in range(iterations):
-            if i % diter_save == 0:
+            if i % diter_save == 0 or (i == iterations - 1):
                 self.calc_EM()
                 M.append(self.M)
                 E.append(self.E)
@@ -702,6 +728,7 @@ class Ising(OrderParameter):
             self.Metropolis_flip()
             T += dTditer
             self.J = -1 / T
+
         return E, J, M
 
     def local_freeze(self):
@@ -711,28 +738,24 @@ class Ising(OrderParameter):
             self.Metropolis_flip(i)
         self.J = current_J
 
+    def frustrated_bonds(self, E, J):
+        return 1 / 2 * (1 - np.array(E) / (self.bonds_num * np.array(J)))
+
     def calc_order_parameter(self, J_range=(-0.5, -4), iterations=None, realizations=10, samples=1000,
-                             random_initialization=True):
-        # Jc = 1 / 2.269
+                             random_initialization=True, save_annealing=True, localy_freeze=True):
         if iterations is None:
             iterations = self.N * int(1e4)
         diter_save = int(iterations / samples)
         minE = float('inf')
         minEconfig = None
         frustration, Ms = [], []
-        bonds_num = 0
-        for i in range(self.N):
-            for _ in self.nearest_neighbors[i]:
-                bonds_num += 1
-        bonds_num /= 2
-        frustrated_bonds = lambda E, J: 1 / 2 * (1 - np.array(E) / (bonds_num * np.array(J)))
         for i in range(realizations):
             self.initialize(random_initialization=random_initialization, J=J_range[0])
             E, J, M = self.anneal(iterations, diter_save=diter_save,
                                   dTditer=-(1 / J_range[1] - 1 / J_range[0]) / iterations)
-            frustration.append(frustrated_bonds(E, J))
+            frustration.append(self.frustrated_bonds(E, J))
             Ms.append(M / self.N)
-            mE = min(frustrated_bonds(E, J))
+            mE = min(frustration[-1])
             if mE < minE:
                 minE = mE
                 minEconfig = self.op_vec
@@ -740,6 +763,25 @@ class Ising(OrderParameter):
         self.local_freeze()
         annel_path = os.path.join(self.op_dir_path, "anneal_" + str(self.spheres_ind) + '.txt')
         np.savetxt(annel_path, np.transpose([J] + frustration + Ms))
+
+    def correlation(self, J_range=(-0.1, -1), iterations=None, realizations=1, dJ=0.05):
+        if iterations is None:
+            iterations = self.N * int(1e4)
+        Jc = -1 / 2.269
+        Jarr = np.linspace(J_range[0], J_range[1], int(np.abs(J_range[1] - J_range[0]) / dJ) + 1)
+        Jarr = np.sort([J for J in Jarr] + [Jc])
+        frustration = []
+        for J in Jarr:
+            E_reals = []
+            for real in range(realizations):
+                self.initialize(J=J)
+                E, _, _ = self.anneal(iterations, diter_save=iterations, dTditer=0)
+                E_reals.append(E[-1])
+            E = np.mean(E_reals)
+            frustration.append(self.frustrated_bonds(E, J))
+        self.corr_centers = Jarr
+        self.counts = Jarr * 0 + realizations
+        self.op_corr = np.array(frustration)
 
 
 def main(sim_name, calc_type):
@@ -780,10 +822,12 @@ def main(sim_name, calc_type):
     if calc_type.startswith('Ising'):
         op = Ising(sim_path, k_nearest_neighbors=n)
         calc_mean = False
-        calc_correlations = False
-    print("\n\n\n-----------\nDate: " + str(date.today()) + "\nType: " + calc_type + "\nCorrelation arguments:" + str(
-        correlation_kwargs) + "\nCalc correlations: " + str(calc_correlations) + "\nCalc mean: " + str(calc_mean),
-          file=sys.stdout)
+        correlation_kwargs = {}
+    print(
+        "\n\n\n-----------\nDate: " + str(date.today()) + "\nType: " + calc_type + "\nCorrelation arguments:" + str(
+            correlation_kwargs) + "\nCalc correlations: " + str(calc_correlations) + "\nCalc mean: " + str(
+            calc_mean),
+        file=sys.stdout)
     op.calc_for_all_realizations(calc_correlations=calc_correlations, calc_mean=calc_mean, **correlation_kwargs)
 
 

@@ -754,7 +754,7 @@ class Ising(Graph):
             E, J, M = self.anneal(iterations, diter_save=diter_save,
                                   dTditer=-(1 / J_range[1] - 1 / J_range[0]) / iterations)
             frustration.append(self.frustrated_bonds(E, J))
-            Ms.append(M / self.N)
+            Ms.append(np.array(M) / self.N)
             mE = min(frustration[-1])
             if mE < minE:
                 minE = mE

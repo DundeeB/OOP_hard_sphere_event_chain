@@ -32,7 +32,6 @@ class OrderParameter:
         self.op_corr = None
         self.corr_centers = None
         self.counts = None
-        self.op_name = "phi"
         self.vec_name = vec_name
         self.correlation_name = correlation_name
         self.op_father_dir = os.path.join(self.sim_path, "OP")

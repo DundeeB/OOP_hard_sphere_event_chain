@@ -739,10 +739,10 @@ class Ising(Graph):
     def frustrated_bonds(self, E, J):
         return 1 / 2 * (1 - np.array(E) / (self.bonds_num * np.array(J)))
 
-    def calc_order_parameter(self, J_range=(-0.5, -2), iterations=None, realizations=10, samples=1000,
+    def calc_order_parameter(self, J_range=(-0.5, -3), iterations=None, realizations=20, samples=1000,
                              random_initialization=True, save_annealing=True, localy_freeze=True):
         if iterations is None:
-            iterations = self.N * int(4e4)
+            iterations = self.N * int(1e5)
         diter_save = int(iterations / samples)
         minE = float('inf')
         minEconfig = None
@@ -762,12 +762,14 @@ class Ising(Graph):
         annel_path = os.path.join(self.op_dir_path, "anneal_" + str(self.spheres_ind) + '.txt')
         np.savetxt(annel_path, np.transpose([J] + frustration + Ms))
 
-    def correlation(self, J_range=(-0.1, -1), iterations=None, realizations=1, dJ=0.05):
+    def correlation(self, Jarr=None, iterations=None, realizations=3):
         if iterations is None:
-            iterations = self.N * int(1e4)  # E equilibrate faster than M
-        Jc = -1 / 2.269
-        Jarr = np.linspace(J_range[0], J_range[1], int(np.abs(J_range[1] - J_range[0]) / dJ) + 1)
-        Jarr = np.sort([J for J in Jarr] + [Jc])
+            iterations = self.N * int(2e3)  # E equilibrate faster than M
+        if Jarr is None:
+            Jc = -1 / 2.269
+            Jarr = [-1, -0.9, -0.8, -0.7, -0.65, -0.6, -0.55, -0.5, -0.475, -0.45, Jc, -0.425, -0.4, -0.35, -0.3, -0.2,
+                    -0.1, 0]
+            Jarr.sort()
         frustration = []
         for J in Jarr:
             E_reals = []

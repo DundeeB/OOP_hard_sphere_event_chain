@@ -756,7 +756,7 @@ class Ising(Graph):
             mE = min(frustration[-1])
             if mE < minE:
                 minE = mE
-                minEconfig = self.op_vec
+                minEconfig = copy.deepcopy(self.op_vec)
         self.op_vec = minEconfig
         self.local_freeze()
         annel_path = os.path.join(self.op_dir_path, "anneal_" + str(self.spheres_ind) + '.txt')

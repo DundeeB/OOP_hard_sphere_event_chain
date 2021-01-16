@@ -56,36 +56,39 @@ def main():
     runs = []
 
     # All runs - usefull for rerunning everything
-    for d in os.listdir(prefix):
-        if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d)):
-            runs.append(d)
+    # for d in os.listdir(prefix):
+    #     if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d)):
+    #         runs.append(d)
 
-    # Specific low density runs
-    # runs.append(sim_name(100 ** 2,0.8, 0.7, 'honeycomb'))
-    # runs.append(sim_name(100 ** 2, 0.8, 0.7, 'square'))
-    # runs.append(sim_name(100 ** 2, 0.8, 0.75, 'honeycomb'))
-    # runs.append(sim_name(100 ** 2, 0.8, 0.75, 'square'))
+    for N in [100 ** 2, 200 ** 2, 300 ** 2]:
+        # Low density runs
+        for h in [0.1, 0.6, 0.8, 1.0]:
+            for rhoH in [0.1, 0.2, 0.3, 0.4, 0.6, 0.7]:
+                if h >= 0.6:
+                    runs.append(sim_name(N, h, rhoH, 'square'))
+                if h >= 0.8:
+                    runs.append(sim_name(N, h, rhoH, 'honeycomb'))
+                if h == 0.1:
+                    runs.append(sim_name(N, h, rhoH, 'triangle'))
 
-    # Nominal h=0.8,1.0 runs
-    # rhoH_runs = {1.0: np.round(np.linspace(0.8, 0.9, 11), 2), 0.8: np.round(np.linspace(0.75, 0.85, 11), 2)}
-    # rhoH_runs = {1.0: [0.845, 0.855, 0.865], 0.8: [0.775, 0.785, 0.795]}
-    # for N in [100 ** 2, 200 ** 2, 300 ** 2]:
-    #     for h in [0.8, 1.0]:
-    #         for rhoH in rhoH_runs[h]:
-    #             runs.append(sim_name(N, h, rhoH, 'square'))
-    #             runs.append(sim_name(N, h, rhoH, 'honeycomb'))
+        # Nominal h=0.8,1.0 runs
+        # rhoH_runs = {1.0: np.round(np.linspace(0.8, 0.9, 11), 2), 0.8: np.round(np.linspace(0.75, 0.85, 11), 2)}
+        # rhoH_runs = {1.0: [0.845, 0.855, 0.865], 0.8: [0.775, 0.785, 0.795]}
 
-    # Following DOI: 10.1039/c4sm00125g, at h=0.1 eta*sig/H=pi/4*rhoH phase transition at 0.64-0.67, that is rhoH at
-    # 0.81-0.85
-    # for N in [100 ** 2, 200 ** 2, 300 ** 2]:
-    #     h = 0.1
-    #     for rhoH in np.round(np.linspace(0.78, 0.88, 11), 2):
-    #         runs.append(sim_name(N, h, rhoH, 'triangle'))
+        # for h in [0.8, 1.0]:
+        #     for rhoH in rhoH_runs[h]:
+        #         runs.append(sim_name(N, h, rhoH, 'square'))
+        #         runs.append(sim_name(N, h, rhoH, 'honeycomb'))
 
-    # for N in [100 ** 2, 200 ** 2, 300 ** 2]:
-    #     for h in [0.6]:
-    #         for rhoH in np.round(np.linspace(0.73, 0.83, 11), 2):
-    #             runs.append(sim_name(N, h, rhoH, 'square'))
+        # Following DOI: 10.1039/c4sm00125g, at h=0.1 eta*sig/H=pi/4*rhoH phase transition at 0.64-0.67, that is rhoH at
+        # 0.81-0.85
+        #     h = 0.1
+        #     for rhoH in np.round(np.linspace(0.78, 0.88, 11), 2):
+        #         runs.append(sim_name(N, h, rhoH, 'triangle'))
+
+        #     for h in [0.6]:
+        #         for rhoH in np.round(np.linspace(0.73, 0.83, 11), 2):
+        #             runs.append(sim_name(N, h, rhoH, 'square'))
 
     send_runs_envelope(runs)
 

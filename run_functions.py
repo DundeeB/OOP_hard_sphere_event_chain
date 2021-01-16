@@ -215,6 +215,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
     if i >= iterations:
         if write:
             os.system('echo \'Finished ' + str(iterations) + ' iterations\' > FINAL_MESSAGE')
+        sys.exit(0)
     else:  # resend the simulation
         os.system('echo \'\nElapsed time is ' + str(time.time() - initial_time) + '\' >> TIME_LOG')
         os.chdir(code_dir)

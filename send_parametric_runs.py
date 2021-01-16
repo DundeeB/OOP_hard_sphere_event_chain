@@ -56,20 +56,20 @@ def main():
     runs = []
 
     # All runs - usefull for rerunning everything
-    # for d in os.listdir(prefix):
-    #     if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d)):
-    #         runs.append(d)
+    for d in os.listdir(prefix):
+        if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d)):
+            runs.append(d)
 
-    for N in [100 ** 2, 200 ** 2, 300 ** 2]:
+    # for N in [100 ** 2, 200 ** 2, 300 ** 2]:
         # Low density runs
-        for h in [0.1, 0.6, 0.8, 1.0]:
-            for rhoH in [0.1, 0.2, 0.3, 0.4, 0.6, 0.7]:
-                if h >= 0.6:
-                    runs.append(sim_name(N, h, rhoH, 'square'))
-                if h >= 0.8:
-                    runs.append(sim_name(N, h, rhoH, 'honeycomb'))
-                if h == 0.1:
-                    runs.append(sim_name(N, h, rhoH, 'triangle'))
+        # for h in [0.1, 0.6, 0.8, 1.0]:
+        #     for rhoH in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]:
+        #         if h >= 0.6:
+        #             runs.append(sim_name(N, h, rhoH, 'square'))
+        #         if h >= 0.8:
+        #             runs.append(sim_name(N, h, rhoH, 'honeycomb'))
+        #         if h == 0.1:
+        #             runs.append(sim_name(N, h, rhoH, 'triangle'))
 
         # Nominal h=0.8,1.0 runs
         # rhoH_runs = {1.0: np.round(np.linspace(0.8, 0.9, 11), 2), 0.8: np.round(np.linspace(0.75, 0.85, 11), 2)}

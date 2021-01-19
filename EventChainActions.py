@@ -1,4 +1,5 @@
 from Structure import *
+
 # import time
 
 epsilon = 1e-8
@@ -206,7 +207,7 @@ class Event2DCells(ArrayOfCells):
         ay = 2 * l_y / n_row
         spheres_down = ArrayOfCells.spheres_in_triangular(int(n_row / 2), n_col, rad, l_x, l_y)
         spheres_up = ArrayOfCells.spheres_in_triangular(int(n_row / 2), n_col, rad, l_x, l_y)
-        dz_max = np.sqrt((2 * rad) ** 2 - (2.0 / 3.0 * ay) ** 2)
+        dz_max = np.sqrt(max((2 * rad) ** 2 - (2.0 / 3.0 * ay) ** 2, 0))
         dr_max = (self.l_z / 2 - rad - dz_max / 2) / 2  # by two to not have coincidence collision
         for s in spheres_down:
             assert type(s) == Sphere
@@ -234,7 +235,7 @@ class Event2DCells(ArrayOfCells):
         assert a ** 2 + (self.l_z - sig) ** 2 > sig ** 2 and 4 * a ** 2 > sig ** 2, \
             "Can not create so many spheres in the AF square lattice"
         spheres = []
-        dz_max = np.sqrt(sig ** 2 - a ** 2)
+        dz_max = np.sqrt(max(sig ** 2 - a ** 2, 0))
         dr_max = self.l_z / 2 - rad - dz_max / 2  # by two to not have coincidence collision
         for i in range(n_sp_row):
             for j in range(n_sp_col):

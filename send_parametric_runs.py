@@ -70,25 +70,25 @@ def main():
     #                 runs.append(sim_name(N, h, rhoH, 'honeycomb'))
     #             if h == 0.1:
     #                 runs.append(sim_name(N, h, rhoH, 'triangle'))
-
-        # Nominal h=0.8,1.0 runs
-        # rhoH_runs = {1.0: np.round(np.linspace(0.8, 0.9, 11), 2), 0.8: np.round(np.linspace(0.75, 0.85, 11), 2)}
-        # rhoH_runs = {1.0: [0.845, 0.855, 0.865], 0.8: [0.775, 0.785, 0.795]}
-
-        # for h in [0.8, 1.0]:
-        #     for rhoH in rhoH_runs[h]:
-        #         runs.append(sim_name(N, h, rhoH, 'square'))
-        #         runs.append(sim_name(N, h, rhoH, 'honeycomb'))
-
-        # Following DOI: 10.1039/c4sm00125g, at h=0.1 eta*sig/H=pi/4*rhoH phase transition at 0.64-0.67, that is rhoH at
-        # 0.81-0.85
-        #     h = 0.1
-        #     for rhoH in np.round(np.linspace(0.78, 0.88, 11), 2):
-        #         runs.append(sim_name(N, h, rhoH, 'triangle'))
-
-        #     for h in [0.6]:
-        #         for rhoH in np.round(np.linspace(0.73, 0.83, 11), 2):
-        #             runs.append(sim_name(N, h, rhoH, 'square'))
+    #
+    #     Nominal h=0.8,1.0 runs
+    #     rhoH_runs = {1.0: np.round(np.linspace(0.8, 0.9, 11), 2), 0.8: np.round(np.linspace(0.75, 0.85, 11), 2)}
+    #     rhoH_runs = {1.0: [0.845, 0.855, 0.865], 0.8: [0.775, 0.785, 0.795]}
+    #
+    #     for h in [0.8, 1.0]:
+    #         for rhoH in rhoH_runs[h]:
+    #             runs.append(sim_name(N, h, rhoH, 'square'))
+    #             runs.append(sim_name(N, h, rhoH, 'honeycomb'))
+    #
+    #     Following DOI: 10.1039/c4sm00125g, at h=0.1 eta*sig/H=pi/4*rhoH phase transition at 0.64-0.67, that is rhoH at
+    #     0.81-0.85
+    #         h = 0.1
+    #         for rhoH in np.round(np.linspace(0.78, 0.88, 11), 2):
+    #             runs.append(sim_name(N, h, rhoH, 'triangle'))
+    #
+    #         for h in [0.6]:
+    #             for rhoH in np.round(np.linspace(0.73, 0.83, 11), 2):
+    #                 runs.append(sim_name(N, h, rhoH, 'square'))
 
     send_runs_envelope(runs)
 

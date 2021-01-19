@@ -714,9 +714,8 @@ class Ising(Graph):
         if u <= A:
             self.op_vec[i] *= -1
 
-    def anneal(self, iterations, dTditer=0, diter_save=1):
-        M, E, J = [], [], []
-        T = -1 / self.J
+    def anneal(self, iterations, dJditer=lambda J: 0, diter_save=1):
+        J, E, M = [], [], []
         for i in range(iterations):
             if i % diter_save == 0 or (i == iterations - 1):
                 self.calc_EM()
@@ -724,10 +723,8 @@ class Ising(Graph):
                 E.append(self.E)
                 J.append(self.J)
             self.Metropolis_flip()
-            T += dTditer
-            self.J = -1 / T
-
-        return E, J, M
+            self.J += dJditer(self.J)
+        return J, E, M
 
     def local_freeze(self):
         current_J = self.J
@@ -739,7 +736,10 @@ class Ising(Graph):
     def frustrated_bonds(self, E, J):
         return 1 / 2 * (1 - np.array(E) / (self.bonds_num * np.array(J)))
 
-    def calc_order_parameter(self, J_range=(-0.5, -3), iterations=None, realizations=20, samples=1000,
+    def real_path(self, real):
+        return os.path.join(self.op_dir_path, "real_" + str(real) + "_" + str(self.spheres_ind) + '.txt')
+
+    def calc_order_parameter(self, J_range=(-0.4, -3), iterations=None, realizations=20, samples=1000,
                              random_initialization=True, save_annealing=True, localy_freeze=True):
         if iterations is None:
             iterations = self.N * int(1e5)
@@ -748,9 +748,14 @@ class Ising(Graph):
         minEconfig = None
         frustration, Ms = [], []
         for i in range(realizations):
-            self.initialize(random_initialization=random_initialization, J=J_range[0])
-            E, J, M = self.anneal(iterations, diter_save=diter_save,
-                                  dTditer=-(1 / J_range[1] - 1 / J_range[0]) / iterations)
+            if os.path.exists(self.real_path(i)):
+                J, E, M = np.loadtxt(self.real_path(i), unpack=True, usecols=(0, 1, 2))
+            else:
+                self.initialize(random_initialization=random_initialization, J=J_range[0])
+                J, E, M = self.anneal(iterations, diter_save=diter_save,
+                                      dJditer=lambda J: 1 / 2 * (-J) ** 3 / (iterations - 1) * (
+                                              1 / J_range[1] ** 2 - 1 / J_range[0] ** 2))
+                np.savetxt(self.real_path(i), np.transpose([J, E, M]))
             frustration.append(self.frustrated_bonds(E, J))
             Ms.append(np.array(M) / self.N)
             mE = min(frustration[-1])
@@ -758,9 +763,13 @@ class Ising(Graph):
                 minE = mE
                 minEconfig = copy.deepcopy(self.op_vec)
         self.op_vec = minEconfig
-        self.local_freeze()
+        self.J = -100
+        _, _, _ = self.anneal(self.N, diter_save=self.N)
         annel_path = os.path.join(self.op_dir_path, "anneal_" + str(self.spheres_ind) + '.txt')
         np.savetxt(annel_path, np.transpose([J] + frustration + Ms))
+        for i in range(realizations):
+            if os.path.exists(self.real_path(i)):
+                os.remove(self.real_path(i))
 
     def correlation(self, Jarr=None, iterations=None, realizations=3):
         if iterations is None:
@@ -775,7 +784,7 @@ class Ising(Graph):
             E_reals = []
             for real in range(realizations):
                 self.initialize(J=J)
-                E, _, _ = self.anneal(iterations, diter_save=iterations, dTditer=0)
+                _, E, _ = self.anneal(iterations, diter_save=iterations)
                 E_reals.append(E[-1])
             E = np.mean(E_reals)
             frustration.append(self.frustrated_bonds(E, J))

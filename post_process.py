@@ -837,7 +837,7 @@ class LocalDensity(OrderParameter):
                                                                              ywalls[i + 1])
 
     def correlation(self):
-        self.counts, bin_edges = np.histogram(self.op_vec, bins='auto')
+        self.counts, bin_edges = np.histogram(self.op_vec, bins=50)
 
         self.corr_centers = [1 / 2 * (bin_edges[i] + bin_edges[i + 1]) for i in range(len(bin_edges) - 1)]
         self.op_corr = self.counts / np.trapz(self.counts, self.corr_centers)

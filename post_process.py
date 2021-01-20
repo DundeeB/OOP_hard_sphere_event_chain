@@ -3,7 +3,7 @@ import numpy as np
 from SnapShot import *
 from Structure import *
 from EventChainActions import *
-from sklearn.neighbors import kneighbors_graph
+from sklearn.neighbors import kneighbors_graph, radius_neighbors_graph
 from sklearn.utils.graph import single_source_shortest_path_length
 import os
 import sys
@@ -216,18 +216,23 @@ class OrderParameter:
 
 
 class Graph(OrderParameter):
-    def __init__(self, sim_path, k_nearest_neighbors, directed=False, centers=None, spheres_ind=None,
+    def __init__(self, sim_path, k_nearest_neighbors=None, radius=None, directed=False, centers=None, spheres_ind=None,
                  calc_upper_lower=False, **kwargs):
         single_layer_k = 4 if k_nearest_neighbors == 4 else 6
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, k_nearest_neighbors=single_layer_k, **kwargs)
         # extra argument k_nearest_neighbors goes to upper and lower layers
         self.k = k_nearest_neighbors
+        self.radius = radius
+        assert (k_nearest_neighbors is not None) or (
+                radius is not None), "Graph needs either k nearest neighbors or radius"
         self.directed = directed
         self.graph_father_path = os.path.join(self.op_father_dir, "Graph")
 
     @property
     def direc_str(self):
-        return "k=" + str(self.k) + ("_directed" if self.directed else "_undirected")
+        type = "k=" + str(self.k) if (self.k is not None) else "radius=" + str(self.radius)
+        direc = "directed" if self.directed else "undirected"
+        return type + "_" + direc
 
     @property
     def graph_file_path(self):
@@ -244,7 +249,11 @@ class Graph(OrderParameter):
         if recalc_graph:
             cast_sphere = lambda c, r=1, z=0: Sphere([x for x in c] + [z], r)
             cyc = lambda p1, p2: Metric.cyclic_dist(self.event_2d_cells.boundaries, cast_sphere(p1), cast_sphere(p2))
-            self.graph = kneighbors_graph([p[:2] for p in self.spheres], n_neighbors=self.k, metric=cyc)
+            X = [p[:2] for p in self.spheres]
+            if self.k is not None:
+                self.graph = kneighbors_graph(X, n_neighbors=self.k, metric=cyc)
+            else:
+                self.graph = radius_neighbors_graph(X, radius=self.radius, metric=cyc)
             if not self.directed:
                 I, J, _ = scipy.sparse.find(self.graph)[:]
                 Ed = [(i, j) for (i, j) in zip(I, J)]
@@ -630,7 +639,8 @@ class MagneticBraggStructure(BraggStructure):
 class MagneticTopologicalCorr(Graph):
     def __init__(self, sim_path, k_nearest_neighbors, directed=False, centers=None, spheres_ind=None,
                  calc_upper_lower=False):
-        super().__init__(sim_path, k_nearest_neighbors, directed, centers, spheres_ind, calc_upper_lower)
+        super().__init__(sim_path, k_nearest_neighbors=k_nearest_neighbors, directed=directed, centers=centers,
+                         spheres_ind=spheres_ind, calc_upper_lower=calc_upper_lower)
 
     @property
     def op_name(self):
@@ -677,8 +687,8 @@ class MagneticTopologicalCorr(Graph):
 
 class Ising(Graph):
     def __init__(self, sim_path, k_nearest_neighbors, directed=False, centers=None, spheres_ind=None, J=None):
-        super().__init__(sim_path, k_nearest_neighbors, directed, centers, spheres_ind, vec_name="ground_state",
-                         correlation_name="E_vs_J")
+        super().__init__(sim_path, k_nearest_neighbors=k_nearest_neighbors, directed=directed, centers=centers,
+                         spheres_ind=spheres_ind, vec_name="ground_state", correlation_name="E_vs_J")
         l_y = self.event_2d_cells.boundaries[2]
         self.z_spins = [(1 if p[2] > l_y / 2 else -1) for p in self.spheres]
         self.calc_graph()
@@ -793,6 +803,48 @@ class Ising(Graph):
         self.op_corr = np.array(frustration)
 
 
+class LocalDensity(OrderParameter):
+    def __init__(self, sim_path, partitions=None, centers=None, spheres_ind=None, calc_upper_lower=False):
+        super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, partitions=partitions)
+        if partitions is None:
+            partitions = int(np.sqrt(self.N) / 10)
+        # Number of random dots within square is a Poisson variable, given sqrt(N)/10 partition, on average we would
+        # have 100 spheres, so the var would be 100 and std 10, so about 10%.
+        self.partitions = partitions
+
+    @property
+    def op_name(self):
+        return "density_partitions=" + str(self.partitions)
+
+    def count_in_rect(self, xleft, xright, ydown, yup):
+        counter = 0
+        for s in self.spheres:
+            if (xright < s[0] < xleft) and (ydown < s[1] < yup):
+                counter += 1
+        return counter
+
+    def calc_order_parameter(self):
+        lx, ly, lz = self.event_2d_cells.boundaries
+        xwalls = np.linspace(0, lx, self.partitions + 1)
+        ywalls = np.linspace(0, ly, self.partitions + 1)
+        # rhoH=N*sig^3/(A*H)
+        sigma = 2
+        rho_H_normalization = sigma ** 3 / ((lx * ly / self.partitions ** 2) * lz)
+        self.op_vec = np.zeros((self.partitions, self.partitions))
+        for i in range(self.partitions):
+            for j in range(self.partitions):
+                self.op_vec[i, j] = rho_H_normalization * self.count_in_rect(xwalls[i], xwalls[i + 1], ywalls[i],
+                                                                             ywalls[i + 1])
+
+    def correlation(self, number_of_bins=None):
+        if number_of_bins is None:
+            number_of_bins = min(50, self.partitions**2/5)  # at least 5 values per bin
+        self.counts, bin_edges = np.histogram(self.op_vec, bins=number_of_bins)
+
+        self.corr_centers = [1 / 2 * (bin_edges[i] + bin_edges[i + 1]) for i in range(len(bin_edges) - 1)]
+        self.op_corr = self.counts / np.trapz(self.counts, self.corr_centers)
+
+
 def main(sim_name, calc_type):
     correlation_kwargs = {'randomize': False, 'time_limit': 2 * day}
 
@@ -832,11 +884,14 @@ def main(sim_name, calc_type):
         op = Ising(sim_path, k_nearest_neighbors=n)
         calc_mean = False
         correlation_kwargs = {}
+    if calc_type.startswith('Density'):
+        op = LocalDensity(sim_path)
+        calc_mean = False
+        correlation_kwargs = {}
     print(
         "\n\n\n-----------\nDate: " + str(date.today()) + "\nType: " + calc_type + "\nCorrelation arguments:" + str(
             correlation_kwargs) + "\nCalc correlations: " + str(calc_correlations) + "\nCalc mean: " + str(
-            calc_mean),
-        file=sys.stdout)
+            calc_mean), file=sys.stdout)
     op.calc_for_all_realizations(calc_correlations=calc_correlations, calc_mean=calc_mean, **correlation_kwargs)
 
 

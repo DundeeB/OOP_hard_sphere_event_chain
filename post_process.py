@@ -838,7 +838,7 @@ class LocalDensity(OrderParameter):
 
     def correlation(self, number_of_bins=None):
         if number_of_bins is None:
-            number_of_bins = min(50, self.partitions**2/5)  # at least 5 values per bin
+            number_of_bins = min(50, int(self.partitions ** 2 / 5))  # at least 5 values per bin
         self.counts, bin_edges = np.histogram(self.op_vec, bins=number_of_bins)
 
         self.corr_centers = [1 / 2 * (bin_edges[i] + bin_edges[i + 1]) for i in range(len(bin_edges) - 1)]

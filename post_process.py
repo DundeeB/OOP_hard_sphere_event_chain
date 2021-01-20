@@ -807,7 +807,7 @@ class LocalDensity(OrderParameter):
     def __init__(self, sim_path, partitions=None, centers=None, spheres_ind=None, calc_upper_lower=False):
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, partitions=partitions)
         if partitions is None:
-            partitions = int(np.sqrt(self.N) / 10)
+            partitions = int(np.sqrt(self.N) / 5)
         # Number of random dots within square is a Poisson variable, given sqrt(N)/10 partition, on average we would
         # have 100 spheres, so the var would be 100 and std 10, so about 10%.
         self.partitions = partitions

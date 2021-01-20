@@ -819,7 +819,7 @@ class LocalDensity(OrderParameter):
     def count_in_rect(self, xleft, xright, ydown, yup):
         counter = 0
         for s in self.spheres:
-            if (xright < s[0] < xleft) and (ydown < s[1] < yup):
+            if (xleft < s[0] < xright) and (ydown < s[1] < yup):
                 counter += 1
         return counter
 

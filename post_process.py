@@ -26,7 +26,6 @@ class OrderParameter:
                  correlation_name="correlation", **kwargs):
         self.sim_path = sim_path
         self.write_or_load = WriteOrLoad(sim_path)
-        self.update_centers(centers, spheres_ind)
         self.op_vec = None
         self.op_corr = None
         self.corr_centers = None
@@ -34,6 +33,7 @@ class OrderParameter:
         self.vec_name = vec_name
         self.correlation_name = correlation_name
         self.op_father_dir = os.path.join(self.sim_path, "OP")
+        self.update_centers(centers, spheres_ind)
         if calc_upper_lower:
             upper_centers = [c for c in self.spheres if c[2] >= self.event_2d_cells.boundaries[2] / 2]
             lower_centers = [c for c in self.spheres if c[2] < self.event_2d_cells.boundaries[2] / 2]
@@ -218,15 +218,17 @@ class OrderParameter:
 class Graph(OrderParameter):
     def __init__(self, sim_path, k_nearest_neighbors=None, radius=None, directed=False, centers=None, spheres_ind=None,
                  calc_upper_lower=False, **kwargs):
-        single_layer_k = 4 if k_nearest_neighbors == 4 else 6
-        super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, k_nearest_neighbors=single_layer_k, **kwargs)
-        # extra argument k_nearest_neighbors goes to upper and lower layers
         self.k = k_nearest_neighbors
         self.radius = radius
         assert (k_nearest_neighbors is not None) or (
                 radius is not None), "Graph needs either k nearest neighbors or radius"
         self.directed = directed
-        self.graph_father_path = os.path.join(self.op_father_dir, "Graph")
+        self.graph_father_path = os.path.join(sim_path, "OP", "Graph")
+
+        single_layer_k = 4 if k_nearest_neighbors == 4 else 6
+        super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, k_nearest_neighbors=single_layer_k, **kwargs)
+        # update centers overrides has calc_graph in it so it will be called on super().__init__()
+        # extra argument k_nearest_neighbors goes to upper and lower layers
 
     @property
     def direc_str(self):
@@ -272,6 +274,10 @@ class Graph(OrderParameter):
             self.bonds_num += len(self.nearest_neighbors[i])
         self.bonds_num /= 2
 
+    def update_centers(self, centers, spheres_ind):
+        super().update_centers(centers, spheres_ind)
+        self.calc_graph()
+
 
 class PsiMN(Graph):
 
@@ -283,7 +289,6 @@ class PsiMN(Graph):
         self.op_name = "psi_" + str(m) + str(n)
 
     def calc_order_parameter(self, calc_upper_lower=False):
-        self.calc_graph()
         event_2d_cells, n, centers, graph = self.event_2d_cells, self.n, self.event_2d_cells.all_centers, self.graph
         psimn_vec = np.zeros(len(centers), dtype=np.complex)
         for i in range(len(centers)):
@@ -647,7 +652,6 @@ class MagneticTopologicalCorr(Graph):
         return "gM_" + self.direc_str
 
     def calc_order_parameter(self):
-        self.calc_graph()
         rad, lz = 1.0, self.event_2d_cells.l_z
         self.op_vec = [(r[2] - lz / 2) / (lz / 2 - rad) for r in self.spheres]
 
@@ -689,9 +693,8 @@ class Ising(Graph):
     def __init__(self, sim_path, k_nearest_neighbors, directed=False, centers=None, spheres_ind=None, J=None):
         super().__init__(sim_path, k_nearest_neighbors=k_nearest_neighbors, directed=directed, centers=centers,
                          spheres_ind=spheres_ind, vec_name="ground_state", correlation_name="E_vs_J")
-        l_y = self.event_2d_cells.boundaries[2]
-        self.z_spins = [(1 if p[2] > l_y / 2 else -1) for p in self.spheres]
-        self.calc_graph()
+        l_z = self.event_2d_cells.boundaries[2]
+        self.z_spins = [(1 if p[2] > l_z / 2 else -1) for p in self.spheres]
         self.J = J
 
     @property

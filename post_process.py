@@ -754,17 +754,19 @@ class Ising(Graph):
         if iterations is None:
             iterations = self.N * int(1e5)
         diter_save = int(iterations / samples)
+        # dJditer = lambda J: 1 / 2 * (-J) ** 3 / (iterations - 1) * (1 / J_range[1] ** 2 - 1 / J_range[0] ** 2)
+        # dJditer = lambda J: -2 / iterations * (np.sqrt(-J_range[1]) - np.sqrt(-J_range[0])) * np.sqrt(-J)
+        dJditer = lambda J: (J_range[1] - J_range[0]) / iterations
         minE = float('inf')
         minEconfig = None
         frustration, Ms = [], []
         for i in range(realizations):
+            # TODO: What if we have a op file existing already, but we want to add realizations?
             if os.path.exists(self.real_path(i)):
                 J, E, M = np.loadtxt(self.real_path(i), unpack=True, usecols=(0, 1, 2))
             else:
                 self.initialize(random_initialization=random_initialization, J=J_range[0])
-                J, E, M = self.anneal(iterations, diter_save=diter_save,
-                                      dJditer=lambda J: 1 / 2 * (-J) ** 3 / (iterations - 1) * (
-                                              1 / J_range[1] ** 2 - 1 / J_range[0] ** 2))
+                J, E, M = self.anneal(iterations, diter_save=diter_save, dJditer=dJditer)
                 np.savetxt(self.real_path(i), np.transpose([J, E, M]))
             frustration.append(self.frustrated_bonds(E, J))
             Ms.append(np.array(M) / self.N)
@@ -804,6 +806,7 @@ class Ising(Graph):
 
 
 class LocalDensity(OrderParameter):
+    # TODO: why to I get discrite histogram? Fine tune the parameters paritions and bin
     def __init__(self, sim_path, partitions=None, centers=None, spheres_ind=None, calc_upper_lower=False):
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, partitions=partitions)
         if partitions is None:

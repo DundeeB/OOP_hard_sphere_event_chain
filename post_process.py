@@ -68,7 +68,7 @@ class OrderParameter:
         self.event_2d_cells = Event2DCells(edge, n_row, n_col, l_z)
         self.event_2d_cells.append_sphere([Sphere(c, rad) for c in centers])
         self.event_2d_cells.update_all_spheres()
-        self.spheres = self.event_2d_cells.all_centers
+        self.spheres = centers
         self.N = len(centers)
 
     def calc_order_parameter(self, calc_upper_lower=False):
@@ -289,7 +289,7 @@ class PsiMN(Graph):
         self.op_name = "psi_" + str(m) + str(n)
 
     def calc_order_parameter(self, calc_upper_lower=False):
-        event_2d_cells, n, centers, graph = self.event_2d_cells, self.n, self.event_2d_cells.all_centers, self.graph
+        event_2d_cells, n, centers, graph = self.event_2d_cells, self.n, self.spheres, self.graph
         psimn_vec = np.zeros(len(centers), dtype=np.complex)
         for i in range(len(centers)):
             dr = [Metric.cyclic_vec(event_2d_cells.boundaries, PsiMN.cast_sphere(centers[i]),

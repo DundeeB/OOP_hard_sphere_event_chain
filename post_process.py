@@ -287,9 +287,10 @@ class PsiMN(Graph):
     def calc_order_parameter(self, calc_upper_lower=False):
         n, centers, graph = self.n, self.spheres, self.graph
         psimn_vec = np.zeros(len(centers), dtype=np.complex)
+        cast_sphere = lambda c, r=1, z=0: Sphere([x for x in c] + [z], r)
         for i in range(len(centers)):
-            dr = [Metric.cyclic_vec([self.l_x, self.l_y], PsiMN.cast_sphere(centers[i]),
-                                    PsiMN.cast_sphere(centers[j])) for j in self.nearest_neighbors[i]]
+            dr = [Metric.cyclic_vec([self.l_x, self.l_y], cast_sphere(centers[i]), cast_sphere(centers[j])) for j in
+                  self.nearest_neighbors[i]]
             t = np.arctan2([r[1] for r in dr], [r[0] for r in dr])
             psi_n = np.mean(np.exp(1j * n * t))
             psimn_vec[i] = np.abs(psi_n) * np.exp(1j * self.m * np.angle(psi_n))

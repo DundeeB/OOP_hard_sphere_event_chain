@@ -35,8 +35,8 @@ class OrderParameter:
         self.op_father_dir = os.path.join(self.sim_path, "OP")
         self.update_centers(centers, spheres_ind)
         if calc_upper_lower:
-            upper_centers = [c for c in self.spheres if c[2] >= self.event_2d_cells.boundaries[2] / 2]
-            lower_centers = [c for c in self.spheres if c[2] < self.event_2d_cells.boundaries[2] / 2]
+            upper_centers = [c for c in self.spheres if c[2] >= self.l_z / 2]
+            lower_centers = [c for c in self.spheres if c[2] < self.l_z / 2]
             self.upper = type(self)(sim_path, centers=upper_centers, spheres_ind=self.spheres_ind,
                                     calc_upper_lower=False, **kwargs)
             self.lower = type(self)(sim_path, centers=lower_centers, spheres_ind=self.spheres_ind,
@@ -64,10 +64,7 @@ class OrderParameter:
         if (centers is None) or (spheres_ind is None):
             centers, spheres_ind = self.write_or_load.last_spheres()
         self.spheres_ind = spheres_ind
-        l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = self.write_or_load.load_Input()
-        self.event_2d_cells = Event2DCells(edge, n_row, n_col, l_z)
-        self.event_2d_cells.append_sphere([Sphere(c, rad) for c in centers])
-        self.event_2d_cells.update_all_spheres()
+        self.l_x, self.l_y, self.l_z, rad, rho_H, edge, n_row, n_col = self.write_or_load.load_Input()
         self.spheres = centers
         self.N = len(centers)
 
@@ -78,7 +75,7 @@ class OrderParameter:
     def correlation(self, bin_width=0.1, calc_upper_lower=False, low_memory=True, randomize=False,
                     realizations=int(1e7), time_limit=2 * day):
         if self.op_vec is None: self.calc_order_parameter()
-        lx, ly = self.event_2d_cells.boundaries[:2]
+        lx, ly = self.l_x, self.l_y
         l = np.sqrt(lx ** 2 + ly ** 2) / 2
         centers = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1) + bin_width / 2
         kmax = len(centers) - 1
@@ -137,7 +134,7 @@ class OrderParameter:
             self.upper.correlation(bin_width, low_memory=low_memory, randomize=randomize, realizations=realizations)
 
     def __pair_corr__(self, i, j, bin_width):
-        lx, ly = self.event_2d_cells.boundaries[:2]
+        lx, ly = self.l_x, self.l_y
         r, r_ = self.spheres[i], self.spheres[j]
         dr_vec = np.array(r) - r_
         dx = np.min(np.abs([dr_vec[0], dr_vec[0] + lx, dr_vec[0] - lx]))
@@ -250,7 +247,7 @@ class Graph(OrderParameter):
         #         recalc_graph = True
         if recalc_graph:
             cast_sphere = lambda c, r=1, z=0: Sphere([x for x in c] + [z], r)
-            cyc = lambda p1, p2: Metric.cyclic_dist(self.event_2d_cells.boundaries, cast_sphere(p1), cast_sphere(p2))
+            cyc = lambda p1, p2: Metric.cyclic_dist([self.l_x, self.l_y], cast_sphere(p1), cast_sphere(p2))
             X = [p[:2] for p in self.spheres]
             if self.k is not None:
                 self.graph = kneighbors_graph(X, n_neighbors=self.k, metric=cyc)
@@ -289,10 +286,10 @@ class PsiMN(Graph):
         self.op_name = "psi_" + str(m) + str(n)
 
     def calc_order_parameter(self, calc_upper_lower=False):
-        event_2d_cells, n, centers, graph = self.event_2d_cells, self.n, self.spheres, self.graph
+        n, centers, graph = self.n, self.spheres, self.graph
         psimn_vec = np.zeros(len(centers), dtype=np.complex)
         for i in range(len(centers)):
-            dr = [Metric.cyclic_vec(event_2d_cells.boundaries, PsiMN.cast_sphere(centers[i]),
+            dr = [Metric.cyclic_vec([self.l_x, self.l_y], PsiMN.cast_sphere(centers[i]),
                                     PsiMN.cast_sphere(centers[j])) for j in self.nearest_neighbors[i]]
             t = np.arctan2([r[1] for r in dr], [r[0] for r in dr])
             psi_n = np.mean(np.exp(1j * n * t))
@@ -330,7 +327,7 @@ class PositionalCorrelationFunction(OrderParameter):
         self.correlation_name = "correlation_theta=" + str(self.theta)
         theta, rect_width = self.theta, self.rect_width
         v_hat = np.array([np.cos(theta), np.sin(theta)])
-        lx, ly = self.event_2d_cells.boundaries[:2]
+        lx, ly = self.l_x, self.l_y
         l = np.sqrt(lx ** 2 + ly ** 2) / 2
         bins_edges = np.linspace(0, np.ceil(l / bin_width) * bin_width, int(np.ceil(l / bin_width)) + 1)
         kmax = len(bins_edges) - 1
@@ -404,7 +401,7 @@ class PositionalCorrelationFunction(OrderParameter):
                                    realizations=realizations)
 
     def __pair_dist__(self, r, r_, v_hat, rect_width, bin_width):
-        lx, ly = self.event_2d_cells.boundaries[:2]
+        lx, ly = self.l_x, self.l_y
         dr = np.array(r) - r_
         dxs = [dr[0], dr[0] + lx, dr[0] - lx]
         dx = dxs[np.argmin(np.abs(dxs))]
@@ -427,8 +424,8 @@ class BurgerField(OrderParameter):
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower=False)
         self.op_name = "burger_vectors"
         if calc_upper_lower:
-            upper_centers = [c for c in self.spheres if c[2] >= self.event_2d_cells.boundaries[2] / 2]
-            lower_centers = [c for c in self.spheres if c[2] < self.event_2d_cells.boundaries[2] / 2]
+            upper_centers = [c for c in self.spheres if c[2] >= self.l_z / 2]
+            lower_centers = [c for c in self.spheres if c[2] < self.l_z / 2]
             self.upper = BurgerField(sim_path, centers=upper_centers, spheres_ind=self.spheres_ind)
             self.lower = BurgerField(sim_path, centers=lower_centers, spheres_ind=self.spheres_ind)
             self.upper.op_name = "upper_" + self.op_name
@@ -448,33 +445,31 @@ class BurgerField(OrderParameter):
         perfect_lattice_vectors = np.array([n * a1 + m * a2 for n in range(-3, 3) for m in range(-3, 3)])
         perfect_lattice_vectors = np.array([np.matmul(R, p.T) for p in perfect_lattice_vectors])
         # rotate = lambda ps: np.matmul(R(-orientation), np.array(ps).T).T
-        disloc_burger, disloc_location = BurgerField.calc_burger_vector(self.event_2d_cells, perfect_lattice_vectors)
+        disloc_burger, disloc_location = BurgerField.calc_burger_vector(self.spheres, [self.l_x, self.l_y],
+                                                                        perfect_lattice_vectors)
         self.op_vec = np.concatenate((np.array(disloc_location).T, np.array(disloc_burger).T)).T  # x, y, bx, by field
         if calc_upper_lower:
             self.lower.calc_order_parameter()
             self.upper.calc_order_parameter()
 
     @staticmethod
-    def calc_burger_vector(event_2d_cells, perfect_lattice_vectors):
+    def calc_burger_vector(spheres, boundaries, perfect_lattice_vectors):
         """
         Calculate the burger vector on each plaquette of the Delaunay triangulation using methods in:
             [1]	https://link.springer.com/content/pdf/10.1007%2F978-3-319-42913-7_20-1.pdf
             [2]	https://www.sciencedirect.com/science/article/pii/S0022509614001331?via%3Dihub
-        :param event_2d_cells: Structure containing spheres centers, boundaries ext.
-        :param wraped_psi: orientational order parameter for local orientation. psi(i) correspond to the i'th sphere
-        :param perfect_lattice_vectors: list of vectors of the perfect lattice. Their magnitude is no important.
+        :param perfect_lattice_vectors: list of vectors of the perfect lattice. Their magnitude is not important.
         :return: The positions (r) and burger vector at each position b. The position of a dislocation is take as the
                 center of the plaquette.
         """
-        wraped_centers = BurgerField.wrap_with_boundaries(event_2d_cells, w=5)
+        wraped_centers = BurgerField.wrap_with_boundaries(spheres, boundaries, w=5)
         # all spheres within w distance from cyclic boundary will be mirrored
         tri = Delaunay(wraped_centers)
         dislocation_burger = []
         dislocation_location = []
         for i, simplex in enumerate(tri.simplices):
             rc = np.mean(tri.points[simplex], 0)
-            if rc[0] < 0 or rc[0] > event_2d_cells.boundaries[0] or rc[1] < 0 or rc[1] > \
-                    event_2d_cells.boundaries[1]:
+            if rc[0] < 0 or rc[0] > boundaries[0] or rc[1] < 0 or rc[1] > boundaries[1]:
                 continue
             b_i = BurgerField.burger_calculation(tri.points[simplex], perfect_lattice_vectors)
             if np.linalg.norm(b_i) > epsilon:
@@ -498,9 +493,9 @@ class BurgerField(OrderParameter):
         return np.sum(Ls, 0)
 
     @staticmethod
-    def wrap_with_boundaries(event_2d_cells, w):
-        centers = np.array(event_2d_cells.all_centers)[:, :2]
-        Lx, Ly = event_2d_cells.boundaries[:2]
+    def wrap_with_boundaries(spheres, boundaries, w):
+        centers = np.array(spheres)[:, :2]
+        Lx, Ly = boundaries[:2]
         x = centers[:, 0]
         y = centers[:, 1]
 
@@ -546,7 +541,7 @@ class BraggStructure(OrderParameter):
 
     def k_perf(self):
         # rotate self.spheres by orientation before so peak is at for square [1, 0]
-        l = np.sqrt(self.event_2d_cells.l_x * self.event_2d_cells.l_y / len(self.spheres))
+        l = np.sqrt(self.l_x * self.l_y / len(self.spheres))
         if self.m == 1 and self.n == 4:
             return 2 * np.pi / l * np.array([1, 0])
         if self.m == 1 and self.n == 6:
@@ -623,12 +618,12 @@ class MagneticBraggStructure(BraggStructure):
         # z in [rad,lz-rad]-->z in [-1,1]: (z-lz/2)/(lz/2-rad)
         # For z=rad we have (rad-lz/2)/(lz/2-rad)=-1
         # For z=lz-rad we have (lz-rad-lz/2)/(lz/2-rad)=1.
-        rad, lz = 1.0, self.event_2d_cells.l_z
+        rad, lz = 1.0, self.l_z
         return np.array(
             [(r[2] - lz / 2) / (lz / 2 - rad) * np.exp(1j * (k[0] * r[0] + k[1] * r[1])) for r in self.spheres])
 
     def k_perf(self):
-        l = np.sqrt(self.event_2d_cells.l_x * self.event_2d_cells.l_y / len(self.spheres))
+        l = np.sqrt(self.l_x * self.l_y / len(self.spheres))
         if self.m == 1 and self.n == 4:
             return np.pi / l * np.array([1, 1])
         # TODO: update by k*a_AB
@@ -652,7 +647,7 @@ class MagneticTopologicalCorr(Graph):
         return "gM_" + self.direc_str
 
     def calc_order_parameter(self):
-        rad, lz = 1.0, self.event_2d_cells.l_z
+        rad, lz = 1.0, self.l_z
         self.op_vec = [(r[2] - lz / 2) / (lz / 2 - rad) for r in self.spheres]
 
     def correlation(self, calc_upper_lower=False):
@@ -693,8 +688,7 @@ class Ising(Graph):
     def __init__(self, sim_path, k_nearest_neighbors, directed=False, centers=None, spheres_ind=None, J=None):
         super().__init__(sim_path, k_nearest_neighbors=k_nearest_neighbors, directed=directed, centers=centers,
                          spheres_ind=spheres_ind, vec_name="ground_state", correlation_name="E_vs_J")
-        l_z = self.event_2d_cells.boundaries[2]
-        self.z_spins = [(1 if p[2] > l_z / 2 else -1) for p in self.spheres]
+        self.z_spins = [(1 if p[2] > self.l_z / 2 else -1) for p in self.spheres]
         self.J = J
 
     @property
@@ -830,12 +824,11 @@ class LocalDensity(OrderParameter):
         return counter
 
     def calc_order_parameter(self):
-        lx, ly, lz = self.event_2d_cells.boundaries
-        xwalls = np.linspace(0, lx, self.partitions + 1)
-        ywalls = np.linspace(0, ly, self.partitions + 1)
+        xwalls = np.linspace(0, self.lx, self.partitions + 1)
+        ywalls = np.linspace(0, self.ly, self.partitions + 1)
         # rhoH=N*sig^3/(A*H)
         sigma = 2
-        rho_H_normalization = sigma ** 3 / ((lx * ly / self.partitions ** 2) * lz)
+        rho_H_normalization = sigma ** 3 / ((self.lx * self.ly / self.partitions ** 2) * self.lz)
         self.op_vec = np.zeros((self.partitions, self.partitions))
         for i in range(self.partitions):
             for j in range(self.partitions):

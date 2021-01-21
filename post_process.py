@@ -61,7 +61,7 @@ class OrderParameter:
         return os.path.join(self.op_dir_path, self.correlation_name + "_" + str(self.spheres_ind) + '.txt')
 
     def update_centers(self, centers, spheres_ind):
-        if centers is None or spheres_ind is None:
+        if (centers is None) or (spheres_ind is None):
             centers, spheres_ind = self.write_or_load.last_spheres()
         self.spheres_ind = spheres_ind
         l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = self.write_or_load.load_Input()
@@ -243,11 +243,11 @@ class Graph(OrderParameter):
     def calc_graph(self):
         if not os.path.exists(self.graph_father_path): os.mkdir(self.graph_father_path)
         recalc_graph = True
-        if os.path.exists(self.graph_file_path):
-            recalc_graph = False
-            self.graph = scipy.sparse.load_npz(self.graph_file_path)
-            if self.graph.shape != (self.N, self.N):
-                recalc_graph = True
+        # if os.path.exists(self.graph_file_path):
+        #     recalc_graph = False
+        #     self.graph = scipy.sparse.load_npz(self.graph_file_path)
+        #     if self.graph.shape != (self.N, self.N):
+        #         recalc_graph = True
         if recalc_graph:
             cast_sphere = lambda c, r=1, z=0: Sphere([x for x in c] + [z], r)
             cyc = lambda p1, p2: Metric.cyclic_dist(self.event_2d_cells.boundaries, cast_sphere(p1), cast_sphere(p2))

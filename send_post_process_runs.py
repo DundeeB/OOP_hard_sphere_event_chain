@@ -47,8 +47,8 @@ def main():
     sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
     for sim in sims:
         create_op_dir(sim)
-    default_op = ["Bragg_S", "Bragg_Sm", "pos"]  # ["gM", "Ising", ]  # , "Density", , ]
-    # "psi"
+    default_op = ["gM", "Ising"]  # [, ]  # , "Density", , ]
+    # "psi", "Bragg_S", "Bragg_Sm", "pos"
     f = open(os.path.join(code_prefix, 'post_process_list.txt'), 'wt')
     try:
         writer = csv.writer(f, lineterminator='\n')

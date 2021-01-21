@@ -36,8 +36,17 @@ def mn_from_sim(sim_name):
     return mn
 
 
+def create_op_dir(sim):
+    op_dir = os.path.join(prefix, sim, "OP")
+    if not os.path.exists():
+        os.mkdir(op_dir)
+    return
+
+
 def main():
     sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
+    for sim in sims:
+        create_op_dir(sim)
     default_op = ["psi"]  # ["gM", "Ising", "Bragg_S", "Bragg_Sm", "pos"]  # , "Density", , ]
     f = open(os.path.join(code_prefix, 'post_process_list.txt'), 'wt')
     try:

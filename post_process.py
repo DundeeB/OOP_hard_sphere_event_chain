@@ -177,7 +177,6 @@ class OrderParameter:
     def calc_for_all_realizations(self, calc_mean=True, calc_correlations=True, **correlation_kwargs):
         init_time = time.time()
         op_father_dir = os.path.join(self.sim_path, "OP")
-        if not os.path.exists(op_father_dir): os.mkdir(op_father_dir)
         op_dir = os.path.join(op_father_dir, self.op_name)
         if not os.path.exists(op_dir): os.mkdir(op_dir)
         mean_vs_real_reals, mean_vs_real_mean = [], []
@@ -848,7 +847,6 @@ def main(sim_name, calc_type):
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"
     sim_path = os.path.join(prefix, sim_name)
     op_dir = os.path.join(sim_path, "OP")
-    if not os.path.exists(op_dir): os.mkdir(op_dir)
     log = os.path.join(op_dir, "log")
     sys.stdout = open(log, "a")
     if calc_type.endswith("23"):

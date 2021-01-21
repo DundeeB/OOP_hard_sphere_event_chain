@@ -240,11 +240,11 @@ class Graph(OrderParameter):
     def calc_graph(self):
         if not os.path.exists(self.graph_father_path): os.mkdir(self.graph_father_path)
         recalc_graph = True
-        # if os.path.exists(self.graph_file_path):
-        #     recalc_graph = False
-        #     self.graph = scipy.sparse.load_npz(self.graph_file_path)
-        #     if self.graph.shape != (self.N, self.N):
-        #         recalc_graph = True
+        if os.path.exists(self.graph_file_path):
+            recalc_graph = False
+            self.graph = scipy.sparse.load_npz(self.graph_file_path)
+            if self.graph.shape != (self.N, self.N):
+                recalc_graph = True
         if recalc_graph:
             cast_sphere = lambda c, r=1, z=0: Sphere([x for x in c] + [z], r)
             cyc = lambda p1, p2: Metric.cyclic_dist([self.l_x, self.l_y], cast_sphere(p1), cast_sphere(p2))

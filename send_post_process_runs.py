@@ -37,10 +37,8 @@ def mn_from_sim(sim_name):
 
 
 def main():
-    # sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
-    # sims = ["N=10000_h=0.8_rhoH=0.8_AF_square_ECMC", "N=10000_h=0.8_rhoH=0.75_AF_square_ECMC"]
-    sims = ["N=10000_h=0.8_rhoH=0.9_AF_square_ECMC"]
-    default_op = ["gM"]  # , "Ising", "Density", "psi", "Bragg_S", "Bragg_Sm", "pos"]
+    sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
+    default_op = ["gM", "Ising", "psi", "Bragg_S", "Bragg_Sm", "pos"]  # , "Density", ]
     f = open(os.path.join(code_prefix, 'post_process_list.txt'), 'wt')
     try:
         writer = csv.writer(f, lineterminator='\n')

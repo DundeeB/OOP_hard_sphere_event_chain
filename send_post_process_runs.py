@@ -38,7 +38,7 @@ def mn_from_sim(sim_name):
 
 def create_op_dir(sim):
     op_dir = os.path.join(prefix, sim, "OP")
-    if not os.path.exists():
+    if not os.path.exists(op_dir):
         os.mkdir(op_dir)
     return
 

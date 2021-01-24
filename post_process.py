@@ -758,7 +758,6 @@ class Ising(Graph):
         minEconfig = None
         frustration, Ms = [], []
         for i in range(realizations):
-            # TODO: What if we have a op file existing already, but we want to add realizations?
             if os.path.exists(self.real_path(i)):
                 J, E, M = np.loadtxt(self.real_path(i), unpack=True, usecols=(0, 1, 2))
             else:
@@ -800,6 +799,18 @@ class Ising(Graph):
         self.corr_centers = Jarr
         self.counts = Jarr * 0 + realizations
         self.op_corr = np.array(frustration)
+
+    def read_or_calc_write(self, realizations=20, **calc_order_parameter_args):
+        if OrderParameter.exists(self.vec_path):
+            self.read_vec()
+            calculated_reals = int((self.op_vec.shape[1] - 1) / 2)
+            if calculated_reals >= realizations:
+                return
+            for i in range(1, calculated_reals + 1):
+                J, E, M = self.op_vec[:, 0], self.op_vec[:, i], self.op_vec[:, calculated_reals + i]
+                np.savetxt(self.real_path(i), np.transpose([J, E, M]))
+            os.remove(self.vec_path)
+        super().read_or_calc_write(realizations=realizations, **calc_order_parameter_args)
 
 
 class LocalDensity(OrderParameter):

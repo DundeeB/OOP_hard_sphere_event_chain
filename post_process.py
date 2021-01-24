@@ -753,7 +753,8 @@ class Ising(Graph):
         diter_save = int(iterations / samples)
         # dJditer = lambda J: 1 / 2 * (-J) ** 3 / (iterations - 1) * (1 / J_range[1] ** 2 - 1 / J_range[0] ** 2)
         # dJditer = lambda J: -2 / iterations * (np.sqrt(-J_range[1]) - np.sqrt(-J_range[0])) * np.sqrt(-J)
-        dJditer = lambda J: (J_range[1] - J_range[0]) / iterations
+        # dJditer = lambda J: (J_range[1] - J_range[0]) / iterations
+        dJditer = lambda J: J ** 2 * (1 / J_range[0] - 1 / J_range[1]) / iterations
         minE = float('inf')
         minEconfig = None
         frustration, Ms = [], []

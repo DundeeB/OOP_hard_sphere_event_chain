@@ -876,7 +876,7 @@ def main(sim_name, calc_type):
     if calc_type.startswith("pos"):
         op = PositionalCorrelationFunction(sim_path, m, n)
         calc_mean = False
-    if calc_type == "burger_square":
+    if calc_type.startswith("burger_square"):
         op = BurgerField(sim_path)
         calc_mean, calc_correlations = False, False
     if calc_type.startswith("Bragg_S"):

@@ -182,7 +182,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
         displacements = [0]
         realizations = [i]
     initial_time = time.time()
-    while (time.time() - initial_time < 10) and (i < iterations):
+    while (time.time() - initial_time < 2 * day) and (i < iterations):
         # Choose sphere
         spheres = arr.all_spheres
         sphere = spheres[random.randint(0, len(spheres) - 1)]

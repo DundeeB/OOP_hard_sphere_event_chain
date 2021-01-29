@@ -1,2 +1,2 @@
 SUBDAG EXTERNAL A ECMC.subdag
-VARS A sim_name="N=10000_h=0.8_rhoH=0.8_AF_square_ECMC"
+VARS A sim_name="N=40000_h=0.8_rhoH=0.8_AF_square_ECMC"

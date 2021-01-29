@@ -789,7 +789,7 @@ class Ising(Graph):
         if Jarr is None:
             Jc = -1 / 2.269
             Jarr = [-1, -0.9, -0.8, -0.7, -0.65, -0.6, -0.55, -0.5, -0.475, -0.45, Jc, -0.425, -0.4, -0.35, -0.3, -0.2,
-                    -0.1, 0]
+                    -0.1]
             Jarr.sort()
         frustration = []
         for J in Jarr:

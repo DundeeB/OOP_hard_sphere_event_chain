@@ -1,0 +1,22 @@
+JOB  A  ECMC.sub
+JOB  B  ECMC.sub
+JOB  C  ECMC.sub
+JOB  D  ECMC.sub
+JOB  E  ECMC.sub
+JOB  F  ECMC.sub
+JOB  G  ECMC.sub
+
+VARS A sim_name="$(sim_name)"
+VARS B sim_name="$(sim_name)"
+VARS C sim_name="$(sim_name)"
+VARS D sim_name="$(sim_name)"
+VARS E sim_name="$(sim_name)"
+VARS F sim_name="$(sim_name)"
+VARS G sim_name="$(sim_name)"
+
+PARENT A CHILD B
+PARENT B CHILD C
+PARENT C CHILD D
+PARENT D CHILD E
+PARENT E CHILD F
+PARENT F CHILD G

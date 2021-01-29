@@ -182,7 +182,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
     if record_displacements:
         displacements = [0]
         realizations = [i]
-    while (time.time() - initial_time < day) and (i < iterations):
+    while (time.time() - initial_time < 2 * day) and (i < iterations):
         # Choose sphere
         spheres = arr.all_spheres
         sphere = spheres[random.randint(0, len(spheres) - 1)]
@@ -219,11 +219,10 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
             os.chdir(os.path.join(prefix, sim_name))
             os.system('echo \'Finished ' + str(iterations) + ' iterations\' > FINAL_MESSAGE')
         sys.exit(0)
-    else:  # resend the simulation
+    else:
         os.system('echo \'\nElapsed time is ' + str(time.time() - initial_time) + '\' >> TIME_LOG')
         os.chdir(code_dir)
-        sys.exit(7)  # any !=0 number
-    return 0 if (not record_displacements) else (realizations, displacements)
+        sys.exit(0)  # any !=0 number
 
 
 def main():

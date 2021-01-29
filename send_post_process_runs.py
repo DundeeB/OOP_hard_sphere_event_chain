@@ -47,7 +47,7 @@ def main():
     sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
     for sim in sims:
         create_op_dir(sim)
-    default_op = ["Ising"]  # "Density"]
+    default_op = ["Ising-annealing", "Ising-E_T"]  # "Density"]
     # "psi", "Bragg_S", "Bragg_Sm", "pos", "gM",
     f = open(os.path.join(code_prefix, 'post_process_list.txt'), 'wt')
     try:

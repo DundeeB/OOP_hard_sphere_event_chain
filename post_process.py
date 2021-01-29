@@ -174,7 +174,7 @@ class OrderParameter:
             self.calc_order_parameter(**calc_order_parameter_args)
             self.write(write_correlations=False, write_vec=True)
 
-    def calc_for_all_realizations(self, calc_mean=True, calc_correlations=True, **correlation_kwargs):
+    def calc_for_all_realizations(self, calc_mean=True, calc_correlations=True, calc_vec=True, **correlation_kwargs):
         init_time = time.time()
         op_father_dir = os.path.join(self.sim_path, "OP")
         op_dir = os.path.join(op_father_dir, self.op_name)
@@ -196,7 +196,7 @@ class OrderParameter:
             else:
                 centers = np.loadtxt(os.path.join(self.sim_path, 'Initial Conditions'))
             self.update_centers(centers, sp_ind)
-            if (type(self) is not PositionalCorrelationFunction):
+            if calc_vec:
                 self.read_or_calc_write()
             if calc_mean and (sp_ind not in mean_vs_real_reals):
                 mean_vs_real_reals.append(sp_ind)
@@ -868,14 +868,14 @@ def main(sim_name, calc_type):
         m, n = 1, 4
     if calc_type.endswith("16"):
         m, n = 1, 6
-    calc_correlations, calc_mean = True, True
+    calc_correlations, calc_mean, calc_vec = True, True, True
     if calc_type.startswith("psi"):
         op = PsiMN(sim_path, m, n)
         if calc_type.startswith("psi_mean"):
             calc_correlations = False
     if calc_type.startswith("pos"):
         op = PositionalCorrelationFunction(sim_path, m, n)
-        calc_mean = False
+        calc_mean, calc_vec = False, False
     if calc_type.startswith("burger_square"):
         op = BurgerField(sim_path)
         calc_mean, calc_correlations = False, False
@@ -889,6 +889,10 @@ def main(sim_name, calc_type):
         calc_mean = False
         correlation_kwargs = {}
     if calc_type.startswith('Ising'):
+        if calc_type.endswith('E_T'):
+            calc_vec = False
+        if calc_type.endswith('annealing'):
+            calc_correlations = False
         op = Ising(sim_path, k_nearest_neighbors=n)
         calc_mean = False
         correlation_kwargs = {}
@@ -900,7 +904,8 @@ def main(sim_name, calc_type):
         "\n\n\n-----------\nDate: " + str(date.today()) + "\nType: " + calc_type + "\nCorrelation arguments:" + str(
             correlation_kwargs) + "\nCalc correlations: " + str(calc_correlations) + "\nCalc mean: " + str(
             calc_mean), file=sys.stdout)
-    op.calc_for_all_realizations(calc_correlations=calc_correlations, calc_mean=calc_mean, **correlation_kwargs)
+    op.calc_for_all_realizations(calc_correlations=calc_correlations, calc_mean=calc_mean, calc_vec=calc_vec,
+                                 **correlation_kwargs)
 
 
 if __name__ == "__main__":

@@ -798,7 +798,7 @@ class Ising(Graph):
             E = np.mean(E_reals)
             frustration.append(self.frustrated_bonds(E, J))
         self.corr_centers = Jarr
-        self.counts = Jarr * 0 + realizations
+        self.counts = np.array(Jarr) * 0 + realizations
         self.op_corr = np.array(frustration)
 
     def read_or_calc_write(self, realizations=20, **calc_order_parameter_args):

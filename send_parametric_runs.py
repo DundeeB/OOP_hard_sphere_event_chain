@@ -33,6 +33,7 @@ def send_runs_envelope(sims_names):
     finally:
         f.close()
         # os.system("condor_submit ECMC.sub")
+        os.system("rm -f ECMC.dag.*")
         os.system("condor_submit_dag ECMC.dag")
     return
 

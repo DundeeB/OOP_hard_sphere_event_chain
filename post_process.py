@@ -695,6 +695,10 @@ class Ising(Graph):
     def op_name(self):
         return "Ising_" + self.direc_str
 
+    @property
+    def anneal_path(self):
+        return os.path.join(self.op_dir_path, "anneal_" + str(self.spheres_ind) + '.txt')
+
     def initialize(self, random_initialization=True, J=None):
         if J is not None:
             self.J = J
@@ -774,8 +778,7 @@ class Ising(Graph):
         self.op_vec = minEconfig
         self.J = -100
         _, _, _ = self.anneal(self.N, diter_save=self.N)
-        annel_path = os.path.join(self.op_dir_path, "anneal_" + str(self.spheres_ind) + '.txt')
-        np.savetxt(annel_path, np.transpose([J] + frustration + Ms))
+        np.savetxt(self.anneal_path, np.transpose([J] + frustration + Ms))
         for i in range(realizations):
             if os.path.exists(self.real_path(i)):
                 os.remove(self.real_path(i))
@@ -802,13 +805,13 @@ class Ising(Graph):
         self.op_corr = np.array(frustration)
 
     def read_or_calc_write(self, realizations=20, **calc_order_parameter_args):
-        if OrderParameter.exists(self.vec_path):
-            self.read_vec()
-            calculated_reals = int((self.op_vec.shape[1] - 1) / 2)
+        if OrderParameter.exists(self.anneal_path):
+            anneal_mat = np.loadtxt(self.anneal_path)
+            calculated_reals = int((anneal_mat.shape[1] - 1) / 2)
             if calculated_reals >= realizations:
                 return
             for i in range(1, calculated_reals + 1):
-                J, E, M = self.op_vec[:, 0], self.op_vec[:, i], self.op_vec[:, calculated_reals + i]
+                J, E, M = anneal_mat[:, 0], anneal_mat[:, i], anneal_mat[:, calculated_reals + i]
                 np.savetxt(self.real_path(i), np.transpose([J, E, M]))
             os.remove(self.vec_path)
         super().read_or_calc_write(realizations=realizations, **calc_order_parameter_args)

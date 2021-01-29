@@ -32,7 +32,8 @@ def send_runs_envelope(sims_names):
             writer.writerow([sim_name])
     finally:
         f.close()
-        os.system("condor_submit ECMC.sub")
+        # os.system("condor_submit ECMC.sub")
+        os.system("condor_submit_dag ECMC.dag")
     return
 
 
@@ -54,25 +55,25 @@ def params_from_name(name):
 
 def main():
     runs = []
-
+    runs.append('N=40000_h=0.8_rhoH=0.8_AF_square_ECMC')
     # All runs - usefull for rerunning everything
-    for d in os.listdir(prefix):
-        if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d)):
-            runs.append(d)
+    # for d in os.listdir(prefix):
+    #     if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d)):
+    #         runs.append(d)
 
     # for N in [100 ** 2, 200 ** 2, 300 ** 2]:
     #         Low density runs
-        # for h in [0.1, 0.6, 0.8, 1.0]:
-        #     for rhoH in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]:
-        #         if h >= 0.6:
-        #             runs.append(sim_name(N, h, rhoH, 'square'))
-        #         if h >= 0.8:
-        #             runs.append(sim_name(N, h, rhoH, 'honeycomb'))
-        #         if h == 0.1:
-        #             runs.append(sim_name(N, h, rhoH, 'triangle'))
-        # for rhoH in [0.71, 0.72, 0.73, 0.74]:
-        #     runs.append(sim_name(N, 0.8, rhoH, 'square'))
-        #     runs.append(sim_name(N, 0.8, rhoH, 'honeycomb'))
+    # for h in [0.1, 0.6, 0.8, 1.0]:
+    #     for rhoH in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]:
+    #         if h >= 0.6:
+    #             runs.append(sim_name(N, h, rhoH, 'square'))
+    #         if h >= 0.8:
+    #             runs.append(sim_name(N, h, rhoH, 'honeycomb'))
+    #         if h == 0.1:
+    #             runs.append(sim_name(N, h, rhoH, 'triangle'))
+    # for rhoH in [0.71, 0.72, 0.73, 0.74]:
+    #     runs.append(sim_name(N, 0.8, rhoH, 'square'))
+    #     runs.append(sim_name(N, 0.8, rhoH, 'honeycomb'))
     #
     #     Nominal h=0.8,1.0 runs
     #     rhoH_runs = {1.0: np.round(np.linspace(0.8, 0.9, 11), 2), 0.8: np.round(np.linspace(0.75, 0.85, 11), 2)}

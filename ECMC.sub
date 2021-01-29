@@ -8,5 +8,4 @@ request_cpus = 1
 Arguments = $(sim_name)
 RequestMemory = 2GB
 universe = vanilla
-# queue sim_name from ecmc_list.txt
-queue
+queue sim_name from ecmc_list.txt

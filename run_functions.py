@@ -174,7 +174,6 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
         last_ind = 0  # count starts from 1 so 0 means non exist yet and the first one will be i+1=1
 
     # Run loops
-    initial_time = time.time()
     day = 86400  # seconds
     i = last_ind
     if i >= iterations:
@@ -182,6 +181,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
     if record_displacements:
         displacements = [0]
         realizations = [i]
+    initial_time = time.time()
     while (time.time() - initial_time < 10) and (i < iterations):
         # Choose sphere
         spheres = arr.all_spheres

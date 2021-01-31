@@ -764,7 +764,6 @@ class Ising(Graph):
         frustration, Ms = [], []
 
         def append_real(J, E, M):
-            global frustration, Ms, minE, minEconfig
             frustration.append(self.frustrated_bonds(E, J))
             Ms.append(np.array(M) / self.N)
             mE = min(frustration[-1])
@@ -774,7 +773,6 @@ class Ising(Graph):
             return
 
         def pack():
-            global self, minEconfig, J, frustration, Ms
             np.savetxt(self.anneal_path, np.transpose([J] + frustration + Ms))
             self.op_vec = minEconfig
             self.J = -100
@@ -782,7 +780,6 @@ class Ising(Graph):
             return
 
         def load_exisiting_anneal():
-            global self, calculated_reals, frustration, Ms, minE, minEconfig
             if os.path.exists(self.anneal_path):
                 anneal_mat = np.loadtxt(self.anneal_path)
                 calculated_reals = int((anneal_mat.shape[1] - 1) / 2)
@@ -794,7 +791,6 @@ class Ising(Graph):
                                 self.N * anneal_mat[:, calculated_reals + i])
 
         def clean():
-            global self, frustration, Ms, minE, minEconfig
             real_files = [real_file for real_file in os.listdir(self.op_dir_path) if
                           real_file.startswith("real_")]
             if len(real_files) > 0:

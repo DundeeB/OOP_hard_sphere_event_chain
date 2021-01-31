@@ -47,7 +47,7 @@ def main():
     sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
     for sim in sims:
         create_op_dir(sim)
-    default_op = ["Ising-annealing", "Ising-E_T"]  # "Density"]
+    default_op = ["Ising-annealing"]  # , "Ising-E_T"]  # "Density"]
     # "psi", "Bragg_S", "Bragg_Sm", "pos", "gM",
     f = open(os.path.join(code_prefix, 'post_process_list.txt'), 'wt')
     try:
@@ -55,8 +55,8 @@ def main():
         for sim_name in sims:
             mn = mn_from_sim(sim_name)
             op_w_mn_list = [op + mn for op in default_op]
-            if mn == "14":
-                op_w_mn_list += ["burger_square"]
+            # if mn == "14":
+            #     op_w_mn_list += ["burger_square"]
             for calc_type in op_w_mn_list:
                 writer.writerow((sim_name, calc_type))
     finally:

@@ -214,9 +214,9 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
     if write:
         files_interface.dump_spheres(arr.all_centers, str(i + 1))
 
+    os.chdir(os.path.join(prefix, sim_name))
     if i >= iterations:
         if write:
-            os.chdir(os.path.join(prefix, sim_name))
             os.system('echo \'Finished ' + str(iterations) + ' iterations\' > FINAL_MESSAGE')
         sys.exit(0)
     else:

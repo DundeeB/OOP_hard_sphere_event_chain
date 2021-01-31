@@ -787,7 +787,7 @@ class Ising(Graph):
                     J = anneal_mat[:, 0]
                     append_real(J, J * self.bonds_num * (1 - 2 * anneal_mat[:, i]),
                                 self.N * anneal_mat[:, calculated_reals + i])
-                return calculated_reals
+            return calculated_reals
 
         def clean():
             real_files = [real_file for real_file in os.listdir(self.op_dir_path) if

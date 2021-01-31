@@ -763,14 +763,14 @@ class Ising(Graph):
         minEconfig = None
         frustration, Ms = [], []
 
-        def append_real(J, E, M):
+        def append_real(J, E, M, minE, minEconfig):
             frustration.append(self.frustrated_bonds(E, J))
             Ms.append(np.array(M) / self.N)
             mE = min(frustration[-1])
             if mE < minE:
                 minE = mE
                 minEconfig = copy.deepcopy(self.op_vec)
-            return
+            return minE, minEconfig
 
         def pack():
             np.savetxt(self.anneal_path, np.transpose([J] + frustration + Ms))
@@ -779,7 +779,7 @@ class Ising(Graph):
             _, _, _ = self.anneal(self.N, diter_save=self.N)
             return
 
-        def load_exisiting_anneal():
+        def load_exisiting_anneal(minE, minEconfig):
             if os.path.exists(self.anneal_path):
                 anneal_mat = np.loadtxt(self.anneal_path)
                 calculated_reals = int((anneal_mat.shape[1] - 1) / 2)
@@ -787,10 +787,11 @@ class Ising(Graph):
                     return
                 for i in range(1, calculated_reals + 1):
                     J = anneal_mat[:, 0]
-                    append_real(J, J * self.bonds_num * (1 - 2 * anneal_mat[:, i]),
-                                self.N * anneal_mat[:, calculated_reals + i])
+                    minE, minEconfig = append_real(J, J * self.bonds_num * (1 - 2 * anneal_mat[:, i]),
+                                                   self.N * anneal_mat[:, calculated_reals + i], minE, minEconfig)
+                return minE, minEconfig
 
-        def clean():
+        def clean(minE, minEconfig):
             real_files = [real_file for real_file in os.listdir(self.op_dir_path) if
                           real_file.startswith("real_")]
             if len(real_files) > 0:
@@ -799,28 +800,32 @@ class Ising(Graph):
                 sp_inds = [sp_ind_from_real(real_file) for real_file in real_files]
                 for sp_ind in np.unique(sp_inds):
                     self.spheres_ind = sp_ind
-                    load_exisiting_anneal()
+                    minE, minEconfig = load_exisiting_anneal(minE, minEconfig)
                     for real_file in real_files:
                         if sp_ind_from_real(real_file) != sp_ind:
                             continue
                         real_path = os.path.join(self.op_dir_path, real_file)
                         J, E, M = np.loadtxt(real_path, unpack=True, usecols=(0, 1, 2))
-                        append_real(J, E, M)
+                        minE, minEconfig = append_real(J, E, M, minE, minEconfig)
                         os.remove(real_path)
                     pack()
+                    minE = float('inf')
+                    minEconfig = None
                     frustration, Ms = [], []
                 self.spheres_ind = orig_sp_ind
+                return minE, minEconfig
 
-        clean()
+        minE, minEconfig = clean(minE, minEconfig)
         calculated_reals = 0
-        load_exisiting_anneal()
+        minE, minEconfig = load_exisiting_anneal(minE, minEconfig)
         for i in range(calculated_reals, realizations):
             self.initialize(random_initialization=random_initialization, J=J_range[0])
             J, E, M = self.anneal(iterations, diter_save=diter_save, dJditer=dJditer)
             np.savetxt(self.real_path(i), np.transpose([J, E, M]))
-            append_real(J, E, M)
+            minE, minEconfig = append_real(J, E, M, minE, minEconfig)
         pack()
-        clean()
+        minE, minEconfig = clean(minE, minEconfig)
+        return
 
     def correlation(self, Jarr=None, iterations=None, realizations=3):
         if iterations is None:

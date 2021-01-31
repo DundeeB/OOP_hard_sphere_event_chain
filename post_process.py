@@ -759,27 +759,27 @@ class Ising(Graph):
         # dJditer = lambda J: -2 / iterations * (np.sqrt(-J_range[1]) - np.sqrt(-J_range[0])) * np.sqrt(-J)
         # dJditer = lambda J: (J_range[1] - J_range[0]) / iterations
         dJditer = lambda J: J ** 2 * (1 / J_range[0] - 1 / J_range[1]) / iterations
-        minE = float('inf')
-        minEconfig = None
-        frustration, Ms = [], []
+        self.minE = float('inf')
+        self.minEconfig = None
+        self.frustration, self.Ms = [], []
 
-        def append_real(J, E, M, minE, minEconfig):
-            frustration.append(self.frustrated_bonds(E, J))
-            Ms.append(np.array(M) / self.N)
-            mE = min(frustration[-1])
-            if mE < minE:
-                minE = mE
-                minEconfig = copy.deepcopy(self.op_vec)
-            return minE, minEconfig
+        def append_real(J, E, M):
+            self.frustration.append(self.frustrated_bonds(E, J))
+            self.Ms.append(np.array(M) / self.N)
+            self.mE = min(self.frustration[-1])
+            if self.mE < self.minE:
+                self.minE = self.mE
+                self.minEconfig = copy.deepcopy(self.op_vec)
+            return
 
-        def pack():
-            np.savetxt(self.anneal_path, np.transpose([J] + frustration + Ms))
-            self.op_vec = minEconfig
+        def pack(J):
+            np.savetxt(self.anneal_path, np.transpose([J] + self.frustration + self.Ms))
+            self.op_vec = self.minEconfig
             self.J = -100
             _, _, _ = self.anneal(self.N, diter_save=self.N)
             return
 
-        def load_exisiting_anneal(minE, minEconfig):
+        def load_exisiting_anneal():
             if os.path.exists(self.anneal_path):
                 anneal_mat = np.loadtxt(self.anneal_path)
                 calculated_reals = int((anneal_mat.shape[1] - 1) / 2)
@@ -787,11 +787,11 @@ class Ising(Graph):
                     return
                 for i in range(1, calculated_reals + 1):
                     J = anneal_mat[:, 0]
-                    minE, minEconfig = append_real(J, J * self.bonds_num * (1 - 2 * anneal_mat[:, i]),
-                                                   self.N * anneal_mat[:, calculated_reals + i], minE, minEconfig)
-                return minE, minEconfig
+                    append_real(J, J * self.bonds_num * (1 - 2 * anneal_mat[:, i]),
+                                self.N * anneal_mat[:, calculated_reals + i])
+                return
 
-        def clean(minE, minEconfig):
+        def clean():
             real_files = [real_file for real_file in os.listdir(self.op_dir_path) if
                           real_file.startswith("real_")]
             if len(real_files) > 0:
@@ -800,31 +800,31 @@ class Ising(Graph):
                 sp_inds = [sp_ind_from_real(real_file) for real_file in real_files]
                 for sp_ind in np.unique(sp_inds):
                     self.spheres_ind = sp_ind
-                    minE, minEconfig = load_exisiting_anneal(minE, minEconfig)
+                    load_exisiting_anneal()
                     for real_file in real_files:
                         if sp_ind_from_real(real_file) != sp_ind:
                             continue
                         real_path = os.path.join(self.op_dir_path, real_file)
                         J, E, M = np.loadtxt(real_path, unpack=True, usecols=(0, 1, 2))
-                        minE, minEconfig = append_real(J, E, M, minE, minEconfig)
+                        append_real(J, E, M)
                         os.remove(real_path)
-                    pack()
-                    minE = float('inf')
-                    minEconfig = None
-                    frustration, Ms = [], []
+                    pack(J)
+                    self.minE = float('inf')
+                    self.minEconfig = None
+                    self.frustration, self.Ms = [], []
                 self.spheres_ind = orig_sp_ind
-                return minE, minEconfig
+                return
 
-        minE, minEconfig = clean(minE, minEconfig)
+        clean()
         calculated_reals = 0
-        minE, minEconfig = load_exisiting_anneal(minE, minEconfig)
+        load_exisiting_anneal()
         for i in range(calculated_reals, realizations):
             self.initialize(random_initialization=random_initialization, J=J_range[0])
             J, E, M = self.anneal(iterations, diter_save=diter_save, dJditer=dJditer)
             np.savetxt(self.real_path(i), np.transpose([J, E, M]))
-            minE, minEconfig = append_real(J, E, M, minE, minEconfig)
-        pack()
-        minE, minEconfig = clean(minE, minEconfig)
+            append_real(J, E, M)
+        pack(J)
+        clean()
         return
 
     def correlation(self, Jarr=None, iterations=None, realizations=3):

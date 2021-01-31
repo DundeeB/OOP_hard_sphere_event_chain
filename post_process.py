@@ -774,9 +774,6 @@ class Ising(Graph):
 
         def pack(J):
             np.savetxt(self.anneal_path, np.transpose([J] + self.frustration + self.Ms))
-            self.op_vec = self.minEconfig
-            self.J = -100
-            _, _, _ = self.anneal(self.N, diter_save=self.N)
             return
 
         def load_exisiting_anneal():
@@ -789,7 +786,7 @@ class Ising(Graph):
                     J = anneal_mat[:, 0]
                     append_real(J, J * self.bonds_num * (1 - 2 * anneal_mat[:, i]),
                                 self.N * anneal_mat[:, calculated_reals + i])
-                return
+                return calculated_reals
 
         def clean():
             real_files = [real_file for real_file in os.listdir(self.op_dir_path) if
@@ -800,7 +797,7 @@ class Ising(Graph):
                 sp_inds = [sp_ind_from_real(real_file) for real_file in real_files]
                 for sp_ind in np.unique(sp_inds):
                     self.spheres_ind = sp_ind
-                    load_exisiting_anneal()
+                    _ = load_exisiting_anneal()
                     for real_file in real_files:
                         if sp_ind_from_real(real_file) != sp_ind:
                             continue
@@ -817,13 +814,17 @@ class Ising(Graph):
 
         clean()
         calculated_reals = 0
-        load_exisiting_anneal()
-        for i in range(calculated_reals, realizations):
-            self.initialize(random_initialization=random_initialization, J=J_range[0])
-            J, E, M = self.anneal(iterations, diter_save=diter_save, dJditer=dJditer)
-            np.savetxt(self.real_path(i), np.transpose([J, E, M]))
-            append_real(J, E, M)
-        pack(J)
+        calculated_reals = load_exisiting_anneal()
+        if calculated_reals < realizations:
+            for i in range(calculated_reals, realizations):
+                self.initialize(random_initialization=random_initialization, J=J_range[0])
+                J, E, M = self.anneal(iterations, diter_save=diter_save, dJditer=dJditer)
+                np.savetxt(self.real_path(i), np.transpose([J, E, M]))
+                append_real(J, E, M)
+            pack(J)
+            self.op_vec = self.minEconfig
+            self.J = -100
+            _, _, _ = self.anneal(self.N, diter_save=self.N)
         clean()
         return
 

@@ -44,8 +44,8 @@ def create_op_dir(sim):
 
 
 def main():
-    # sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
-    sims = ["N=40000_h=0.8_rhoH=0.8_AF_square_ECMC"]
+    sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
+    # sims = ["N=40000_h=0.8_rhoH=0.8_AF_square_ECMC"]
     for sim in sims:
         create_op_dir(sim)
     default_op = ["Ising-annealing"]  # , "Ising-E_T"]  # "Density"]

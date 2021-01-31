@@ -777,6 +777,7 @@ class Ising(Graph):
             return
 
         def load_exisiting_anneal():
+            calculated_reals = 0
             if os.path.exists(self.anneal_path):
                 anneal_mat = np.loadtxt(self.anneal_path)
                 calculated_reals = int((anneal_mat.shape[1] - 1) / 2)
@@ -813,7 +814,6 @@ class Ising(Graph):
                 return
 
         clean()
-        calculated_reals = 0
         calculated_reals = load_exisiting_anneal()
         if calculated_reals < realizations:
             for i in range(calculated_reals, realizations):

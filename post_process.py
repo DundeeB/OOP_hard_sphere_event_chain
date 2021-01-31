@@ -803,9 +803,10 @@ class Ising(Graph):
                     for real_file in real_files:
                         if sp_ind_from_real(real_file) != sp_ind:
                             continue
-                        J, E, M = np.loadtxt(real_file, unpack=True, usecols=(0, 1, 2))
+                        real_path = os.path.join(self.op_dir_path, real_file)
+                        J, E, M = np.loadtxt(real_path, unpack=True, usecols=(0, 1, 2))
                         append_real(J, E, M)
-                        os.remove(real_file)
+                        os.remove(real_path)
                     pack()
                     frustration, Ms = [], []
                 self.spheres_ind = orig_sp_ind

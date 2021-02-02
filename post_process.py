@@ -763,7 +763,6 @@ class Ising(Graph):
         self.minEconfig = None
         self.frustration, self.Ms = [], []
 
-        # TODO: after removing cleaning, everything except append_real can be removed or become regular code
         def append_real(J, E, M):
             self.frustration.append(self.frustrated_bonds(E, J))
             self.Ms.append(np.array(M) / self.N)
@@ -773,51 +772,27 @@ class Ising(Graph):
                 self.minEconfig = copy.deepcopy(self.op_vec)
             return
 
-        def load_exisiting_anneal():
-            calculated_reals = 0
-            if os.path.exists(self.anneal_path):
-                anneal_mat = np.loadtxt(self.anneal_path)
-                calculated_reals = int((anneal_mat.shape[1] - 1) / 2)
-                if calculated_reals >= realizations:
-                    return
-                for i in range(1, calculated_reals + 1):
-                    J = anneal_mat[:, 0]
-                    append_real(J, J * self.bonds_num * (1 - 2 * anneal_mat[:, i]),
-                                self.N * anneal_mat[:, calculated_reals + i])
-            return calculated_reals
-
-        real_files = [real_file for real_file in os.listdir(self.op_dir_path) if
-                      real_file.startswith("real_")]
-        if len(real_files) > 0:
-            orig_sp_ind = self.spheres_ind
-            sp_ind_from_real = lambda real_file: int(re.split('_|\.', real_file)[2])
-            sp_inds = [sp_ind_from_real(real_file) for real_file in real_files]
-            for sp_ind in np.unique(sp_inds):
-                self.spheres_ind = sp_ind
-                _ = load_exisiting_anneal()
-                for real_file in real_files:
-                    if sp_ind_from_real(real_file) != sp_ind:
-                        continue
-                    real_path = os.path.join(self.op_dir_path, real_file)
-                    J, E, M = np.loadtxt(real_path, unpack=True, usecols=(0, 1, 2))
-                    append_real(J, E, M)
-                    os.remove(real_path)
-                np.savetxt(self.anneal_path, np.transpose([J] + self.frustration + self.Ms))
-                self.minE = float('inf')
-                self.minEconfig = None
-                self.frustration, self.Ms = [], []
-            self.spheres_ind = orig_sp_ind
-
-        calculated_reals = load_exisiting_anneal()
-        if calculated_reals < realizations:
-            for i in range(calculated_reals, realizations):
-                self.initialize(random_initialization=random_initialization, J=J_range[0])
-                J, E, M = self.anneal(iterations, diter_save=diter_save, dJditer=dJditer)
-                append_real(J, E, M)
-                np.savetxt(self.anneal_path, np.transpose([J] + self.frustration + self.Ms))
-            self.op_vec = self.minEconfig
-            self.J = -100
-            _, _, _ = self.anneal(self.N, diter_save=self.N)
+        calculated_reals = 0
+        if os.path.exists(self.anneal_path):
+            anneal_mat = np.loadtxt(self.anneal_path)
+            calculated_reals = int((anneal_mat.shape[1] - 1) / 2)
+            if calculated_reals >= realizations:
+                return
+            for i in range(1, calculated_reals + 1):
+                J = anneal_mat[:, 0]
+                append_real(J, J * self.bonds_num * (1 - 2 * anneal_mat[:, i]),
+                            self.N * anneal_mat[:, calculated_reals + i])
+        if OrderParameter.exists(self.vec_path):
+            self.minEconfig = np.loadtxt(self.vec_path)
+        for i in range(calculated_reals, realizations):
+            self.initialize(random_initialization=random_initialization, J=J_range[0])
+            J, E, M = self.anneal(iterations, diter_save=diter_save, dJditer=dJditer)
+            append_real(J, E, M)
+            np.savetxt(self.anneal_path, np.transpose([J] + self.frustration + self.Ms))
+            np.savetxt(self.vec_path, self.minEconfig)
+        self.op_vec = self.minEconfig
+        self.J = -100
+        _, _, _ = self.anneal(self.N, diter_save=self.N)
         return
 
     def correlation(self, Jarr=None, iterations=None, realizations=3):

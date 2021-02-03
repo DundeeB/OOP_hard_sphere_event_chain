@@ -236,6 +236,11 @@ class Graph(OrderParameter):
     def graph_file_path(self):
         return os.path.join(self.graph_father_path, self.direc_str + "_" + str(self.spheres_ind) + ".npz")
 
+    @property
+    def frustration_path(self):
+        return os.path.join(self.graph_father_path,
+                            "frustration_" + self.direc_str + "_" + str(self.spheres_ind) + ".txt")
+
     def calc_graph(self):
         if not os.path.exists(self.graph_father_path): os.mkdir(self.graph_father_path)
         recalc_graph = True
@@ -269,6 +274,17 @@ class Graph(OrderParameter):
         for i in range(self.N):
             self.bonds_num += len(self.nearest_neighbors[i])
         self.bonds_num /= 2
+        if not OrderParameter.exists(self.frustration_path):
+            frustration = 0
+            z_spins = [(1 if p[2] > self.l_z / 2 else -1) for p in self.spheres]
+            for i in range(len(self.spheres)):
+                for j in self.nearest_neighbors[i]:
+                    if j > i:
+                        continue
+                    if z_spins[i] * z_spins[j] == 1:
+                        frustration += 1
+            frustration /= self.bonds_num
+            np.savetxt(self.frustration_path, [frustration])
 
     def update_centers(self, centers, spheres_ind):
         super().update_centers(centers, spheres_ind)
@@ -773,7 +789,7 @@ class Ising(Graph):
             return
 
         calculated_reals = 0
-        if os.path.exists(self.anneal_path):
+        if OrderParameter.exists(self.anneal_path):
             anneal_mat = np.loadtxt(self.anneal_path)
             calculated_reals = int((anneal_mat.shape[1] - 1) / 2)
             if calculated_reals >= realizations:

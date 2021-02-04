@@ -941,7 +941,7 @@ def main(sim_name, calc_type):
         m, n = 1, 4
     if calc_type.endswith("16"):
         m, n = 1, 6
-    calc_correlations, calc_mean, calc_vec = True, True, True
+    calc_correlations, calc_mean, calc_vec, calc_all_reals = True, True, True, True
     if calc_type.startswith("psi"):
         op = PsiMN(sim_path, m, n)
         if calc_type.startswith("psi_mean"):
@@ -978,12 +978,20 @@ def main(sim_name, calc_type):
         op = LocalOrientation(sim_path, m, n, radius=radius)
         # radius=10 for H=1.8, rhoH=0.8 gives N=(pi*r^2)*H*rhoH/sig^3~56 particles
         correlation_kwargs = {}
+        calc_all_reals = False
     print(
         "\n\n\n-----------\nDate: " + str(date.today()) + "\nType: " + calc_type + "\nCorrelation arguments:" + str(
             correlation_kwargs) + "\nCalc correlations: " + str(calc_correlations) + "\nCalc mean: " + str(
             calc_mean), file=sys.stdout)
-    op.calc_for_all_realizations(calc_correlations=calc_correlations, calc_mean=calc_mean, calc_vec=calc_vec,
-                                 **correlation_kwargs)
+    if calc_all_reals:
+        op.calc_for_all_realizations(calc_correlations=calc_correlations, calc_mean=calc_mean, calc_vec=calc_vec,
+                                     **correlation_kwargs)
+    else:
+        if calc_vec:
+            op.read_or_calc_write()
+        if calc_correlations and (not OrderParameter.exists(op.corr_path)):
+            op.correlation(**correlation_kwargs)
+            op.write(write_correlations=True, write_vec=False)
 
 
 if __name__ == "__main__":

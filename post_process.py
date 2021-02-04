@@ -717,7 +717,7 @@ class Ising(Graph):
 
     @property
     def cv_path(self):
-        return os.path.join(self.op_dir_path, "Cv_vs_J" + str(self.spheres_ind) + '.txt')
+        return os.path.join(self.op_dir_path, "Cv_vs_J_" + str(self.spheres_ind) + '.txt')
 
     def initialize(self, random_initialization=True, J=None):
         if J is not None:
@@ -915,9 +915,10 @@ class LocalOrientation(Graph):
         return "Local_" + self.psi_mn.op_name + "_rad=" + str(self.radius)
 
     def calc_order_parameter(self):
-        self.op_vec = copy.deepcopy(self.psi_mn)
+        self.op_vec = copy.deepcopy(self.psi_mn.op_vec)
         for i in range(self.N):
-            self.op_vec[i] = np.mean([self.psi_mn[j] for j in self.nearest_neighbors[i]] + [self.psi_mn[i]])
+            self.op_vec[i] = np.mean(
+                [self.psi_mn.op_vec[j] for j in self.nearest_neighbors[i]] + [self.psi_mn.op_vec[i]])
 
     def correlation(self):
         self.counts, bin_edges = np.histogram(np.abs(self.op_vec), bins=50)

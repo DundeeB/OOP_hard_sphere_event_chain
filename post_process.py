@@ -715,6 +715,10 @@ class Ising(Graph):
     def anneal_path(self):
         return os.path.join(self.op_dir_path, "anneal_" + str(self.spheres_ind) + '.txt')
 
+    @property
+    def cv_path(self):
+        return os.path.join(self.op_dir_path, "Cv_vs_J" + str(self.spheres_ind) + '.txt')
+
     def initialize(self, random_initialization=True, J=None):
         if J is not None:
             self.J = J
@@ -725,7 +729,9 @@ class Ising(Graph):
         self.E = 0
         for i in range(self.N):
             for j in self.nearest_neighbors[i]:
-                self.E -= self.J / 2 * self.op_vec[i] * self.op_vec[j]  # double counting bonds
+                if j > i:  # dont double count
+                    continue
+                self.E -= self.J * self.op_vec[i] * self.op_vec[j]
         self.M = 0  # Magnetization is if op_vec, ising spins, is corr or anti corr to up down initial partition
         for s, z in zip(self.op_vec, self.z_spins):
             self.M += s * z
@@ -752,6 +758,15 @@ class Ising(Graph):
             self.Metropolis_flip()
             self.J += dJditer(self.J)
         return J, E, M
+
+    def heat_capacity(self, iterations, diter_save=1):
+        """
+        Cv = 1/k_B*T^2 * Var(E) in statistical physics notation.
+        In our notation, we work with beta*E as E, and so Cv=k_B*Var(E). Working in units of k_B and per particale we 4
+        get Cv=Var(E)/N
+        """
+        _, E, _ = self.anneal(iterations, diter_save=diter_save)
+        return np.var(E) / self.N
 
     def local_freeze(self):
         current_J = self.J
@@ -820,17 +835,22 @@ class Ising(Graph):
                     -0.1]
             Jarr.sort()
         frustration = []
+        Cv = []
         for J in Jarr:
             E_reals = []
+            Cv_reals = []
             for real in range(realizations):
                 self.initialize(J=J)
                 _, E, _ = self.anneal(iterations, diter_save=iterations)
                 E_reals.append(E[-1])
+                Cv_reals.append(self.heat_capacity(int(1e3 * self.N), diter_save=self.N))
             E = np.mean(E_reals)
             frustration.append(self.frustrated_bonds(E, J))
+            Cv.append(np.mean(Cv_reals))
         self.corr_centers = Jarr
         self.counts = np.array(Jarr) * 0 + realizations
         self.op_corr = np.array(frustration)
+        np.savetxt(self.cv_path, np.transpose([Jarr, Cv]))
 
     def read_or_calc_write(self, realizations=20, **calc_order_parameter_args):
         if OrderParameter.exists(self.anneal_path):
@@ -842,7 +862,7 @@ class Ising(Graph):
 
 
 class LocalDensity(OrderParameter):
-    # TODO: why to I get discrite histogram? Fine tune the parameters paritions and bin
+    # TODO: why do I get discrite histogram? Fine tune the parameters paritions and bin
     def __init__(self, sim_path, partitions=None, centers=None, spheres_ind=None, calc_upper_lower=False):
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, partitions=partitions)
         if partitions is None:

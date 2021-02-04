@@ -901,6 +901,31 @@ class LocalDensity(OrderParameter):
         self.op_corr = self.counts / np.trapz(self.counts, self.corr_centers)
 
 
+class LocalOrientation(Graph):
+
+    def __init__(self, sim_path, m, n, radius, centers=None, spheres_ind=None):
+        super().__init__(sim_path, radius=radius, directed=True, centers=centers, spheres_ind=spheres_ind)
+        # directed=True saves computation time, and it does not matter because by symmetry of the metric use radius
+        # nearest neighbor graph is already symmetric, that is undirected graph by construction
+        self.psi_mn = PsiMN(sim_path, m, n, centers=centers, spheres_ind=spheres_ind)
+        self.psi_mn.read_or_calc_write()
+
+    @property
+    def op_name(self):
+        return "Local_" + self.psi_mn.op_name + "_rad=" + str(self.radius)
+
+    def calc_order_parameter(self):
+        self.op_vec = copy.deepcopy(self.psi_mn)
+        for i in range(self.N):
+            self.op_vec[i] = np.mean([self.psi_mn[j] for j in self.nearest_neighbors[i]] + [self.psi_mn[i]])
+
+    def correlation(self):
+        self.counts, bin_edges = np.histogram(np.abs(self.op_vec), bins=50)
+
+        self.corr_centers = [1 / 2 * (bin_edges[i] + bin_edges[i + 1]) for i in range(len(bin_edges) - 1)]
+        self.op_corr = self.counts / np.trapz(self.counts, self.corr_centers)
+
+
 def main(sim_name, calc_type):
     correlation_kwargs = {'randomize': False, 'time_limit': 2 * day}
 
@@ -946,6 +971,11 @@ def main(sim_name, calc_type):
     if calc_type.startswith('Density'):
         op = LocalDensity(sim_path)
         calc_mean = False
+        correlation_kwargs = {}
+    if calc_type.startswith('LocalPsi'):
+        radius = float(calc_type.split('_')[1].split('=')[1])
+        op = LocalOrientation(sim_path, m, n, radius=radius)
+        # radius=10 for H=1.8, rhoH=0.8 gives N=(pi*r^2)*H*rhoH/sig^3~56 particles
         correlation_kwargs = {}
     print(
         "\n\n\n-----------\nDate: " + str(date.today()) + "\nType: " + calc_type + "\nCorrelation arguments:" + str(

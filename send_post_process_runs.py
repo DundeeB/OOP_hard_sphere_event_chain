@@ -48,8 +48,8 @@ def main():
     # sims = ["N=10000_h=0.8_rhoH=0.8_AF_square_ECMC"]
     for sim in sims:
         create_op_dir(sim)
-    default_op = ["LocalPsi_radius=3_", "LocalPsi_radius=10_", "LocalPsi_radius=30_"]
-    # "psi", "Bragg_S", "Bragg_Sm", "pos", "gM", "Ising-annealing", "Ising-E_T", "Density","LocalPsi_radius=10"
+    default_op = ["LocalPsi_radius=50_"]
+    # "psi", "Bragg_S", "Bragg_Sm", "pos", "gM", "Ising-annealing", "Ising-E_T", "Density","LocalPsi_radius=50_"
     f = open(os.path.join(code_prefix, 'post_process_list.txt'), 'wt')
     try:
         writer = csv.writer(f, lineterminator='\n')

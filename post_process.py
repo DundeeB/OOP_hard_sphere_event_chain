@@ -826,31 +826,36 @@ class Ising(Graph):
         _, _, _ = self.anneal(self.N, diter_save=self.N)
         return
 
-    def correlation(self, Jarr=None, iterations=None, realizations=3):
+    def correlation(self, Jarr=None, iterations=None, realizations=10):
         if iterations is None:
             iterations = self.N * int(2e3)  # E equilibrate faster than M
         if Jarr is None:
-            Jc = -1 / 2.269
-            Jarr = [-1, -0.9, -0.8, -0.7, -0.65, -0.6, -0.55, -0.5, -0.475, -0.45, Jc, -0.425, -0.4, -0.35, -0.3, -0.2,
-                    -0.1]
-            Jarr.sort()
+            Jarr = np.linspace(-0.05, -1.5, 30)
         frustration = []
         Cv = []
+        Jarr_calculated = []
+        if os.path.exists(self.cv_path):
+            Jarr_calculated_np, Cv_np = np.loadtxt(self.cv_path, unpack=True, usecols=(0, 1))
+            Jarr_calculated = [J for J in Jarr_calculated_np]
+            Cv = [c for c in Cv_np]
         for J in Jarr:
+            if J in Jarr_calculated:
+                continue
             E_reals = []
             Cv_reals = []
             for real in range(realizations):
                 self.initialize(J=J)
                 _, E, _ = self.anneal(iterations, diter_save=iterations)
                 E_reals.append(E[-1])
-                Cv_reals.append(self.heat_capacity(int(1e3 * self.N), diter_save=self.N))
+                Cv_reals.append(self.heat_capacity(int(1e4 * self.N), diter_save=self.N))
             E = np.mean(E_reals)
             frustration.append(self.frustrated_bonds(E, J))
             Cv.append(np.mean(Cv_reals))
+            Jarr_calculated.append(J)
+            np.savetxt(self.cv_path, np.transpose([Jarr_calculated, Cv]))
         self.corr_centers = Jarr
         self.counts = np.array(Jarr) * 0 + realizations
         self.op_corr = np.array(frustration)
-        np.savetxt(self.cv_path, np.transpose([Jarr, Cv]))
 
     def read_or_calc_write(self, realizations=20, **calc_order_parameter_args):
         if OrderParameter.exists(self.anneal_path):
@@ -970,6 +975,7 @@ def main(sim_name, calc_type):
         op = Ising(sim_path, k_nearest_neighbors=n)
         calc_mean = False
         correlation_kwargs = {}
+        calc_all_reals = False
     if calc_type.startswith('Density'):
         op = LocalDensity(sim_path)
         calc_mean = False

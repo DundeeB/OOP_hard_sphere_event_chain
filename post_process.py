@@ -703,7 +703,7 @@ class MagneticTopologicalCorr(Graph):
 class Ising(Graph):
     def __init__(self, sim_path, k_nearest_neighbors, directed=False, centers=None, spheres_ind=None, J=None):
         super().__init__(sim_path, k_nearest_neighbors=k_nearest_neighbors, directed=directed, centers=centers,
-                         spheres_ind=spheres_ind, vec_name="ground_state", correlation_name="E_vs_J")
+                         spheres_ind=spheres_ind, vec_name="ground_state", correlation_name="Cv_vs_J")
         self.z_spins = [(1 if p[2] > self.l_z / 2 else -1) for p in self.spheres]
         self.J = J
 
@@ -826,18 +826,21 @@ class Ising(Graph):
         _, _, _ = self.anneal(self.N, diter_save=self.N)
         return
 
-    def correlation(self, Jarr=None, iterations=None, realizations=10):
-        if iterations is None:
-            iterations = self.N * int(2e3)  # E equilibrate faster than M
+    def correlation(self, Jarr=None, initial_iterations=None, cv_iterations=None, realizations=10):
+        if initial_iterations is None:
+            initial_iterations = self.N * int(2e3)  # E equilibrate faster than M
+        if cv_iterations is None:
+            cv_iterations = int(1e4 * self.N)
         if Jarr is None:
             Jarr = np.linspace(-0.05, -1.5, 30)
         frustration = []
         Cv = []
         Jarr_calculated = []
         if os.path.exists(self.cv_path):
-            Jarr_calculated_np, Cv_np = np.loadtxt(self.cv_path, unpack=True, usecols=(0, 1))
+            Jarr_calculated_np, Cv_np, frustration_np = np.loadtxt(self.cv_path, unpack=True, usecols=(0, 1, 2))
             Jarr_calculated = [J for J in Jarr_calculated_np]
             Cv = [c for c in Cv_np]
+            frustration = [f for f in frustration_np]
         for J in Jarr:
             if J in Jarr_calculated:
                 continue
@@ -845,17 +848,19 @@ class Ising(Graph):
             Cv_reals = []
             for real in range(realizations):
                 self.initialize(J=J)
-                _, E, _ = self.anneal(iterations, diter_save=iterations)
+                _, _, _ = self.anneal(initial_iterations, diter_save=initial_iterations)
+                Cv_reals.append(self.heat_capacity(cv_iterations, diter_save=self.N))
+                E = self.anneal(1)
                 E_reals.append(E[-1])
-                Cv_reals.append(self.heat_capacity(int(1e4 * self.N), diter_save=self.N))
             E = np.mean(E_reals)
             frustration.append(self.frustrated_bonds(E, J))
             Cv.append(np.mean(Cv_reals))
             Jarr_calculated.append(J)
-            np.savetxt(self.cv_path, np.transpose([Jarr_calculated, Cv]))
-        self.corr_centers = Jarr
-        self.counts = np.array(Jarr) * 0 + realizations
-        self.op_corr = np.array(frustration)
+            np.savetxt(self.cv_path, np.transpose([Jarr_calculated, Cv, frustration]))
+        os.remove(self.cv_path)
+        self.corr_centers = Jarr_calculated
+        self.counts = np.array(frustration)
+        self.op_corr = np.array(Cv)
 
     def read_or_calc_write(self, realizations=20, **calc_order_parameter_args):
         if OrderParameter.exists(self.anneal_path):

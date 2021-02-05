@@ -974,7 +974,7 @@ def main(sim_name, calc_type):
         calc_mean = False
         correlation_kwargs = {}
     if calc_type.startswith('LocalPsi'):
-        radius = float(calc_type.split('_')[1].split('=')[1])
+        radius = int(calc_type.split('_')[1].split('=')[1])
         op = LocalOrientation(sim_path, m, n, radius=radius)
         # radius=10 for H=1.8, rhoH=0.8 gives N=(pi*r^2)*H*rhoH/sig^3~56 particles
         correlation_kwargs = {}

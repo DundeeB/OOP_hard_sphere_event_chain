@@ -704,6 +704,21 @@ class Ising(Graph):
     def __init__(self, sim_path, k_nearest_neighbors, directed=False, centers=None, spheres_ind=None, J=None):
         super().__init__(sim_path, k_nearest_neighbors=k_nearest_neighbors, directed=directed, centers=centers,
                          spheres_ind=spheres_ind, vec_name="ground_state", correlation_name="Cv_vs_J")
+        if os.path.exists(self.op_dir_path):
+            pattern = re.compile(self.correlation_name + "_.*.txt")
+            reals = []
+            for file_name in os.listdir(self.op_dir_path):
+                if pattern.match(file_name):
+                    reals.append(float(re.split('[_|\.]', file_name)[-2]))
+            if len(reals) > 0:
+                maxreal = None
+                maxmatlen = 0
+                for r in reals:
+                    mat = np.loadtxt(os.path.join(self.op_dir_path, self.correlation_name + "_" + str(r) + ".txt"))
+                    if mat.shape[0] >= maxmatlen:
+                        maxreal = r
+                        maxmatlen = mat.shape[0]
+                self.update_centers(np.loadtxt(os.path.join(self.sim_path, str(maxreal))), maxreal)
         self.z_spins = [(1 if p[2] > self.l_z / 2 else -1) for p in self.spheres]
         self.J = J
 

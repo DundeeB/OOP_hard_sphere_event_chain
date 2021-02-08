@@ -709,7 +709,7 @@ class Ising(Graph):
             reals = []
             for file_name in os.listdir(self.op_dir_path):
                 if pattern.match(file_name):
-                    reals.append(float(re.split('[_|\.]', file_name)[-2]))
+                    reals.append(int(re.split('[_|\.]', file_name)[-2]))
             if len(reals) > 0:
                 maxreal = None
                 maxmatlen = 0

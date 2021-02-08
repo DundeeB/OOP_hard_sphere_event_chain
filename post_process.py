@@ -847,9 +847,14 @@ class Ising(Graph):
         Jarr_calculated = []
         if os.path.exists(self.corr_path):
             Jarr_calculated_np, Cv_np, frustration_np = np.loadtxt(self.corr_path, unpack=True, usecols=(0, 1, 2))
-            Jarr_calculated = [J for J in Jarr_calculated_np]
-            Cv = [c for c in Cv_np]
-            frustration = [f for f in frustration_np]
+            if type(Jarr_calculated_np) is np.ndarray:
+                Jarr_calculated = [J for J in Jarr_calculated_np]
+                Cv = [c for c in Cv_np]
+                frustration = [f for f in frustration_np]
+            else:
+                Jarr_calculated = [Jarr_calculated_np]
+                Cv = [Cv_np]
+                frustration = [frustration_np]
         for J in Jarr:
             if J in Jarr_calculated:
                 continue

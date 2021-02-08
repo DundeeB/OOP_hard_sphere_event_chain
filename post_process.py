@@ -758,7 +758,7 @@ class Ising(Graph):
     def anneal(self, iterations, dJditer=None, diter_save=1):
         J, E, M = [], [], []
 
-        for i in range(int(iterations/diter_save)):
+        for i in range(int(iterations / diter_save)):
             if dJditer is None:
                 for j in range(diter_save):
                     self.Metropolis_flip()
@@ -832,11 +832,11 @@ class Ising(Graph):
         _, _, _ = self.anneal(self.N, diter_save=self.N)
         return
 
-    def correlation(self, Jarr=None, initial_iterations=None, cv_iterations=None, realizations=10):
+    def correlation(self, Jarr=None, initial_iterations=None, cv_iterations=None):
         if initial_iterations is None:
-            initial_iterations = int(2e7)  # E equilibrate faster than M
+            initial_iterations = int(2e3 * self.N)
         if cv_iterations is None:
-            cv_iterations = int(1e8)
+            cv_iterations = int(1e4 * self.N)
         if Jarr is None:
             Jarr = np.linspace(-0.05, -1.5, 30)
         frustration = []
@@ -852,22 +852,23 @@ class Ising(Graph):
                 Jarr_calculated = [Jarr_calculated_np]
                 Cv = [Cv_np]
                 frustration = [frustration_np]
+        last_cv_spins_path = os.path.join(self.op_dir_path, "last_cv_spins")
+        if os.path.exists(last_cv_spins_path):
+            self.op_vec = np.loadtxt(last_cv_spins_path)
+        else:
+            self.initialize(J=Jarr[0])
         for J in Jarr:
             if J in Jarr_calculated:
                 continue
-            E_reals = []
-            Cv_reals = []
-            for real in range(realizations):
-                self.initialize(J=J)
-                _, _, _ = self.anneal(initial_iterations, diter_save=initial_iterations)
-                Cv_reals.append(self.heat_capacity(cv_iterations, diter_save=self.N))
-                self.calc_EM()
-                E_reals.append(self.E)
-            E = np.mean(E_reals)
-            frustration.append(self.frustrated_bonds(E, J))
-            Cv.append(np.mean(Cv_reals))
+            self.J = J
+            _, _, _ = self.anneal(initial_iterations, diter_save=initial_iterations)
+            Cv.append(self.heat_capacity(cv_iterations, diter_save=self.N))
+            self.calc_EM()
+            frustration.append(self.frustrated_bonds(self.E, J))
             Jarr_calculated.append(J)
             np.savetxt(self.corr_path, np.transpose([Jarr_calculated, Cv, frustration]))
+            np.savetxt(last_cv_spins_path, self.op_vec)
+        os.remove(last_cv_spins_path)
         self.corr_centers = Jarr_calculated
         self.counts = np.array(frustration)
         self.op_corr = np.array(Cv)

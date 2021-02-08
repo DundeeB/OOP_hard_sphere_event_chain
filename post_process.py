@@ -878,7 +878,10 @@ class Ising(Graph):
             calculated_reals = int((anneal_mat.shape[1] - 1) / 2)
             if calculated_reals >= realizations:
                 return
-        super().read_or_calc_write(realizations=realizations, **calc_order_parameter_args)
+            self.calc_order_parameter(realizations=realizations, **calc_order_parameter_args)
+            self.write(write_correlations=False, write_vec=True)
+        else:
+            super().read_or_calc_write(realizations=realizations, **calc_order_parameter_args)
 
 
 class LocalDensity(OrderParameter):

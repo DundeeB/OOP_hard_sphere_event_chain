@@ -984,15 +984,15 @@ def main(sim_name, calc_type):
         correlation_kwargs = {}
     if calc_type.startswith('Ising'):
         op = Ising(sim_path, k_nearest_neighbors=n)
+        calc_correlations = False
+        calc_mean = False
+        correlation_kwargs = {}
+        calc_all_reals = False
         if calc_type.find('E_T') >= 0:
             op.correlation(**correlation_kwargs)
             op.write(write_correlations=True, write_vec=False)
             calc_vec = False
             # no matter if op.corr_path exists or not, run correlation in this case
-        calc_correlations = False
-        calc_mean = False
-        correlation_kwargs = {}
-        calc_all_reals = False
     if calc_type.startswith('Density'):
         op = LocalDensity(sim_path)
         calc_mean = False

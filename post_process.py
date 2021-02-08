@@ -983,11 +983,13 @@ def main(sim_name, calc_type):
         calc_mean = False
         correlation_kwargs = {}
     if calc_type.startswith('Ising'):
-        if calc_type.find('E_T') >= 0:
-            calc_vec = False
-        if calc_type.find('annealing') >= 0:
-            calc_correlations = False
         op = Ising(sim_path, k_nearest_neighbors=n)
+        if calc_type.find('E_T') >= 0:
+            op.correlation(**correlation_kwargs)
+            op.write(write_correlations=True, write_vec=False)
+            calc_vec = False
+            # no matter if op.corr_path exists or not, run correlation in this case
+        calc_correlations = False
         calc_mean = False
         correlation_kwargs = {}
         calc_all_reals = False

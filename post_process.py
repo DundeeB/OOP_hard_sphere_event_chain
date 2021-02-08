@@ -18,8 +18,6 @@ epsilon = 1e-8
 day = 86400  # sec
 
 
-# TODO: local rho
-
 class OrderParameter:
 
     def __init__(self, sim_path, centers=None, spheres_ind=None, calc_upper_lower=False, vec_name="vec",
@@ -882,46 +880,6 @@ class Ising(Graph):
             self.write(write_correlations=False, write_vec=True)
         else:
             super().read_or_calc_write(realizations=realizations, **calc_order_parameter_args)
-
-
-class LocalDensity(OrderParameter):
-    # TODO: why do I get discrite histogram? Fine tune the parameters paritions and bin
-    def __init__(self, sim_path, partitions=None, centers=None, spheres_ind=None, calc_upper_lower=False):
-        super().__init__(sim_path, centers, spheres_ind, calc_upper_lower, partitions=partitions)
-        if partitions is None:
-            partitions = int(np.sqrt(self.N) / 5)
-        # Number of random dots within square is a Poisson variable, given sqrt(N)/10 partition, on average we would
-        # have 100 spheres, so the var would be 100 and std 10, so about 10%.
-        self.partitions = partitions
-
-    @property
-    def op_name(self):
-        return "density_partitions=" + str(self.partitions)
-
-    def count_in_rect(self, xleft, xright, ydown, yup):
-        counter = 0
-        for s in self.spheres:
-            if (xleft < s[0] < xright) and (ydown < s[1] < yup):
-                counter += 1
-        return counter
-
-    def calc_order_parameter(self):
-        xwalls = np.linspace(0, self.lx, self.partitions + 1)
-        ywalls = np.linspace(0, self.ly, self.partitions + 1)
-        # rhoH=N*sig^3/(A*H)
-        sigma = 2
-        rho_H_normalization = sigma ** 3 / ((self.lx * self.ly / self.partitions ** 2) * self.lz)
-        self.op_vec = np.zeros((self.partitions, self.partitions))
-        for i in range(self.partitions):
-            for j in range(self.partitions):
-                self.op_vec[i, j] = rho_H_normalization * self.count_in_rect(xwalls[i], xwalls[i + 1], ywalls[i],
-                                                                             ywalls[i + 1])
-
-    def correlation(self):
-        self.counts, bin_edges = np.histogram(self.op_vec, bins=30)
-
-        self.corr_centers = [1 / 2 * (bin_edges[i] + bin_edges[i + 1]) for i in range(len(bin_edges) - 1)]
-        self.op_corr = self.counts / np.trapz(self.counts, self.corr_centers)
 
 
 class LocalOrientation(Graph):

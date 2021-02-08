@@ -745,9 +745,8 @@ class Ising(Graph):
         for s, z in zip(self.op_vec, self.z_spins):
             self.M += s * z
 
-    def Metropolis_flip(self, i=None):
-        if i is None:
-            i = random.randint(0, self.N - 1)
+    def Metropolis_flip(self):
+        i = random.randint(0, self.N - 1)
         de = 0.0
         for j in self.nearest_neighbors[i]:
             de += 2 * self.J * self.op_vec[i] * self.op_vec[j]
@@ -781,13 +780,6 @@ class Ising(Graph):
         """
         _, E, _ = self.anneal(iterations, diter_save=diter_save)
         return np.var(E) / self.N
-
-    def local_freeze(self):
-        current_J = self.J
-        self.J = -100
-        for i in range(self.N):
-            self.Metropolis_flip(i)
-        self.J = current_J
 
     def frustrated_bonds(self, E, J):
         return 1 / 2 * (1 - np.array(E) / (self.bonds_num * np.array(J)))

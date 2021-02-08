@@ -730,10 +730,6 @@ class Ising(Graph):
     def anneal_path(self):
         return os.path.join(self.op_dir_path, "anneal_" + str(self.spheres_ind) + '.txt')
 
-    @property
-    def cv_path(self):
-        return os.path.join(self.op_dir_path, "Cv_vs_J_" + str(self.spheres_ind) + '.txt')
-
     def initialize(self, random_initialization=True, J=None):
         if J is not None:
             self.J = J
@@ -851,8 +847,8 @@ class Ising(Graph):
         frustration = []
         Cv = []
         Jarr_calculated = []
-        if os.path.exists(self.cv_path):
-            Jarr_calculated_np, Cv_np, frustration_np = np.loadtxt(self.cv_path, unpack=True, usecols=(0, 1, 2))
+        if os.path.exists(self.corr_path):
+            Jarr_calculated_np, Cv_np, frustration_np = np.loadtxt(self.corr_path, unpack=True, usecols=(0, 1, 2))
             Jarr_calculated = [J for J in Jarr_calculated_np]
             Cv = [c for c in Cv_np]
             frustration = [f for f in frustration_np]
@@ -871,8 +867,7 @@ class Ising(Graph):
             frustration.append(self.frustrated_bonds(E, J))
             Cv.append(np.mean(Cv_reals))
             Jarr_calculated.append(J)
-            np.savetxt(self.cv_path, np.transpose([Jarr_calculated, Cv, frustration]))
-        os.remove(self.cv_path)
+            np.savetxt(self.corr_path, np.transpose([Jarr_calculated, Cv, frustration]))
         self.corr_centers = Jarr_calculated
         self.counts = np.array(frustration)
         self.op_corr = np.array(Cv)

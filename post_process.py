@@ -842,9 +842,9 @@ class Ising(Graph):
 
     def correlation(self, Jarr=None, initial_iterations=None, cv_iterations=None, realizations=10):
         if initial_iterations is None:
-            initial_iterations = self.N * int(2e3)  # E equilibrate faster than M
+            initial_iterations = int(2e7)  # E equilibrate faster than M
         if cv_iterations is None:
-            cv_iterations = int(1e4 * self.N)
+            cv_iterations = int(1e8)
         if Jarr is None:
             Jarr = np.linspace(-0.05, -1.5, 30)
         frustration = []

@@ -756,16 +756,21 @@ class Ising(Graph):
         if u <= A:
             self.op_vec[i] *= -1
 
-    def anneal(self, iterations, dJditer=lambda J: 0, diter_save=1):
+    def anneal(self, iterations, dJditer=None, diter_save=1):
         J, E, M = [], [], []
-        for i in range(iterations):
-            if i % diter_save == 0 or (i == iterations - 1):
-                self.calc_EM()
-                M.append(self.M)
-                E.append(self.E)
-                J.append(self.J)
-            self.Metropolis_flip()
-            self.J += dJditer(self.J)
+
+        for i in range(int(iterations/diter_save)):
+            if dJditer is None:
+                for j in range(diter_save):
+                    self.Metropolis_flip()
+            else:
+                for j in range(diter_save):
+                    self.Metropolis_flip()
+                    self.J += dJditer(self.J)
+            self.calc_EM()
+            M.append(self.M)
+            E.append(self.E)
+            J.append(self.J)
         return J, E, M
 
     def heat_capacity(self, iterations, diter_save=1):
@@ -864,8 +869,8 @@ class Ising(Graph):
                 self.initialize(J=J)
                 _, _, _ = self.anneal(initial_iterations, diter_save=initial_iterations)
                 Cv_reals.append(self.heat_capacity(cv_iterations, diter_save=self.N))
-                E = self.anneal(1)
-                E_reals.append(E[-1])
+                self.calc_EM()
+                E_reals.append(self.E)
             E = np.mean(E_reals)
             frustration.append(self.frustrated_bonds(E, J))
             Cv.append(np.mean(Cv_reals))

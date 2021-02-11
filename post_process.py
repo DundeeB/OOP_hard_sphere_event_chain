@@ -870,10 +870,29 @@ class Ising(Graph):
             Jarr_calculated.append(J)
             np.savetxt(self.corr_path, np.transpose([Jarr_calculated, Cv, frustration]))
             np.savetxt(last_cv_spins_path, self.op_vec)
+        # Refinement
+        I = np.argsort(Jarr_calculated)
+        J_sorted = np.array(Jarr_calculated)[I]
+        Cv_sorted = np.array(Cv)[I]
+        imax = np.argmax(Cv_sorted)
+        refined_Jarr = np.linspace(J_sorted[imax - 2], J_sorted[imax + 2], 10)
+        for J in refined_Jarr:
+            if J in Jarr_calculated:
+                continue
+            self.J = J
+            _, _, _ = self.anneal(initial_iterations, diter_save=initial_iterations)
+            Cv.append(self.heat_capacity(cv_iterations, diter_save=self.N))
+            self.calc_EM()
+            frustration.append(self.frustrated_bonds(self.E, J))
+            Jarr_calculated.append(J)
+            np.savetxt(self.corr_path, np.transpose([Jarr_calculated, Cv, frustration]))
+            np.savetxt(last_cv_spins_path, self.op_vec)
+
         os.remove(last_cv_spins_path)
-        self.corr_centers = Jarr_calculated
-        self.counts = np.array(frustration)
-        self.op_corr = np.array(Cv)
+        I = np.argsort(Jarr_calculated)
+        self.corr_centers = np.array(Jarr_calculated)[I]
+        self.counts = np.array(frustration)[I]
+        self.op_corr = np.array(Cv)[I]
 
     def read_or_calc_write(self, realizations=20, **calc_order_parameter_args):
         if OrderParameter.exists(self.anneal_path):

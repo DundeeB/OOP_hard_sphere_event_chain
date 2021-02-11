@@ -61,8 +61,8 @@ def main():
         if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d)):
             runs.append(d)
     for N in [100 ** 2, 200 ** 2, 300 ** 2]:
-        runs.append(sim_name(N, 0.8, (0.775 + 0.78) / 2, 'square'))
-        runs.append(sim_name(N, 0.8, (0.775 + 0.78) / 2, 'honeycomb'))
+        runs.append(sim_name(N, 0.8, np.round((0.775 + 0.78) / 2, 4), 'square'))
+        runs.append(sim_name(N, 0.8, np.round((0.775 + 0.78) / 2, 4), 'honeycomb'))
     #     # Low density runs
     #     for h in [0.1, 0.6, 0.8, 1.0]:
     #         for rhoH in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]:

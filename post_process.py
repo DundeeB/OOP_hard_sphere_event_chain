@@ -652,9 +652,9 @@ class MagneticBraggStructure(BraggStructure):
 
 class MagneticTopologicalCorr(Graph):
     def __init__(self, sim_path, k_nearest_neighbors, directed=False, centers=None, spheres_ind=None,
-                 calc_upper_lower=False):
+                 calc_upper_lower=False, **kwargs):
         super().__init__(sim_path, k_nearest_neighbors=k_nearest_neighbors, directed=directed, centers=centers,
-                         spheres_ind=spheres_ind, calc_upper_lower=calc_upper_lower)
+                         spheres_ind=spheres_ind, calc_upper_lower=calc_upper_lower, **kwargs)
 
     @property
     def op_name(self):
@@ -933,6 +933,28 @@ class LocalOrientation(Graph):
         self.op_corr = self.counts / np.trapz(self.counts, self.corr_centers)
 
 
+class LargestComponent(MagneticTopologicalCorr):
+    def __init__(self, sim_path, k_nearest_neighbors, directed=False, centers=None, spheres_ind=None):
+        super().__init__(sim_path, k_nearest_neighbors=k_nearest_neighbors, directed=False, centers=None,
+                         spheres_ind=None, correlation_name="largest_component")
+
+    def correlation(self, calc_upper_lower=False):
+        I, J, _ = scipy.sparse.find(self.graph)[:]
+        E = [(i, j) for (i, j) in zip(I, J)]
+        for i, j in E:
+            if self.op_vec[i] * self.op_vec[j] > 0:
+                self.graph[i, j] = 0
+        n_components, labels = scipy.sparse.csgraph.connected_components(self.graph, directed=False)
+        largest_component = 0
+        for l in np.unique(labels):
+            component_size = [l for l in labels].count(l)
+            if component_size > largest_component:
+                largest_component = component_size
+        self.counts = 0
+        self.op_corr = largest_component / self.N
+        self.corr_centers = 0
+
+
 def main(sim_name, calc_type):
     correlation_kwargs = {'randomize': False, 'time_limit': 2 * day}
 
@@ -983,7 +1005,12 @@ def main(sim_name, calc_type):
         op = LocalOrientation(sim_path, m, n, radius=radius)
         # radius=10 for H=1.8, rhoH=0.8 gives N=(pi*r^2)*H*rhoH/sig^3~56 particles
         correlation_kwargs = {}
-        # calc_all_reals = False
+        calc_all_reals = False
+    if calc_type.startswith('LargestComponent'):
+        op = LargestComponent(sim_path, k_nearest_neighbors=n)
+        calc_mean = False
+        correlation_kwargs = {}
+        calc_all_reals = False
     print(
         "\n\n\n-----------\nDate: " + str(date.today()) + "\nType: " + calc_type + "\nCorrelation arguments:" + str(
             correlation_kwargs) + "\nCalc correlations: " + str(calc_correlations) + "\nCalc mean: " + str(

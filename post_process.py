@@ -941,9 +941,11 @@ class LargestComponent(MagneticTopologicalCorr):
     def correlation(self, calc_upper_lower=False):
         I, J, _ = scipy.sparse.find(self.graph)[:]
         E = [(i, j) for (i, j) in zip(I, J)]
+        self.graph = scipy.sparse.csr_matrix((self.N, self.N))
         for i, j in E:
-            if self.op_vec[i] * self.op_vec[j] > 0:
-                self.graph[i, j] = 0
+            if self.op_vec[i] * self.op_vec[j] < 0:
+                self.graph[i, j] = 1
+                self.graph[j, i] = 1
         n_components, labels = scipy.sparse.csgraph.connected_components(self.graph, directed=False)
         largest_component = 0
         for l in np.unique(labels):

@@ -833,6 +833,8 @@ class Ising(Graph):
         return
 
     def correlation(self, Jarr=None, initial_iterations=None, cv_iterations=None):
+        # TODO: Add J sorting to writing
+        # TODO: Add Js refinement around maximum
         if initial_iterations is None:
             initial_iterations = int(2e3 * self.N)
         if cv_iterations is None:

@@ -978,16 +978,12 @@ def main(sim_name, calc_type):
             op.write(write_correlations=True, write_vec=False)
             calc_vec = False
             # no matter if op.corr_path exists or not, run correlation in this case
-    if calc_type.startswith('Density'):
-        op = LocalDensity(sim_path)
-        calc_mean = False
-        correlation_kwargs = {}
     if calc_type.startswith('LocalPsi'):
         radius = int(calc_type.split('_')[1].split('=')[1])
         op = LocalOrientation(sim_path, m, n, radius=radius)
         # radius=10 for H=1.8, rhoH=0.8 gives N=(pi*r^2)*H*rhoH/sig^3~56 particles
         correlation_kwargs = {}
-        calc_all_reals = False
+        # calc_all_reals = False
     print(
         "\n\n\n-----------\nDate: " + str(date.today()) + "\nType: " + calc_type + "\nCorrelation arguments:" + str(
             correlation_kwargs) + "\nCalc correlations: " + str(calc_correlations) + "\nCalc mean: " + str(

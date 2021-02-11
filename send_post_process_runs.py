@@ -44,11 +44,11 @@ def create_op_dir(sim):
 
 
 def main():
-    sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
-    # sims = ["N=90000_h=0.8_rhoH=" + str(rhoH) + "_AF_square_ECMC" for rhoH in [0.77, 0.775, 0.78, 0.785]]
+    # sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
+    sims = ["N=90000_h=0.8_rhoH=" + str(rhoH) + "_AF_square_ECMC" for rhoH in [0.77, 0.775, 0.78, 0.785]]
     for sim in sims:
         create_op_dir(sim)
-    default_op = ["Ising-E_T"]
+    default_op = ["LocalPsi_radius=30_"]
     # "psi", "Bragg_S", "Bragg_Sm", "pos", "gM", "Ising-annealing", "Ising-E_T", "Density","LocalPsi_radius=50_",
     # ["LocalPsi_radius=" + str(r) + "_" for r in [20, 25, 35, 40]]
     f = open(os.path.join(code_prefix, 'post_process_list.txt'), 'wt')

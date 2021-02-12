@@ -1007,7 +1007,7 @@ def main(sim_name, calc_type):
         op = LocalOrientation(sim_path, m, n, radius=radius)
         # radius=10 for H=1.8, rhoH=0.8 gives N=(pi*r^2)*H*rhoH/sig^3~56 particles
         correlation_kwargs = {}
-        calc_all_reals = False
+        # calc_all_reals = False
     if calc_type.startswith('LargestComponent'):
         op = LargestComponent(sim_path, k_nearest_neighbors=n)
         calc_mean = False

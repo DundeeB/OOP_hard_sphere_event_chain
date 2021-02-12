@@ -32,6 +32,8 @@ class OrderParameter:
         self.correlation_name = correlation_name
         self.op_father_dir = os.path.join(self.sim_path, "OP")
         self.update_centers(centers, spheres_ind)
+        if not os.path.exists(self.op_father_dir): os.mkdir(self.op_father_dir)
+        if not os.path.exists(self.op_dir_path): os.mkdir(self.op_dir_path)
         if calc_upper_lower:
             upper_centers = [c for c in self.spheres if c[2] >= self.l_z / 2]
             lower_centers = [c for c in self.spheres if c[2] < self.l_z / 2]
@@ -142,8 +144,6 @@ class OrderParameter:
         return self.op_vec[i] * np.conjugate(self.op_vec[j]), k
 
     def write(self, write_correlations=True, write_vec=False, write_upper_lower=False):
-        if not os.path.exists(self.op_father_dir): os.mkdir(self.op_father_dir)
-        if not os.path.exists(self.op_dir_path): os.mkdir(self.op_dir_path)
         if write_vec:
             if self.op_vec is None: raise (Exception("Should calculate vec before writing"))
             np.savetxt(self.vec_path, self.op_vec)

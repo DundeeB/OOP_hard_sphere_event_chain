@@ -832,15 +832,16 @@ class Ising(Graph):
         _, _, _ = self.anneal(self.N, diter_save=self.N)
         return
 
-    def correlation(self, Jarr=None, initial_iterations=None, cv_iterations=None):
-        # TODO: Add J sorting to writing
-        # TODO: Add Js refinement around maximum
+    def correlation(self, Jarr=None, initial_iterations=None, cv_iterations=None, post_refinement=False):
         if initial_iterations is None:
             initial_iterations = int(2e3 * self.N)
         if cv_iterations is None:
             cv_iterations = int(1e4 * self.N)
         if Jarr is None:
-            Jarr = np.linspace(-0.05, -1.5, 30)
+            Jarr = [J for J in np.round(np.linspace(-0.05, -1.5, 30), 2)]
+            for J in np.round(np.linspace(-0.4, -0.7, 31), 2):
+                Jarr.append(J)
+            Jarr = np.flip(np.unique(Jarr))
         frustration = []
         Cv = []
         Jarr_calculated = []
@@ -870,23 +871,24 @@ class Ising(Graph):
             Jarr_calculated.append(J)
             np.savetxt(self.corr_path, np.transpose([Jarr_calculated, Cv, frustration]))
             np.savetxt(last_cv_spins_path, self.op_vec)
-        # Refinement
-        I = np.argsort(Jarr_calculated)
-        J_sorted = np.array(Jarr_calculated)[I]
-        Cv_sorted = np.array(Cv)[I]
-        imax = np.argmax(Cv_sorted)
-        refined_Jarr = np.linspace(J_sorted[imax - 2], J_sorted[imax + 2], 10)
-        for J in refined_Jarr:
-            if J in Jarr_calculated:
-                continue
-            self.J = J
-            _, _, _ = self.anneal(initial_iterations, diter_save=initial_iterations)
-            Cv.append(self.heat_capacity(cv_iterations, diter_save=self.N))
-            self.calc_EM()
-            frustration.append(self.frustrated_bonds(self.E, J))
-            Jarr_calculated.append(J)
-            np.savetxt(self.corr_path, np.transpose([Jarr_calculated, Cv, frustration]))
-            np.savetxt(last_cv_spins_path, self.op_vec)
+        if post_refinement:
+            # Refinement
+            I = np.argsort(Jarr_calculated)
+            J_sorted = np.array(Jarr_calculated)[I]
+            Cv_sorted = np.array(Cv)[I]
+            imax = np.argmax(Cv_sorted)
+            refined_Jarr = np.linspace(J_sorted[imax - 2], J_sorted[imax + 2], 10)
+            for J in refined_Jarr:
+                if J in Jarr_calculated:
+                    continue
+                self.J = J
+                _, _, _ = self.anneal(initial_iterations, diter_save=initial_iterations)
+                Cv.append(self.heat_capacity(cv_iterations, diter_save=self.N))
+                self.calc_EM()
+                frustration.append(self.frustrated_bonds(self.E, J))
+                Jarr_calculated.append(J)
+                np.savetxt(self.corr_path, np.transpose([Jarr_calculated, Cv, frustration]))
+                np.savetxt(last_cv_spins_path, self.op_vec)
 
         os.remove(last_cv_spins_path)
         I = np.argsort(Jarr_calculated)

@@ -222,7 +222,7 @@ def run_sim(initial_arr, N, h, rho_H, sim_name, iterations=None, record_displace
     else:
         os.system('echo \'\nElapsed time is ' + str(time.time() - initial_time) + '\' >> TIME_LOG')
         os.chdir(code_dir)
-        sys.exit(0)  # any !=0 number
+        sys.exit(7)  # any !=0 number
 
 
 def main():

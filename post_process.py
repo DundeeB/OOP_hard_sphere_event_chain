@@ -891,8 +891,8 @@ class Ising(Graph):
                 Jarr_calculated.append(J)
                 np.savetxt(self.corr_path, np.transpose([Jarr_calculated, Cv, frustration]))
                 np.savetxt(last_cv_spins_path, self.op_vec)
-
-        os.remove(last_cv_spins_path)
+        if os.path.exists(last_cv_spins_path):
+            os.remove(last_cv_spins_path)
         I = np.argsort(Jarr_calculated)
         self.corr_centers = np.array(Jarr_calculated)[I]
         self.counts = np.array(frustration)[I]

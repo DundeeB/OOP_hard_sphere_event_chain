@@ -640,7 +640,6 @@ class MagneticBraggStructure(BraggStructure):
         l = np.sqrt(self.l_x * self.l_y / len(self.spheres))
         if self.m == 1 and self.n == 4:
             return np.pi / l * np.array([1, 1])
-        # TODO: update by k*a_AB
         if self.m == 1 and self.n == 6:
             a = np.sqrt(2.0 / np.sqrt(3)) * l
             return np.pi / a * np.array([1.0, 1.0 / np.sqrt(3)])
@@ -779,7 +778,7 @@ class Ising(Graph):
         get Cv=Var(E)/N
         """
         _, E, _ = self.anneal(iterations, diter_save=diter_save)
-        return np.var(E) / self.N
+        return np.var(E, ddof=1) / self.N, np.mean(E)
 
     def frustrated_bonds(self, E, J):
         return 1 / 2 * (1 - np.array(E) / (self.bonds_num * np.array(J)))
@@ -860,17 +859,20 @@ class Ising(Graph):
             self.op_vec = np.loadtxt(last_cv_spins_path)
         else:
             self.initialize(J=Jarr[0])
+        initial_time = time.time()
         for J in Jarr:
             if J in Jarr_calculated:
                 continue
             self.J = J
             _, _, _ = self.anneal(initial_iterations, diter_save=initial_iterations)
-            Cv.append(self.heat_capacity(cv_iterations, diter_save=self.N))
-            self.calc_EM()
-            frustration.append(self.frustrated_bonds(self.E, J))
+            Cv_, E_ = self.heat_capacity(cv_iterations, diter_save=self.N)
+            Cv.append(Cv_)
+            frustration.append(self.frustrated_bonds(E_, J))
             Jarr_calculated.append(J)
             np.savetxt(self.corr_path, np.transpose([Jarr_calculated, Cv, frustration]))
             np.savetxt(last_cv_spins_path, self.op_vec)
+            if time.time() - initial_time > 2 * day:
+                sys.exit(7)
         if post_refinement:
             # Refinement
             I = np.argsort(Jarr_calculated)
@@ -883,9 +885,9 @@ class Ising(Graph):
                     continue
                 self.J = J
                 _, _, _ = self.anneal(initial_iterations, diter_save=initial_iterations)
-                Cv.append(self.heat_capacity(cv_iterations, diter_save=self.N))
-                self.calc_EM()
-                frustration.append(self.frustrated_bonds(self.E, J))
+                Cv_, E_ = self.heat_capacity(cv_iterations, diter_save=self.N)
+                Cv.append(Cv_)
+                frustration.append(self.frustrated_bonds(E_, J))
                 Jarr_calculated.append(J)
                 np.savetxt(self.corr_path, np.transpose([Jarr_calculated, Cv, frustration]))
                 np.savetxt(last_cv_spins_path, self.op_vec)

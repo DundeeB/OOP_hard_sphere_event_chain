@@ -44,9 +44,9 @@ def create_op_dir(sim):
 
 
 def main():
-    # sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
+    sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
     # sims = ["N=90000_h=0.8_rhoH=" + str(rhoH) + "_AF_square_ECMC" for rhoH in [0.77, 0.775, 0.78, 0.785]]
-    sims = ["N=10000_h=0.8_rhoH=0.8_AF_square_ECMC"]
+    # sims = ["N=10000_h=0.8_rhoH=0.8_AF_square_ECMC"]
 
     for sim in sims:
         create_op_dir(sim)

@@ -292,11 +292,11 @@ class Graph(OrderParameter):
 class PsiMN(Graph):
 
     def __init__(self, sim_path, m, n, centers=None, spheres_ind=None, calc_upper_lower=False):
+        self.m, self.n = m, n
+        self.op_name = "psi_" + str(m) + str(n)
         super().__init__(sim_path, k_nearest_neighbors=n, directed=True, centers=centers, spheres_ind=spheres_ind,
                          calc_upper_lower=calc_upper_lower, m=1, n=m * n)
         # extra args m,n goes to upper and lower layers
-        self.m, self.n = m, n
-        self.op_name = "psi_" + str(m) + str(n)
 
     def calc_order_parameter(self, calc_upper_lower=False):
         n, centers, graph = self.n, self.spheres, self.graph

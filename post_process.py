@@ -548,11 +548,11 @@ class BurgerField(OrderParameter):
 
 class BraggStructure(OrderParameter):
     def __init__(self, sim_path, m, n, centers=None, spheres_ind=None):
-        super().__init__(sim_path, centers, spheres_ind, calc_upper_lower=False)
         self.op_name = "Bragg_S"
         self.k_peak = None
         self.data = []
         self.m, self.n = m, n
+        super().__init__(sim_path, centers, spheres_ind, calc_upper_lower=False)
 
     def calc_eikr(self, k):
         return np.exp([1j * (k[0] * r[0] + k[1] * r[1]) for r in self.spheres])

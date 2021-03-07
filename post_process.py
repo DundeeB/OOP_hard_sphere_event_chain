@@ -466,6 +466,8 @@ class BurgerField(OrderParameter):
         else:
             local_psi_mn = LocalOrientation(self.sim_path, 1, 4, self.orientation_rad, self.spheres,
                                             self.spheres_ind, psi)
+            local_psi_mn.read_or_calc_write()
+            local_psi_mn.read_or_calc_write()
             orientation = np.array([np.imag(np.log(p)) / 4 for p in local_psi_mn.op_vec])
         disloc_burger, disloc_location = BurgerField.calc_burger_vector(self.spheres, [self.l_x, self.l_y],
                                                                         perfect_lattice_vectors, orientation)

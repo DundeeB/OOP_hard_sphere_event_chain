@@ -932,8 +932,6 @@ class Ising(Graph):
 class LocalOrientation(Graph):
 
     def __init__(self, sim_path, m, n, radius, centers=None, spheres_ind=None, psi_mn=None):
-        super().__init__(sim_path, radius=radius, directed=True, centers=centers, spheres_ind=spheres_ind,
-                         correlation_name="hist_rad=" + str(radius), vec_name="local-psi_rad=" + str(radius))
         # directed=True saves computation time, and it does not matter because by symmetry of the metric use radius
         # nearest neighbor graph is already symmetric, that is undirected graph by construction
         if psi_mn is None:
@@ -941,6 +939,8 @@ class LocalOrientation(Graph):
             self.psi_mn.read_or_calc_write()
         else:
             self.psi_mn = psi_mn
+        super().__init__(sim_path, radius=radius, directed=True, centers=centers, spheres_ind=spheres_ind,
+                         correlation_name="hist_rad=" + str(radius), vec_name="local-psi_rad=" + str(radius))
 
     @property
     def op_name(self):

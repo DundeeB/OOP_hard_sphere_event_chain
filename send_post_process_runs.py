@@ -50,7 +50,7 @@ def main():
 
     for sim in sims:
         create_op_dir(sim)
-    default_op = []
+    default_op = ["Ising-E_T"]
     # "psi", "Bragg_S", "Bragg_Sm", "pos", "gM", "Ising-annealing", "Ising-E_T", "Density","LocalPsi_radius=50_",
     # "LargestComponent",
     # ["LocalPsi_radius=" + str(r) + "_" for r in [20, 25, 35, 40]]
@@ -60,8 +60,8 @@ def main():
         for sim_name in sims:
             mn = mn_from_sim(sim_name)
             op_w_mn_list = [op + mn for op in default_op]
-            if mn == "14":
-                op_w_mn_list += ["burger_square"]
+            # if mn == "14":
+            #     op_w_mn_list += ["burger_square"]
             for calc_type in op_w_mn_list:
                 writer.writerow((sim_name, calc_type))
     finally:

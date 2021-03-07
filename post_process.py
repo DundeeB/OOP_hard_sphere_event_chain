@@ -434,9 +434,9 @@ class PositionalCorrelationFunction(OrderParameter):
 
 class BurgerField(OrderParameter):
 
-    def __init__(self, sim_path, centers=None, spheres_ind=None, calc_upper_lower=False, local_rotation_rad=None):
+    def __init__(self, sim_path, centers=None, spheres_ind=None, calc_upper_lower=False, orientation_rad=None):
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower=False)
-        self.local_rotation_rad = local_rotation_rad
+        self.orientation_rad = orientation_rad
         if calc_upper_lower:
             upper_centers = [c for c in self.spheres if c[2] >= self.l_z / 2]
             lower_centers = [c for c in self.spheres if c[2] < self.l_z / 2]
@@ -448,7 +448,7 @@ class BurgerField(OrderParameter):
     @property
     def op_name(self):
         return "burger_vectors" + (
-            "" if (self.local_rotation_rad is None) else ("_local_rotation_rad=" + str(self.local_rotation_rad)))
+            "" if (self.orientation_rad is None) else ("_orientation_rad=" + str(self.orientation_rad)))
 
     def calc_order_parameter(self, calc_upper_lower=False):
         psi = PsiMN(self.sim_path, 1, 4, centers=self.spheres, spheres_ind=self.spheres_ind)
@@ -460,11 +460,11 @@ class BurgerField(OrderParameter):
         a1, a2 = np.array([a, 0]), np.array([0, a])
         perfect_lattice_vectors = np.array([n * a1 + m * a2 for n in range(-3, 3) for m in range(-3, 3)])
 
-        if self.local_rotation_rad is None:
+        if self.orientation_rad is None:
             orientation = psi.rotate_spheres(calc_spheres=False)
             # rotate = lambda ps: np.matmul(R(-orientation), np.array(ps).T).T
         else:
-            local_psi_mn = LocalOrientation(self.sim_path, 1, 4, self.local_rotation_rad, self.spheres,
+            local_psi_mn = LocalOrientation(self.sim_path, 1, 4, self.orientation_rad, self.spheres,
                                             self.spheres_ind, psi)
             orientation = np.array([np.imag(np.log(p)) / 4 for p in local_psi_mn.op_vec])
         disloc_burger, disloc_location = BurgerField.calc_burger_vector(self.spheres, [self.l_x, self.l_y],
@@ -1006,7 +1006,7 @@ def main(sim_name, calc_type):
         op = PositionalCorrelationFunction(sim_path, m, n)
         calc_mean, calc_vec = False, False
     if calc_type.startswith("burger_square"):
-        op = BurgerField(sim_path)
+        op = BurgerField(sim_path, orientation_rad=10.0)
         calc_mean, calc_correlations = False, False
     if calc_type.startswith("Bragg_S"):
         if calc_type.startswith("Bragg_Sm"):

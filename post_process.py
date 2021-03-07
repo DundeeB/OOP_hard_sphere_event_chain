@@ -435,8 +435,8 @@ class PositionalCorrelationFunction(OrderParameter):
 class BurgerField(OrderParameter):
 
     def __init__(self, sim_path, centers=None, spheres_ind=None, calc_upper_lower=False, orientation_rad=None):
-        super().__init__(sim_path, centers, spheres_ind, calc_upper_lower=False)
         self.orientation_rad = orientation_rad
+        super().__init__(sim_path, centers, spheres_ind, calc_upper_lower=False)
         if calc_upper_lower:
             upper_centers = [c for c in self.spheres if c[2] >= self.l_z / 2]
             lower_centers = [c for c in self.spheres if c[2] < self.l_z / 2]

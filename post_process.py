@@ -434,9 +434,9 @@ class PositionalCorrelationFunction(OrderParameter):
 
 class BurgerField(OrderParameter):
 
-    def __init__(self, sim_path, centers=None, spheres_ind=None, calc_upper_lower=False):
+    def __init__(self, sim_path, centers=None, spheres_ind=None, calc_upper_lower=False, local_rotation_rad=None):
         super().__init__(sim_path, centers, spheres_ind, calc_upper_lower=False)
-        self.op_name = "burger_vectors"
+        self.local_rotation_rad = local_rotation_rad
         if calc_upper_lower:
             upper_centers = [c for c in self.spheres if c[2] >= self.l_z / 2]
             lower_centers = [c for c in self.spheres if c[2] < self.l_z / 2]
@@ -445,29 +445,37 @@ class BurgerField(OrderParameter):
             self.upper.op_name = "upper_" + self.op_name
             self.lower.op_name = "lower_" + self.op_name
 
+    @property
+    def op_name(self):
+        return "burger_vectors" + (
+            "" if (self.local_rotation_rad is None) else ("_local_rotation_rad=" + str(self.local_rotation_rad)))
+
     def calc_order_parameter(self, calc_upper_lower=False):
         psi = PsiMN(self.sim_path, 1, 4, centers=self.spheres, spheres_ind=self.spheres_ind)
         psi.read_or_calc_write()
-        orientation = psi.rotate_spheres(calc_spheres=False)
-        R = np.array([[np.cos(orientation), -np.sin(orientation)], [np.sin(orientation), np.cos(orientation)]])
 
         bragg = BraggStructure(self.sim_path, 1, 4, self.spheres, self.spheres_ind)
         bragg.read_or_calc_write(psi=psi)
         a = 2 * np.pi / np.linalg.norm(bragg.k_peak)
         a1, a2 = np.array([a, 0]), np.array([0, a])
-
         perfect_lattice_vectors = np.array([n * a1 + m * a2 for n in range(-3, 3) for m in range(-3, 3)])
-        perfect_lattice_vectors = np.array([np.matmul(R, p.T) for p in perfect_lattice_vectors])
-        # rotate = lambda ps: np.matmul(R(-orientation), np.array(ps).T).T
+
+        if self.local_rotation_rad is None:
+            orientation = psi.rotate_spheres(calc_spheres=False)
+            # rotate = lambda ps: np.matmul(R(-orientation), np.array(ps).T).T
+        else:
+            local_psi_mn = LocalOrientation(self.sim_path, 1, 4, self.local_rotation_rad, self.spheres,
+                                            self.spheres_ind, psi)
+            orientation = np.array([np.imag(np.log(p)) / 4 for p in local_psi_mn.op_vec])
         disloc_burger, disloc_location = BurgerField.calc_burger_vector(self.spheres, [self.l_x, self.l_y],
-                                                                        perfect_lattice_vectors)
+                                                                        perfect_lattice_vectors, orientation)
         self.op_vec = np.concatenate((np.array(disloc_location).T, np.array(disloc_burger).T)).T  # x, y, bx, by field
         if calc_upper_lower:
             self.lower.calc_order_parameter()
             self.upper.calc_order_parameter()
 
     @staticmethod
-    def calc_burger_vector(spheres, boundaries, perfect_lattice_vectors):
+    def calc_burger_vector(spheres, boundaries, perfect_lattice_vectors, orientation):
         """
         Calculate the burger vector on each plaquette of the Delaunay triangulation using methods in:
             [1]	https://link.springer.com/content/pdf/10.1007%2F978-3-319-42913-7_20-1.pdf
@@ -483,12 +491,23 @@ class BurgerField(OrderParameter):
         dislocation_location = []
         for i, simplex in enumerate(tri.simplices):
             rc = np.mean(tri.points[simplex], 0)
-            if rc[0] < 0 or rc[0] > boundaries[0] or rc[1] < 0 or rc[1] > boundaries[1]:
-                continue
-            b_i = BurgerField.burger_calculation(tri.points[simplex], perfect_lattice_vectors)
-            if np.linalg.norm(b_i) > epsilon:
-                dislocation_location.append(rc)
-                dislocation_burger.append(b_i)
+            if (0 < rc[0] < boundaries[0]) and (0 < rc[1] < boundaries[1]):
+                if type(orientation) is np.ndarray:
+                    vertices_inside = [k for k in simplex if
+                                       (0 < tri.points[k][0] < boundaries[0] and 0 < tri.points[k][1] < boundaries[1])]
+                    theta = np.mean(orientation[vertices_inside])
+                    # wraped spheres has first the centers in places 1..N, and only after the new wrapping spheres.
+                    # Therefor for any vertex j inside the box the orientation vector of len N has the appropriate
+                    # orinentation[j]
+                else:
+                    theta = orientation
+                R = np.array(
+                    [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+                lattice_vectors = np.array([np.matmul(R, p.T) for p in perfect_lattice_vectors])
+                b_i = BurgerField.burger_calculation(tri.points[simplex], lattice_vectors)
+                if np.linalg.norm(b_i) > epsilon:
+                    dislocation_location.append(rc)
+                    dislocation_burger.append(b_i)
         return dislocation_burger, dislocation_location
 
     @staticmethod
@@ -523,7 +542,7 @@ class BurgerField(OrderParameter):
         sp8 = centers[y - Ly > -w, :] + [0, -Ly]
         sp9 = centers[np.logical_and(x < w, y - Ly > -w), :] + [Lx, -Ly]
 
-        wraped_centers = np.concatenate((sp1, sp2, sp3, sp4, sp5, sp6, sp7, sp8, sp9))
+        wraped_centers = np.concatenate((sp5, sp1, sp2, sp3, sp4, sp6, sp7, sp8, sp9))
         return wraped_centers
 
 
@@ -912,13 +931,16 @@ class Ising(Graph):
 
 class LocalOrientation(Graph):
 
-    def __init__(self, sim_path, m, n, radius, centers=None, spheres_ind=None):
+    def __init__(self, sim_path, m, n, radius, centers=None, spheres_ind=None, psi_mn=None):
         super().__init__(sim_path, radius=radius, directed=True, centers=centers, spheres_ind=spheres_ind,
                          correlation_name="hist_rad=" + str(radius), vec_name="local-psi_rad=" + str(radius))
         # directed=True saves computation time, and it does not matter because by symmetry of the metric use radius
         # nearest neighbor graph is already symmetric, that is undirected graph by construction
-        self.psi_mn = PsiMN(sim_path, m, n, centers=centers, spheres_ind=spheres_ind)
-        self.psi_mn.read_or_calc_write()
+        if psi_mn is None:
+            self.psi_mn = PsiMN(sim_path, m, n, centers=centers, spheres_ind=spheres_ind)
+            self.psi_mn.read_or_calc_write()
+        else:
+            self.psi_mn = psi_mn
 
     @property
     def op_name(self):

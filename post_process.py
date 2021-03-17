@@ -879,7 +879,7 @@ class Ising(Graph):
                 Jarr_calculated = [Jarr_calculated_np]
                 Cv = [Cv_np]
                 frustration = [frustration_np]
-        last_cv_spins_path = os.path.join(self.op_dir_path, "last_cv_spins")
+        last_cv_spins_path = os.path.join(self.op_dir_path, "last_cv_spins_" + str(self.spheres_ind))
         if os.path.exists(last_cv_spins_path):
             self.op_vec = np.loadtxt(last_cv_spins_path)
         else:
@@ -1003,7 +1003,7 @@ def main(sim_name, calc_type):
         m, n = 1, 4
     if calc_type.endswith("16"):
         m, n = 1, 6
-    calc_correlations, calc_mean, calc_vec, calc_all_reals = True, True, True, False
+    calc_correlations, calc_mean, calc_vec, calc_all_reals = True, True, True, True
     if calc_type.startswith("psi"):
         op = PsiMN(sim_path, m, n)
         if calc_type.startswith("psi_mean"):

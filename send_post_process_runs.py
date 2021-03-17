@@ -71,6 +71,7 @@ def main():
                 real = load_obj.realizations()[real_count]
                 calc_type = 'Ising-E_T_real=' + str(real) + '_14'
                 writer.writerow((sim_name, calc_type))
+                writer.writerow((sim_name, "burger_square"))
     finally:
         f.close()
         os.system("condor_submit post_process.sub")

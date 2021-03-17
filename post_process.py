@@ -1008,7 +1008,8 @@ def main(sim_name, calc_type):
         op = PositionalCorrelationFunction(sim_path, m, n)
         calc_mean, calc_vec = False, False
     if calc_type.startswith("burger_square"):
-        op = BurgerField(sim_path, orientation_rad=10.0)
+        # op = BurgerField(sim_path, orientation_rad=10.0)
+        op = BurgerField(sim_path)
         calc_mean, calc_correlations = False, False
     if calc_type.startswith("Bragg_S"):
         if calc_type.startswith("Bragg_Sm"):

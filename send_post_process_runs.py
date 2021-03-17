@@ -66,7 +66,7 @@ def main():
         #         writer.writerow((sim_name, calc_type))
         sims = ["N=90000_h=0.8_rhoH=" + str(rhoH) + "_AF_square_ECMC" for rhoH in [0.75, 0.8, 0.85]]
         for sim_name in sims:
-            for real_count in [-1, -2, -3, -4, -5]:
+            for real_count in [0, 1, 2, 3, 4]:
                 load_obj = WriteOrLoad(os.path.join(prefix, sim_name))
                 real = load_obj.realizations()[real_count]
                 calc_type = 'Ising-E_T_real=' + str(real) + '_14'

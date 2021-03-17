@@ -1003,7 +1003,7 @@ def main(sim_name, calc_type):
         m, n = 1, 4
     if calc_type.endswith("16"):
         m, n = 1, 6
-    calc_correlations, calc_mean, calc_vec, calc_all_reals = True, True, True, True
+    calc_correlations, calc_mean, calc_vec, calc_all_reals = True, True, True, False
     if calc_type.startswith("psi"):
         op = PsiMN(sim_path, m, n)
         if calc_type.startswith("psi_mean"):

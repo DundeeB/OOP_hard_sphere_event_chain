@@ -72,6 +72,7 @@ def main():
                 calc_type = 'Ising-E_T_real=' + str(real) + '_14'
                 writer.writerow((sim_name, calc_type))
             writer.writerow((sim_name, "burger_square"))
+            writer.writerow((sim_name, "Bragg_Sm14"))
     finally:
         f.close()
         os.system("condor_submit post_process.sub")

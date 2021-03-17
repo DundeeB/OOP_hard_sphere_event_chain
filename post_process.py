@@ -740,6 +740,10 @@ class Ising(Graph):
         self.z_spins = [(1 if p[2] > self.l_z / 2 else -1) for p in self.spheres]
         self.J = J
 
+    def update_centers(self, centers, spheres_ind):
+        super().update_centers(centers, spheres_ind)
+        self.z_spins = [(1 if p[2] > self.l_z / 2 else -1) for p in self.spheres]
+
     @property
     def op_name(self):
         return "Ising_" + self.direc_str

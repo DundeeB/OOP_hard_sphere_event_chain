@@ -1026,8 +1026,15 @@ def main(sim_name, calc_type):
         correlation_kwargs = {}
         calc_all_reals = False
         if calc_type.find('E_T') >= 0:
-            op.correlation(**correlation_kwargs)
-            op.write(write_correlations=True, write_vec=False)
+            if not (calc_type.find('real') >= 0):
+                op.correlation(**correlation_kwargs)
+                op.write(write_correlations=True, write_vec=False)
+            else:
+                real = re.split('(_|real=)', calc_type)[-3]
+                centers = np.loadtxt(os.path.join(op.sim_path, str(real)))
+                op.update_centers(centers, real)
+                op.correlation(**correlation_kwargs)
+                op.write(write_correlations=True, write_vec=False)
             calc_vec = False
             # no matter if op.corr_path exists or not, run correlation in this case
     if calc_type.startswith('LocalPsi'):

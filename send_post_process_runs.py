@@ -77,7 +77,7 @@ def main():
                 writer.writerow((sim_name, calc_type))
         sims = ["N=90000_h=0.8_rhoH=" + str(rhoH) + "_AF_square_ECMC" for rhoH in [0.78, 0.8, 0.83]]
         for sim_name in sims:
-            calc_type = 'psi14'
+            calc_type = 'psi_mean14'
             writer.writerow((sim_name, calc_type))
     finally:
         f.close()

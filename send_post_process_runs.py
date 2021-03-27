@@ -66,13 +66,19 @@ def main():
         #         writer.writerow((sim_name, calc_type))
         sims = ["N=90000_h=0.8_rhoH=" + str(rhoH) + "_AF_square_ECMC" for rhoH in [0.75, 0.8, 0.85]]
         for sim_name in sims:
-            for real_count in [0, 1, 2, 3, 4]:
-                load_obj = WriteOrLoad(os.path.join(prefix, sim_name))
-                real = load_obj.realizations()[real_count]
+            # load_obj = WriteOrLoad(os.path.join(prefix, sim_name))
+            # reals = load_obj.realizations()
+            # for real_count in [0, 1, 2, 3, 4]:
+            #     calc_type = 'Ising-E_T_real=' + str(reals[real_count]) + '_14'
+            op_path = os.path.join(prefix, sim_name, 'Ising_k=4_undirected')
+            reals = [int(re.split('(_|.txt)', f)[-3]) for f in os.listdir(op_path) if f.startswith('Cv_vs_J_')]
+            for real in reals:
                 calc_type = 'Ising-E_T_real=' + str(real) + '_14'
                 writer.writerow((sim_name, calc_type))
-            writer.writerow((sim_name, "burger_square"))
-            writer.writerow((sim_name, "Bragg_Sm14"))
+        sims = ["N=90000_h=0.8_rhoH=" + str(rhoH) + "_AF_square_ECMC" for rhoH in [0.78, 0.8, 0.83]]
+        for sim_name in sims:
+            calc_type = 'psi14'
+            writer.writerow((sim_name, calc_type))
     finally:
         f.close()
         os.system("condor_submit post_process.sub")

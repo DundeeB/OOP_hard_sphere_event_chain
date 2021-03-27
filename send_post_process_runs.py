@@ -70,7 +70,7 @@ def main():
             # reals = load_obj.realizations()
             # for real_count in [0, 1, 2, 3, 4]:
             #     calc_type = 'Ising-E_T_real=' + str(reals[real_count]) + '_14'
-            op_path = os.path.join(prefix, sim_name, 'Ising_k=4_undirected')
+            op_path = os.path.join(prefix, sim_name, 'OP', 'Ising_k=4_undirected')
             reals = [int(re.split('(_|.txt)', f)[-3]) for f in os.listdir(op_path) if f.startswith('Cv_vs_J_')]
             for real in reals:
                 calc_type = 'Ising-E_T_real=' + str(real) + '_14'

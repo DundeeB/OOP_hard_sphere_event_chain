@@ -31,7 +31,7 @@ def mn_from_sim(sim_name):
         mn = "23"
     if 0.55 <= h <= 0.85:
         mn = "14"
-        # send_specific_run(sim_name, ["burger_square"])
+        # send_specific_run(sim_name, ["BurgersSquare"])
     if h < 0.55:
         mn = "16"
     return mn
@@ -45,40 +45,46 @@ def create_op_dir(sim):
 
 
 def main():
-    # sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
+    sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
     # sims = ["N=10000_h=0.8_rhoH=0.8_AF_square_ECMC"]
 
-    # for sim in sims:
-    #     create_op_dir(sim)
-    # default_op = ["Ising-E_T"]
+    for sim in sims:
+        create_op_dir(sim)
+    # default_op = ["BurgersSquare"]
     # "psi", "Bragg_S", "Bragg_Sm", "pos", "gM", "Ising-annealing", "Ising-E_T", "Density","LocalPsi_radius=50_",
     # "LargestComponent",
     # ["LocalPsi_radius=" + str(r) + "_" for r in [20, 25, 35, 40]]
     f = open(os.path.join(code_prefix, 'post_process_list.txt'), 'wt')
     try:
         writer = csv.writer(f, lineterminator='\n')
-        # for sim_name in sims:
-        #     mn = mn_from_sim(sim_name)
-        #     op_w_mn_list = [op + mn for op in default_op]
-        #     # if mn == "14":
-        #     #     op_w_mn_list += ["burger_square"]
-        #     for calc_type in op_w_mn_list:
-        #         writer.writerow((sim_name, calc_type))
-        sims = ["N=90000_h=0.8_rhoH=" + str(rhoH) + "_AF_square_ECMC" for rhoH in [0.75, 0.8, 0.85]]
+
         for sim_name in sims:
+            mn = mn_from_sim(sim_name)
+            # op_w_mn_list = [op + mn for op in default_op]
+            if mn == "14":
+                # op_w_mn_list += ["BurgersSquare"]
+                # for calc_type in op_w_mn_list:
+                writer.writerow((sim_name, "BurgersSquare_radius=10"))
+
+        # sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
+        # for sim_name in sims:
+        #     writer.writerow((sim_name, "psi" + mn_from_sim(sim_name)))
+
+        # sims = ["N=90000_h=0.8_rhoH=" + str(rhoH) + "_AF_square_ECMC" for rhoH in [0.75, 0.8, 0.85]]
+        # for sim_name in sims:
             # load_obj = WriteOrLoad(os.path.join(prefix, sim_name))
             # reals = load_obj.realizations()
             # for real_count in [0, 1, 2, 3, 4]:
             #     calc_type = 'Ising-E_T_real=' + str(reals[real_count]) + '_14'
-            op_path = os.path.join(prefix, sim_name, 'OP', 'Ising_k=4_undirected')
-            reals = [int(re.split('(_|.txt)', f)[-3]) for f in os.listdir(op_path) if f.startswith('Cv_vs_J_')]
-            for real in reals:
-                calc_type = 'Ising-E_T_real=' + str(real) + '_14'
-                writer.writerow((sim_name, calc_type))
-        sims = ["N=90000_h=0.8_rhoH=" + str(rhoH) + "_AF_square_ECMC" for rhoH in [0.78, 0.8, 0.83]]
-        for sim_name in sims:
-            calc_type = 'psi_mean14'
-            writer.writerow((sim_name, calc_type))
+            # op_path = os.path.join(prefix, sim_name, 'OP', 'Ising_k=4_undirected')
+            # reals = [int(re.split('(_|.txt)', f)[-3]) for f in os.listdir(op_path) if f.startswith('Cv_vs_J_')]
+            # for real in reals:
+            #     calc_type = 'Ising-E_T_real=' + str(real) + '_14'
+            #     writer.writerow((sim_name, calc_type))
+        # sims = ["N=90000_h=0.8_rhoH=" + str(rhoH) + "_AF_square_ECMC" for rhoH in [0.78, 0.8, 0.83]]
+        # for sim_name in sims:
+        #     calc_type = 'psi_mean14'
+        #     writer.writerow((sim_name, calc_type))
     finally:
         f.close()
         os.system("condor_submit post_process.sub")

@@ -248,8 +248,15 @@ class Graph(OrderParameter):
             if self.graph.shape != (self.N, self.N):
                 recalc_graph = True
         if recalc_graph:
-            cast_sphere = lambda c, r=1, z=0: Sphere([x for x in c] + [z], r)
-            cyc = lambda p1, p2: Metric.cyclic_dist([self.l_x, self.l_y], cast_sphere(p1), cast_sphere(p2))
+            def cyc_dist(p1, p2, boundaries):
+                dx = np.array(p1) - p2  # direct vector
+                dsq = 0
+                for i in range(2):
+                    L = boundaries[i]
+                    dsq += min(dx[i] ** 2, (dx[i] + L) ** 2, (dx[i] - L) ** 2)  # find shorter path through B.D.
+                return np.sqrt(dsq)
+
+            cyc = lambda p1, p2: cyc_dist(p1, p2, [self.l_x, self.l_y])
             X = [p[:2] for p in self.spheres]
             if self.k is not None:
                 self.graph = kneighbors_graph(X, n_neighbors=self.k, metric=cyc)
@@ -458,26 +465,26 @@ class BurgerField(OrderParameter):
         bragg.read_or_calc_write(psi=psi)
         a = 2 * np.pi / np.linalg.norm(bragg.k_peak)
         a1, a2 = np.array([a, 0]), np.array([0, a])
-        perfect_lattice_vectors = np.array([n * a1 + m * a2 for n in range(-3, 3) for m in range(-3, 3)])
-
+        perfect_lattice_vectors = [n * a1 + m * a2 for n in range(-3, 3) for m in range(-3, 3)]
+        single_orientation, orientation_list = None, None
         if self.orientation_rad is None:
-            orientation = psi.rotate_spheres(calc_spheres=False)
-            # rotate = lambda ps: np.matmul(R(-orientation), np.array(ps).T).T
+            single_orientation = psi.rotate_spheres(calc_spheres=False)
         else:
             local_psi_mn = LocalOrientation(self.sim_path, 1, 4, self.orientation_rad, self.spheres,
                                             self.spheres_ind, psi)
             local_psi_mn.read_or_calc_write()
-            local_psi_mn.read_or_calc_write()
-            orientation = np.array([np.imag(np.log(p)) / 4 for p in local_psi_mn.op_vec])
+            orientation_array = np.array([np.imag(np.log(p)) / 4 for p in local_psi_mn.op_vec])
         disloc_burger, disloc_location = BurgerField.calc_burger_vector(self.spheres, [self.l_x, self.l_y],
-                                                                        perfect_lattice_vectors, orientation)
+                                                                        perfect_lattice_vectors, single_orientation,
+                                                                        orientation_array)
         self.op_vec = np.concatenate((np.array(disloc_location).T, np.array(disloc_burger).T)).T  # x, y, bx, by field
         if calc_upper_lower:
             self.lower.calc_order_parameter()
             self.upper.calc_order_parameter()
 
     @staticmethod
-    def calc_burger_vector(spheres, boundaries, perfect_lattice_vectors, orientation):
+    def calc_burger_vector(spheres, boundaries, perfect_lattice_vectors, single_orientation=None,
+                           orientation_array=None):
         """
         Calculate the burger vector on each plaquette of the Delaunay triangulation using methods in:
             [1]	https://link.springer.com/content/pdf/10.1007%2F978-3-319-42913-7_20-1.pdf
@@ -486,34 +493,35 @@ class BurgerField(OrderParameter):
         :return: The positions (r) and burger vector at each position b. The position of a dislocation is take as the
                 center of the plaquette.
         """
-        wraped_centers = BurgerField.wrap_with_boundaries(spheres, boundaries, w=5)
+        wraped_centers, orientation_array = BurgerField.wrap_with_boundaries(spheres, boundaries, w=5,
+                                                                             orientation_array=orientation_array)
         # all spheres within w distance from cyclic boundary will be mirrored
         tri = Delaunay(wraped_centers)
         dislocation_burger = []
         dislocation_location = []
         for i, simplex in enumerate(tri.simplices):
             rc = np.mean(tri.points[simplex], 0)
-            if (0 < rc[0] < boundaries[0]) and (0 < rc[1] < boundaries[1]):
-                if type(orientation) is np.ndarray:
-                    vertices_inside = [k for k in simplex if
-                                       (0 < tri.points[k][0] < boundaries[0] and 0 < tri.points[k][1] < boundaries[1])]
-                    theta = np.mean(orientation[vertices_inside])
-                    # wraped spheres has first the centers in places 1..N, and only after the new wrapping spheres.
-                    # Therefor for any vertex j inside the box the orientation vector of len N has the appropriate
-                    # orinentation[j]
-                else:
-                    theta = orientation
-                R = np.array(
-                    [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-                lattice_vectors = np.array([np.matmul(R, p.T) for p in perfect_lattice_vectors])
-                b_i = BurgerField.burger_calculation(tri.points[simplex], lattice_vectors)
-                if np.linalg.norm(b_i) > epsilon:
-                    dislocation_location.append(rc)
-                    dislocation_burger.append(b_i)
+            if not ((0 < rc[0] < boundaries[0]) and (0 < rc[1] < boundaries[1])):
+                continue
+            b_i = None
+            if orientation_array is not None:
+                b_i = BurgerField.burger_calculation(wraped_centers[simplex], perfect_lattice_vectors,
+                                                     nodes_orientation=orientation_array[simplex])
+            else:
+                R = BurgerField.rotation_matrix(single_orientation)
+                lattice_vectors = [np.matmul(R, p) for p in perfect_lattice_vectors]
+                b_i = BurgerField.burger_calculation(wraped_centers[simplex], lattice_vectors)
+            if np.linalg.norm(b_i) > epsilon:
+                dislocation_location.append(rc)
+                dislocation_burger.append(b_i)
         return dislocation_burger, dislocation_location
 
     @staticmethod
-    def burger_calculation(simplex_points, perfect_lattice_vectors):
+    def rotation_matrix(theta):
+        return np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+
+    @staticmethod
+    def burger_calculation(simplex_points, global_reference_lattice, nodes_orientation=None):
         simplex_points = np.array(simplex_points)
 
         ts = []
@@ -522,13 +530,29 @@ class BurgerField(OrderParameter):
             ts.append(np.arctan2(p[0] - rc[0], p[1] - rc[1]))
         I = np.argsort(ts)
         simplex_points = simplex_points[I]  # calculate burger circuit always anti-clockwise
-        which_L = lambda x_ab: np.argmin([np.linalg.norm(x_ab - L_) for L_ in perfect_lattice_vectors])
-        L_ab = lambda x_ab: perfect_lattice_vectors[which_L(x_ab)]
-        Ls = [L_ab(simplex_points[b] - simplex_points[a]) for (a, b) in [(0, 1), (1, 2), (2, 0)]]
+
+        def L_ab(x_ab, refference_lattice):
+            i = np.argmin([np.linalg.norm(x_ab - L_) for L_ in refference_lattice])
+            return refference_lattice[i]
+
+        Ls = []
+        for (a, b) in [(0, 1), (1, 2), (2, 0)]:
+            reference_lattice = global_reference_lattice
+            if nodes_orientation is not None:
+                theta = (nodes_orientation[a] + nodes_orientation[b]) / 2
+                R = BurgerField.rotation_matrix(theta)
+                reference_lattice = [np.matmul(R, p) for p in global_reference_lattice]
+            Ls.append(L_ab(simplex_points[b] - simplex_points[a], reference_lattice))
+        if nodes_orientation is not None:
+            theta = np.mean(nodes_orientation)
+            R = BurgerField.rotation_matrix(theta)
+            reference_lattice = [np.matmul(R, p) for p in global_reference_lattice]
+            return L_ab(np.sum(Ls), reference_lattice)
         return np.sum(Ls, 0)
 
     @staticmethod
-    def wrap_with_boundaries(spheres, boundaries, w):
+    def wrap_with_boundaries(spheres, boundaries, w, orientation_array=None):
+        # TODO: return and accept oriantion as well
         centers = np.array(spheres)[:, :2]
         Lx, Ly = boundaries[:2]
         x = centers[:, 0]
@@ -545,7 +569,21 @@ class BurgerField(OrderParameter):
         sp9 = centers[np.logical_and(x < w, y - Ly > -w), :] + [Lx, -Ly]
 
         wraped_centers = np.concatenate((sp5, sp1, sp2, sp3, sp4, sp6, sp7, sp8, sp9))
-        return wraped_centers
+
+        if orientation_array is not None:
+            # Copied code from above...
+            sp1 = orientation_array[np.logical_and(x - Lx > -w, y < w)]
+            sp2 = orientation_array[y < w]
+            sp3 = orientation_array[np.logical_and(x < w, y < w)]
+            sp4 = orientation_array[x - Lx > -w]
+            sp5 = orientation_array[:]
+            sp6 = orientation_array[x < w]
+            sp7 = orientation_array[np.logical_and(x - Lx > -w, y - Ly > -w)]
+            sp8 = orientation_array[y - Ly > -w]
+            sp9 = orientation_array[np.logical_and(x < w, y - Ly > -w)]
+
+            orientation_array = np.concatenate((sp5, sp1, sp2, sp3, sp4, sp6, sp7, sp8, sp9))
+        return wraped_centers, orientation_array
 
 
 class BraggStructure(OrderParameter):
@@ -1011,9 +1049,12 @@ def main(sim_name, calc_type):
     if calc_type.startswith("pos"):
         op = PositionalCorrelationFunction(sim_path, m, n)
         calc_mean, calc_vec = False, False
-    if calc_type.startswith("burger_square"):
-        # op = BurgerField(sim_path, orientation_rad=10.0)
-        op = BurgerField(sim_path)
+    if calc_type.startswith("BurgersSquare"):
+        radius = int(calc_type.split('_')[1].split('=')[1])
+        if radius == 0:
+            op = BurgerField(sim_path)
+        else:
+            op = BurgerField(sim_path, orientation_rad=radius)
         calc_mean, calc_correlations = False, False
     if calc_type.startswith("Bragg_S"):
         if calc_type.startswith("Bragg_Sm"):

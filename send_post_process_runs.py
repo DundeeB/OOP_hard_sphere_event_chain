@@ -64,7 +64,7 @@ def main():
             if mn == "14":
                 # op_w_mn_list += ["BurgersSquare"]
                 # for calc_type in op_w_mn_list:
-                writer.writerow((sim_name, "BurgersSquare_radius=5"))
+                writer.writerow((sim_name, "BurgersSquare_radius=2"))
 
         # sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
         # for sim_name in sims:

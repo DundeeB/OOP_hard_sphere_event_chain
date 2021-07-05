@@ -530,29 +530,30 @@ class BurgerField(OrderParameter):
             ts.append(np.arctan2(p[0] - rc[0], p[1] - rc[1]))
         I = np.argsort(ts)
         simplex_points = simplex_points[I]  # calculate burger circuit always anti-clockwise
+        if nodes_orientation is not None:
+            nodes_orientation = np.array(nodes_orientation)[I]
 
         def L_ab(x_ab, refference_lattice):
-            i = np.argmin([np.linalg.norm(x_ab - L_) for L_ in refference_lattice])
+            i = np.argmin([np.linalg.norm(x_ab - L) for L in refference_lattice])
             return refference_lattice[i]
 
         Ls = []
+        reference_lattice = global_reference_lattice
         for (a, b) in [(0, 1), (1, 2), (2, 0)]:
-            reference_lattice = global_reference_lattice
             if nodes_orientation is not None:
-                theta = (nodes_orientation[a] + nodes_orientation[b]) / 2
-                R = BurgerField.rotation_matrix(theta)
-                reference_lattice = [np.matmul(R, p) for p in global_reference_lattice]
+                theta_edge = (nodes_orientation[a] + nodes_orientation[b]) / 2
+                R_edge = BurgerField.rotation_matrix(theta_edge)
+                reference_lattice = [np.matmul(R_edge, p) for p in global_reference_lattice]
             Ls.append(L_ab(simplex_points[b] - simplex_points[a], reference_lattice))
         if nodes_orientation is not None:
-            theta = np.mean(nodes_orientation)
-            R = BurgerField.rotation_matrix(theta)
-            reference_lattice = [np.matmul(R, p) for p in global_reference_lattice]
-            return L_ab(np.sum(Ls), reference_lattice)
+            theta_simplex = np.mean(nodes_orientation)
+            R_simplex = BurgerField.rotation_matrix(theta_simplex)
+            reference_lattice = [np.matmul(R_simplex, p) for p in global_reference_lattice]
+            return L_ab(np.sum(Ls, 0), reference_lattice)
         return np.sum(Ls, 0)
 
     @staticmethod
     def wrap_with_boundaries(spheres, boundaries, w, orientation_array=None):
-        # TODO: return and accept oriantion as well
         centers = np.array(spheres)[:, :2]
         Lx, Ly = boundaries[:2]
         x = centers[:, 0]
@@ -569,7 +570,7 @@ class BurgerField(OrderParameter):
         sp9 = centers[np.logical_and(x < w, y - Ly > -w), :] + [Lx, -Ly]
 
         wraped_centers = np.concatenate((sp5, sp1, sp2, sp3, sp4, sp6, sp7, sp8, sp9))
-
+        wraped_orientation = None
         if orientation_array is not None:
             # Copied code from above...
             sp1 = orientation_array[np.logical_and(x - Lx > -w, y < w)]
@@ -582,8 +583,8 @@ class BurgerField(OrderParameter):
             sp8 = orientation_array[y - Ly > -w]
             sp9 = orientation_array[np.logical_and(x < w, y - Ly > -w)]
 
-            orientation_array = np.concatenate((sp5, sp1, sp2, sp3, sp4, sp6, sp7, sp8, sp9))
-        return wraped_centers, orientation_array
+            wraped_orientation = np.concatenate((sp5, sp1, sp2, sp3, sp4, sp6, sp7, sp8, sp9))
+        return wraped_centers, wraped_orientation
 
 
 class BraggStructure(OrderParameter):
@@ -1050,11 +1051,14 @@ def main(sim_name, calc_type):
         op = PositionalCorrelationFunction(sim_path, m, n)
         calc_mean, calc_vec = False, False
     if calc_type.startswith("BurgersSquare"):
-        radius = int(calc_type.split('_')[1].split('=')[1])
-        if radius == 0:
+        try:
+            radius = int(calc_type.split('_')[1].split('=')[1])
+            if radius == 0:
+                op = BurgerField(sim_path)
+            else:
+                op = BurgerField(sim_path, orientation_rad=radius)
+        except Exception:
             op = BurgerField(sim_path)
-        else:
-            op = BurgerField(sim_path, orientation_rad=radius)
         calc_mean, calc_correlations = False, False
     if calc_type.startswith("Bragg_S"):
         if calc_type.startswith("Bragg_Sm"):

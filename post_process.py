@@ -279,7 +279,7 @@ class Graph(OrderParameter):
         for i in range(self.N):
             self.bonds_num += len(self.nearest_neighbors[i])
         self.bonds_num /= 2
-        if not os.path.exists(self.frustration_path):
+        if (not os.path.exists(self.frustration_path)) and (self.radius is None):
             frustration = 0
             z_spins = [(1 if p[2] > self.l_z / 2 else -1) for p in self.spheres]
             for i in range(len(self.spheres)):

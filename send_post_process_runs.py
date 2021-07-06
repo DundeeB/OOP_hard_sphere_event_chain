@@ -47,47 +47,18 @@ def create_op_dir(sim):
 def main():
     sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
     # sims = ["N=90000_h=0.8_rhoH=0.8_AF_square_ECMC"]
-
     for sim in sims:
         create_op_dir(sim)
-    # default_op = ["BurgersSquare"]
-    # "psi", "Bragg_S", "Bragg_Sm", "pos", "gM", "Ising-annealing", "Ising-E_T", "Density","LocalPsi_radius=50_",
-    # "LargestComponent",
-    # ["LocalPsi_radius=" + str(r) + "_" for r in [20, 25, 35, 40]]
     f = open(os.path.join(code_prefix, 'post_process_list.txt'), 'wt')
     try:
         writer = csv.writer(f, lineterminator='\n')
 
         for sim_name in sims:
-            mn = mn_from_sim(sim_name)
-            # op_w_mn_list = [op + mn for op in default_op]
-            if mn == "14":
-                # op_w_mn_list += ["BurgersSquare"]
-                # for calc_type in op_w_mn_list:
-                N, h, rhoH, ic = params_from_name(sim_name)
+            N, h, rhoH, _ = params_from_name(sim_name)
+            if h == 0.8:
                 if N == 90000 and 0.75 <= rhoH <= 0.85:
                     for rad in [10, 5, 2, 0]:
                         writer.writerow((sim_name, "BurgersSquare_radius=" + str(rad)))
-
-        # sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
-        # for sim_name in sims:
-        #     writer.writerow((sim_name, "psi" + mn_from_sim(sim_name)))
-
-        # sims = ["N=90000_h=0.8_rhoH=" + str(rhoH) + "_AF_square_ECMC" for rhoH in [0.75, 0.8, 0.85]]
-        # for sim_name in sims:
-        # load_obj = WriteOrLoad(os.path.join(prefix, sim_name))
-        # reals = load_obj.realizations()
-        # for real_count in [0, 1, 2, 3, 4]:
-        #     calc_type = 'Ising-E_T_real=' + str(reals[real_count]) + '_14'
-        # op_path = os.path.join(prefix, sim_name, 'OP', 'Ising_k=4_undirected')
-        # reals = [int(re.split('(_|.txt)', f)[-3]) for f in os.listdir(op_path) if f.startswith('Cv_vs_J_')]
-        # for real in reals:
-        #     calc_type = 'Ising-E_T_real=' + str(real) + '_14'
-        #     writer.writerow((sim_name, calc_type))
-        # sims = ["N=90000_h=0.8_rhoH=" + str(rhoH) + "_AF_square_ECMC" for rhoH in [0.78, 0.8, 0.83]]
-        # for sim_name in sims:
-        #     calc_type = 'psi_mean14'
-        #     writer.writerow((sim_name, calc_type))
     finally:
         f.close()
         os.system("condor_submit post_process.sub")
@@ -95,6 +66,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-# TODO: decrease #files. For example, control when frustration_* is writen, because I am using it only for k=*_undirected
-#  graph. Another example - I don't need local-psi_rad=10 for every burger calculation, its easy to calculate it and I
-#  can recalculate it when ever. So is k=4_directed_graph

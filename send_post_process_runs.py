@@ -56,10 +56,11 @@ def main():
         for sim_name in sims:
             N, h, rhoH, _ = params_from_name(sim_name)
             if h == 0.8:
-                # if N == 90000 and 0.75 <= rhoH <= 0.85:
-                #     for rad in [10, 5, 2, 0]:
-                #         writer.writerow((sim_name, "BurgersSquare_radius=" + str(rad)))
-                writer.writerow((sim_name, "BurgersSquare"))
+                if N == 90000 and 0.75 <= rhoH <= 0.85:
+                    writer.writerow((sim_name, "BurgersSquare"))
+                    # for rad in [10, 5, 2, 0]:
+                    #     writer.writerow((sim_name, "BurgersSquare_radius=" + str(rad)))
+
     finally:
         f.close()
         os.system("condor_submit post_process.sub")

@@ -470,7 +470,7 @@ class BurgerField(OrderParameter):
         if self.orientation_rad is None:
             single_orientation = psi.rotate_spheres(calc_spheres=False)
         else:
-            if self.orientation_rad > 0 :
+            if self.orientation_rad > 0:
                 local_psi_mn = LocalOrientation(self.sim_path, 1, 4, self.orientation_rad, self.spheres,
                                                 self.spheres_ind, psi)
                 local_psi_mn.read_or_calc_write()

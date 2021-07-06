@@ -466,7 +466,7 @@ class BurgerField(OrderParameter):
         a = 2 * np.pi / np.linalg.norm(bragg.k_peak)
         a1, a2 = np.array([a, 0]), np.array([0, a])
         perfect_lattice_vectors = [n * a1 + m * a2 for n in range(-3, 3) for m in range(-3, 3)]
-        single_orientation, orientation_list = None, None
+        single_orientation, orientation_array = None, None
         if self.orientation_rad is None:
             single_orientation = psi.rotate_spheres(calc_spheres=False)
         else:

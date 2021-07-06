@@ -1053,10 +1053,7 @@ def main(sim_name, calc_type):
     if calc_type.startswith("BurgersSquare"):
         try:
             radius = int(calc_type.split('_')[1].split('=')[1])
-            if radius == 0:
-                op = BurgerField(sim_path)
-            else:
-                op = BurgerField(sim_path, orientation_rad=radius)
+            op = BurgerField(sim_path, orientation_rad=radius)
         except Exception:
             op = BurgerField(sim_path)
         calc_mean, calc_correlations = False, False

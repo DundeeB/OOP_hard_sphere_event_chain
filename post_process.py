@@ -496,6 +496,9 @@ class BurgerField(OrderParameter):
         :return: The positions (r) and burger vector at each position b. The position of a dislocation is take as the
                 center of the plaquette.
         """
+        # TODO: orientation should not be by average of theta because of modulu, it should be average of psi's and then
+        #  Imag of log
+        # TODO: add warning for final snapping of Burgers so it would not be too large.
         wraped_centers, orientation_array = BurgerField.wrap_with_boundaries(spheres, boundaries, w=5,
                                                                              orientation_array=orientation_array)
         # all spheres within w distance from cyclic boundary will be mirrored
@@ -1032,6 +1035,7 @@ class LargestComponent(MagneticTopologicalCorr):
 
 
 def main(sim_name, calc_type):
+    # TODO: add odd loops removal and histogram
     correlation_kwargs = {'randomize': False, 'time_limit': 2 * day}
 
     prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"

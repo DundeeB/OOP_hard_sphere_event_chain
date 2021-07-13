@@ -92,7 +92,6 @@ def main():
         #         for h in [0.6]:
         #             for rhoH in np.round(np.linspace(0.73, 0.83, 11), 2):
         #                 runs.append(sim_name(N, h, rhoH, 'square'))
-        # TODO: run 0.802,0.804,0.806, 0.808
         h = 0.8
         for rhoH in np.round(np.linspace(0.801, 0.819, 19), 3):
             runs.append(sim_name(N, h, rhoH, 'square'))

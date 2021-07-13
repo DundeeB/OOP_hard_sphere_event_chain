@@ -56,11 +56,20 @@ def main():
         for sim_name in sims:
             N, h, rhoH, _ = params_from_name(sim_name)
             if h == 0.8:
-                if N == 90000 and 0.75 <= rhoH <= 0.85:
-                    writer.writerow((sim_name, "BurgersSquare"))
+                if (N == 90000 or N == 40000) and (rhoH == 0.81 or rhoH == 0.82 or rhoH == 0.83):
+                    for calc_type in ["psi", "psi_mean", "Bragg_S", "Bragg_Sm", "gM", "Ising-annealing"] + [
+                        "LocalPsi_radius=" + str(rad) for rad in [10, 30, 50]]:
+                        writer.writerow((sim_name, calc_type + "14"))
+
+                    load_obj = WriteOrLoad(os.path.join(prefix, sim_name))
+                    reals = load_obj.realizations()
+                    for real_count in [0, 1, 2, 3, 4]:
+                        calc_type = 'Ising-E_T_real=' + str(reals[real_count]) + '_14'
+                        writer.writerow((sim_name, calc_type))
+                    # writer.writerow((sim_name, "BurgersSquare"))
                     # for rad in [10, 5, 2, 0]:
                     #     writer.writerow((sim_name, "BurgersSquare_radius=" + str(rad)))
-
+    # TODO: send needed runs for rhoH=0.81 change, such as correlations, Ising analysis...
     finally:
         f.close()
         os.system("condor_submit post_process.sub")

@@ -93,11 +93,10 @@ def main():
         #             for rhoH in np.round(np.linspace(0.73, 0.83, 11), 2):
         #                 runs.append(sim_name(N, h, rhoH, 'square'))
         h = 0.8
-        for rhoH in np.round(np.linspace(0.801, 0.819, 19), 3):
+        for rhoH in [r for r in np.round(np.linspace(0.801, 0.819, 19), 3) if r != 0.81]:
             runs.append(sim_name(N, h, rhoH, 'square'))
             runs.append(sim_name(N, h, rhoH, 'honeycomb'))
     send_runs_envelope(runs)
-
 
 if __name__ == "__main__":
     main()

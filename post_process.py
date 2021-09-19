@@ -634,6 +634,9 @@ class BraggStructure(OrderParameter):
 
     def calc_peak(self):
         S = lambda k: -self.S(k)
+        # TODO: use rotated k_perf according to sample orientation. This might be the reason I could not get honeycomb
+        #  ic's positional correlation to be algebraic (I got always exponential), because I did not find a proper
+        #  Bragg peak
         self.k_peak, S_peak_m, _, _, _ = fmin(S, self.k_perf(), xtol=0.01 / len(self.spheres), ftol=1.0,
                                               full_output=True)
         self.S_peak = -S_peak_m
@@ -856,7 +859,7 @@ class Ising(Graph):
     def real_path(self, real):
         return os.path.join(self.op_dir_path, "real_" + str(real) + "_" + str(self.spheres_ind) + '.txt')
 
-    def calc_order_parameter(self, J_range=(-0.4, -3), iterations=None, realizations=20, samples=1000,
+    def calc_order_parameter(self, J_range=(-0.4, -3), iterations=None, realizations=100, samples=1000,
                              random_initialization=True, save_annealing=True, localy_freeze=True):
         if iterations is None:
             iterations = self.N * int(1e5)

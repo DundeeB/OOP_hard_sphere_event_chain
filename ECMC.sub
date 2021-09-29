@@ -8,7 +8,4 @@ request_cpus = 1
 Arguments = $(sim_name)
 RequestMemory = 2GB
 universe = vanilla
-on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
-max_retries  = 30
-requirements = Machine =!= LastRemoteHost
 queue sim_name from ecmc_list.txt

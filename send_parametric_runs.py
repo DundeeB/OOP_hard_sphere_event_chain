@@ -9,19 +9,19 @@ prefix = "/storage/ph_daniel/danielab/ECMC_simulation_results3.0/"
 code_prefix = "/srv01/technion/danielab/OOP_hard_sphere_event_chain/"
 
 
-def sim_name(N, h, rhoH, ic):
+def sim_name(N, h, rhoH, ic, algorithm):
     if ic == 'honeycomb':
-        init_name_in_dir = 'AF_triangle_ECMC'
+        init_name_in_dir = 'AF_triangle_'
     else:
         if ic == 'square':
-            init_name_in_dir = 'AF_square_ECMC'
+            init_name_in_dir = 'AF_square_'
         else:
             if ic == 'triangle':
-                init_name_in_dir = "triangle_ECMC"
+                init_name_in_dir = "triangle_"
             else:
                 raise NotImplementedError(
                     "Implemented initial conditions are: square, honeycomb. No " + ic + " implemented")
-    return "N=" + str(N) + "_h=" + str(h) + "_rhoH=" + str(rhoH) + "_" + init_name_in_dir
+    return "N=" + str(N) + "_h=" + str(h) + "_rhoH=" + str(rhoH) + "_" + init_name_in_dir + algorithm
 
 
 def send_runs_envelope(sims_names):
@@ -49,54 +49,18 @@ def params_from_name(name):
             ic = s
             if ss[i - 1] == 'AF' and s == 'triangle':
                 ic = 'honeycomb'
-    return N, h, rhoH, ic
+    algorithm = ss[-1]
+    return N, h, rhoH, ic, algorithm
 
 
 def main():
     runs = []
-    # All runs - usefull for rerunning everything
-    # for d in os.listdir(prefix):
-    #     if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d)):
-    #         runs.append(d)
-    for N in [100 ** 2, 200 ** 2, 300 ** 2]:
-        #     runs.append(sim_name(N, 0.8, np.round((0.775 + 0.78) / 2, 4), 'square'))
-        #     runs.append(sim_name(N, 0.8, np.round((0.775 + 0.78) / 2, 4), 'honeycomb'))
-        #     # Low density runs
-        #     for h in [0.1, 0.6, 0.8, 1.0]:
-        #         for rhoH in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]:
-        #             if h >= 0.6:
-        #                 runs.append(sim_name(N, h, rhoH, 'square'))
-        #             if h >= 0.8:
-        #                 runs.append(sim_name(N, h, rhoH, 'honeycomb'))
-        #             if h == 0.1:
-        #                 runs.append(sim_name(N, h, rhoH, 'triangle'))
-        # for rhoH in [0.71, 0.72, 0.73, 0.74]:
-        #     runs.append(sim_name(N, 0.8, rhoH, 'square'))
-        #     runs.append(sim_name(N, 0.8, rhoH, 'honeycomb'))
-        #
-        #     Nominal h=0.8,1.0 runs
-        #     rhoH_runs = {1.0: np.round(np.linspace(0.8, 0.9, 11), 2), 0.8: np.round(np.linspace(0.75, 0.85, 11), 2)}
-        #     rhoH_runs = {1.0: [0.845, 0.855, 0.865], 0.8: [0.775, 0.785, 0.795]}
-        #
-        #     for h in [0.8, 1.0]:
-        #         for rhoH in rhoH_runs[h]:
-        #             runs.append(sim_name(N, h, rhoH, 'square'))
-        #             runs.append(sim_name(N, h, rhoH, 'honeycomb'))
-        #
-        #     Following DOI: 10.1039/c4sm00125g, at h=0.1 eta*sig/H=pi/4*rhoH phase transition at 0.64-0.67, that is rhoH at
-        #     0.81-0.85
-        #         h = 0.1
-        #         for rhoH in np.round(np.linspace(0.78, 0.88, 11), 2):
-        #             runs.append(sim_name(N, h, rhoH, 'triangle'))
-        #
-        #         for h in [0.6]:
-        #             for rhoH in np.round(np.linspace(0.73, 0.83, 11), 2):
-        #                 runs.append(sim_name(N, h, rhoH, 'square'))
-        h = 0.8
-        for rhoH in [r for r in np.round(np.linspace(0.801, 0.819, 19), 3) if r != 0.81]:
-            runs.append(sim_name(N, h, rhoH, 'square'))
-            runs.append(sim_name(N, h, rhoH, 'honeycomb'))
+    N, rhoH, h = 100, 0.8, 0.8
+    for ic in ['square', 'honeycomb']:
+        for algorithm in ['ECMC', 'MCMC']:
+            runs.append(sim_name(N, h, rhoH, ic, algorithm))
     send_runs_envelope(runs)
+
 
 if __name__ == "__main__":
     main()

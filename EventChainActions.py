@@ -198,25 +198,21 @@ class Event2DCells(ArrayOfCells):
         # TODO: implement
         cell = self.cells[i][j]
         cell.remove_sphere(sphere)
-
         other_spheres = [s for s in cell.spheres]
-
-        def add(c):
-            for s in c.spheres:
-                other_spheres.append(s)
-
         ip1, jp1, im1, jm1 = ArrayOfCells.cyclic_indices(i, j, self.n_rows, self.n_columns)
         for c in [self.cells[ip1][j], self.cells[ip1][jp1], self.cells[i][jp1],
                   self.cells[im1][jp1], self.cells[im1][j]]:
-            add(c)
+            for s in c.spheres:
+                other_spheres.append(s)
         old_center = sphere.center
         for i in range(len(sphere.center)):
-            sphere.center[i] = sphere.center[i] + step_vector[i]
+            sphere.center[i] += step_vector[i]
         sphere.box_it(self.boundaries)
         for other_sphere in other_spheres:
             if Metric.overlap(sphere, other_sphere, self.boundaries):
                 sphere.center = old_center
-                return
+                break
+        self.append_sphere(sphere)
         return
 
     def generate_spheres_in_AF_triangular_structure(self, n_row, n_col, rad):

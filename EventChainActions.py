@@ -195,7 +195,6 @@ class Event2DCells(ArrayOfCells):
                 return
 
     def perform_MCMC_step(self, i, j, sphere, step_vector):
-        # TODO: implement
         cell = self.cells[i][j]
         cell.remove_sphere(sphere)
         other_spheres = [s for s in cell.spheres]
@@ -207,7 +206,10 @@ class Event2DCells(ArrayOfCells):
         old_center = sphere.center
         for i in range(len(sphere.center)):
             sphere.center[i] += step_vector[i]
-        sphere.box_it(self.boundaries)
+        # box it only for dim=0,1
+        for i in range(2):
+            sphere.center[i] = sphere.center[i] % self.boundaries[i]
+        # TODO: handle z dimension and the hard walls!
         for other_sphere in other_spheres:
             if Metric.overlap(sphere, other_sphere, self.boundaries):
                 sphere.center = old_center

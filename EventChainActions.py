@@ -215,29 +215,14 @@ class Event2DCells(ArrayOfCells):
         ip1, jp1, im1, jm1 = ArrayOfCells.cyclic_indices(i, j, self.n_rows, self.n_columns)
         ip2, jp2, _, _ = ArrayOfCells.cyclic_indices(ip1, jp1, self.n_rows, self.n_columns)
         _, _, im2, jm2 = ArrayOfCells.cyclic_indices(im1, jm1, self.n_rows, self.n_columns)
-        # relevant_cells = [cell, self.cells[ip1][jm1], self.cells[ip1][j], self.cells[ip1][jp1], self.cells[i][jp1],
-        #                   self.cells[i][jm1], self.cells[im1][jm1], self.cells[im1][j], self.cells[im1][jp1]]
-        # for i_ in [im2, im1, i, ip1, ip2]:
-        #     relevant_cells.append(self.cells[i_][jm2])
-        #     relevant_cells.append(self.cells[i_][jp2])
-        # for j_ in [jm1, j, jp1]:
-        #     relevant_cells.append(self.cells[im2][j_])
-        #     relevant_cells.append(self.cells[ip2][j_])
         relevant_cells = []
         for i_ in [i, im1, ip1, im2, ip2]:
             for j_ in [j, jm1, jp1, jm2, jp2]:
-                relevant_cells.append(self.cells[i_][j_])
-        for c in relevant_cells:
-            for other_sphere in c.spheres:
-                if Metric.overlap(sphere, other_sphere, self.boundaries):
-                    sphere.center = old_center
-                    self.append_sphere(sphere)
-                    return False
-        # for other_sphere in self.all_spheres:
-        #     if Metric.overlap(sphere, other_sphere, self.boundaries):
-        #         sphere.center = old_center
-        #         self.append_sphere(sphere)
-        #         return False
+                for other_sphere in self.cells[i_][j_].spheres:
+                    if Metric.overlap(sphere, other_sphere, self.boundaries):
+                        sphere.center = old_center
+                        self.append_sphere(sphere)
+                        return False
         self.append_sphere(sphere)
         return True
 

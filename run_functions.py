@@ -42,7 +42,7 @@ def run_honeycomb(h, N, rhoH, algorithm, **kwargs):
         initial_arr.scale_xy(np.sqrt(rho_H_new / rhoH))
         assert initial_arr.edge > sig
 
-        return run_sim(initial_arr, N, h, rhoH, sim_name, **kwargs)
+        return run_sim(initial_arr, N, h, rhoH, algorithm, sim_name, **kwargs)
 
 
 def run_square(h, N, rho_H, algorithm, **kwargs):
@@ -64,7 +64,7 @@ def run_square(h, N, rho_H, algorithm, **kwargs):
         initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells, l_z=(h + 1) * sig)
         initial_arr.generate_spheres_in_AF_square(n_row, n_col, r)
 
-        return run_sim(initial_arr, N, h, rho_H, sim_name, **kwargs)
+        return run_sim(initial_arr, N, h, rho_H, algorithm, sim_name, **kwargs)
 
 
 def run_triangle(h, N, rho_H, algorithm, **kwargs):

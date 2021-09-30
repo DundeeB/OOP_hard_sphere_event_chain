@@ -209,9 +209,7 @@ class Event2DCells(ArrayOfCells):
         # box it only for dim=0,1
         for i in range(2):
             sphere.center[i] = sphere.center[i] % self.boundaries[i]
-        H_rad = self.boundaries[2] - sphere.rad
-        z = sphere.center[2]
-        if z > H_rad or z < sphere.rad:
+        if sphere.center[2] > self.boundaries[2] - sphere.rad or sphere.center[2] < sphere.rad:
             sphere.center = old_center
             self.append_sphere(sphere)
             return

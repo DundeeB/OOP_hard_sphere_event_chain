@@ -209,7 +209,12 @@ class Event2DCells(ArrayOfCells):
         # box it only for dim=0,1
         for i in range(2):
             sphere.center[i] = sphere.center[i] % self.boundaries[i]
-        # TODO: handle z dimension and the hard walls!
+        H_rad = self.boundaries[2] - sphere.rad
+        z = sphere.center[2]
+        if z > H_rad or z < sphere.rad:
+            sphere.center = old_center
+            self.append_sphere(sphere)
+            return
         for other_sphere in other_spheres:
             if Metric.overlap(sphere, other_sphere, self.boundaries):
                 sphere.center = old_center

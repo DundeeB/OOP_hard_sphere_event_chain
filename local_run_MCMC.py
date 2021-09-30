@@ -85,13 +85,6 @@ for i in range(4*10 ** 3):
             old_sphere = old_arr.all_spheres[i_sp]
             accepted_move = arr.perform_MCMC_step(i_cell, j_cell, sphere, metropolis_step * np.array(
                 [np.cos(phi) * np.sin(theta), np.sin(phi) * np.sin(theta), np.cos(theta)]))
-            # if not arr.legal_configuration():
-            #     arr.legal_configuration()
-            #     plt_arr(old_arr, label='realization ' + str(i - 1))
-            #     plt_arr(arr, label='realization ' + str(i) + ' with error')
-            #     old_arr.perform_MCMC_step(i_cell, j_cell, old_sphere, metropolis_step * np.array(
-            #         [np.cos(phi) * np.sin(theta), np.sin(phi) * np.sin(theta), np.cos(theta)]))
-            #     break
         except IndexError as err:
             plt_arr(arr, label='realization ' + str(i) + ' with error')
             raise

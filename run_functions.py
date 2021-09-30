@@ -91,9 +91,7 @@ def run_triangle(h, N, rho_H, algorithm, **kwargs):
         return run_sim(initial_arr, N, h, rho_H, algorithm, sim_name, **kwargs)
 
 
-def run_sim(initial_arr, N, h, rhoH, algorithm, sim_name, iterations=None, record_displacements=False, write=True):
-    if iterations is None:
-        iterations = int(N * 1e4)
+def run_sim(initial_arr, N, h, rhoH, algorithm, sim_name, record_displacements=False, write=True):
     rad = 1
     a_free = (1 / rhoH - np.pi / 6) ** (1 / 3) * 2 * rad  # ((V-N*4/3*pi*r^3)/N)^(1/3)
     if algorithm == 'ECMC':
@@ -130,22 +128,19 @@ def run_sim(initial_arr, N, h, rhoH, algorithm, sim_name, iterations=None, recor
             os.chdir(output_dir)
         # print simulation description
         print("\n\nSimulation: N=" + str(N) + ", rhoH=" + str(rhoH) + ", h=" + str(h), file=sys.stdout)
-        print("N_iterations=" + str(iterations) +
-              ", Lx=" + str(initial_arr.l_x) + ", Ly=" + str(initial_arr.l_y), file=sys.stdout)
+        print("Lx=" + str(initial_arr.l_x) + ", Ly=" + str(initial_arr.l_y), file=sys.stdout)
         last_ind = 0  # count starts from 1 so 0 means non exist yet and the first one will be i+1=1
 
     # Run loops
     day = 86400  # seconds
     hour = 3600  # seconds
     i = last_ind
-    if i >= iterations:
-        sys.exit(0)
     if record_displacements:
         displacements = [0]
         realizations = [i]
     initial_time = time.time()
     realizations_saved = 0
-    while (time.time() - initial_time < 2 * day) and (i < iterations):
+    while time.time() - initial_time < 2 * day:
         # Choose sphere
         spheres = arr.all_spheres
         sphere = spheres[random.randint(0, len(spheres) - 1)]
@@ -172,8 +167,6 @@ def run_sim(initial_arr, N, h, rhoH, algorithm, sim_name, iterations=None, recor
             arr.perform_MCMC_step(i_cell, j_cell, sphere,
                                   metropolis_step * np.array(
                                       [np.cos(phi) * np.sin(theta), np.sin(phi) * np.sin(theta), np.cos(theta)]))
-        if (i + 1) % (iterations / 100) == 0:
-            print(str(100 * (i + 1) / iterations) + "%", end=", ", file=sys.stdout)
         if np.floor((time.time() - initial_time) / (hour / 2)) > realizations_saved:
             # save realization every half an hour
             realizations_saved += 1
@@ -189,14 +182,9 @@ def run_sim(initial_arr, N, h, rhoH, algorithm, sim_name, iterations=None, recor
         files_interface.dump_spheres(arr.all_centers, str(i + 1))
 
     os.chdir(os.path.join(prefix, sim_name))
-    if i >= iterations:
-        if write:
-            os.system('echo \'Finished ' + str(iterations) + ' iterations\' > FINAL_MESSAGE')
-        sys.exit(0)
-    else:
-        os.system('echo \'\nElapsed time is ' + str(time.time() - initial_time) + '\' >> TIME_LOG')
-        os.chdir(code_dir)
-        sys.exit(7)  # any !=0 number
+    os.system('echo \'\nElapsed time is ' + str(time.time() - initial_time) + '\' >> TIME_LOG')
+    os.chdir(code_dir)
+    sys.exit(7)  # any !=0 number
 
 
 def main():

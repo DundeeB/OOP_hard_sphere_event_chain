@@ -195,30 +195,51 @@ class Event2DCells(ArrayOfCells):
                 return
 
     def perform_MCMC_step(self, i, j, sphere, step_vector):
+        # maximal_free_step = min(
+        #     [self.cells[i][j].site[dim] + 2 * self.edge - 2 * sphere.rad - sphere.center[dim] for dim in range(2)])
+        # if np.linalg.norm(step_vector) > maximal_free_step:
+        #     print('problem with maximal free step')
+
         cell = self.cells[i][j]
         cell.remove_sphere(sphere)
-        other_spheres = [s for s in cell.spheres]
-        ip1, jp1, im1, jm1 = ArrayOfCells.cyclic_indices(i, j, self.n_rows, self.n_columns)
-        for c in [self.cells[ip1][j], self.cells[ip1][jp1], self.cells[i][jp1],
-                  self.cells[im1][jp1], self.cells[im1][j]]:
-            for s in c.spheres:
-                other_spheres.append(s)
-        old_center = sphere.center
+        old_center = copy.deepcopy(sphere.center)
         for i in range(len(sphere.center)):
             sphere.center[i] += step_vector[i]
         if sphere.center[2] > self.boundaries[2] - sphere.rad or sphere.center[2] < sphere.rad:
             sphere.center = old_center
             self.append_sphere(sphere)
-            return
+            return False
         # box it only for dim=0,1
         for i in range(2):
             sphere.center[i] = sphere.center[i] % self.boundaries[i]
-        for other_sphere in other_spheres:
-            if Metric.overlap(sphere, other_sphere, self.boundaries):
-                sphere.center = old_center
-                break
+        ip1, jp1, im1, jm1 = ArrayOfCells.cyclic_indices(i, j, self.n_rows, self.n_columns)
+        ip2, jp2, _, _ = ArrayOfCells.cyclic_indices(ip1, jp1, self.n_rows, self.n_columns)
+        _, _, im2, jm2 = ArrayOfCells.cyclic_indices(im1, jm1, self.n_rows, self.n_columns)
+        # relevant_cells = [cell, self.cells[ip1][jm1], self.cells[ip1][j], self.cells[ip1][jp1], self.cells[i][jp1],
+        #                   self.cells[i][jm1], self.cells[im1][jm1], self.cells[im1][j], self.cells[im1][jp1]]
+        # for i_ in [im2, im1, i, ip1, ip2]:
+        #     relevant_cells.append(self.cells[i_][jm2])
+        #     relevant_cells.append(self.cells[i_][jp2])
+        # for j_ in [jm1, j, jp1]:
+        #     relevant_cells.append(self.cells[im2][j_])
+        #     relevant_cells.append(self.cells[ip2][j_])
+        relevant_cells = []
+        for i_ in [i, im1, ip1, im2, ip2]:
+            for j_ in [j, jm1, jp1, jm2, jp2]:
+                relevant_cells.append(self.cells[i_][j_])
+        for c in relevant_cells:
+            for other_sphere in c.spheres:
+                if Metric.overlap(sphere, other_sphere, self.boundaries):
+                    sphere.center = old_center
+                    self.append_sphere(sphere)
+                    return False
+        # for other_sphere in self.all_spheres:
+        #     if Metric.overlap(sphere, other_sphere, self.boundaries):
+        #         sphere.center = old_center
+        #         self.append_sphere(sphere)
+        #         return False
         self.append_sphere(sphere)
-        return
+        return True
 
     def generate_spheres_in_AF_triangular_structure(self, n_row, n_col, rad):
         """

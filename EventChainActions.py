@@ -206,13 +206,13 @@ class Event2DCells(ArrayOfCells):
         old_center = sphere.center
         for i in range(len(sphere.center)):
             sphere.center[i] += step_vector[i]
-        # box it only for dim=0,1
-        for i in range(2):
-            sphere.center[i] = sphere.center[i] % self.boundaries[i]
         if sphere.center[2] > self.boundaries[2] - sphere.rad or sphere.center[2] < sphere.rad:
             sphere.center = old_center
             self.append_sphere(sphere)
             return
+        # box it only for dim=0,1
+        for i in range(2):
+            sphere.center[i] = sphere.center[i] % self.boundaries[i]
         for other_sphere in other_spheres:
             if Metric.overlap(sphere, other_sphere, self.boundaries):
                 sphere.center = old_center

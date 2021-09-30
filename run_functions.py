@@ -14,12 +14,12 @@ prefix = '/storage/ph_daniel/danielab/ECMC_simulation_results3.0/'
 # prefix = 'C:\\Users\\Daniel Abutbul\\OneDrive - Technion\\simulation-results'
 
 
-def run_honeycomb(h, N, rho_H, algorithm, **kwargs):
+def run_honeycomb(h, N, rhoH, algorithm, **kwargs):
     # More physical properties calculated from Input
-    sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rho_H) + '_AF_triangle_' + algorithm
+    sim_name = 'N=' + str(N) + '_h=' + str(h) + '_rhoH=' + str(rhoH) + '_AF_triangle_' + algorithm
     output_dir = prefix + sim_name
     if os.path.exists(output_dir):
-        return run_sim(np.nan, N, h, rho_H, algorithm, sim_name, **kwargs)
+        return run_sim(np.nan, N, h, rhoH, algorithm, sim_name, **kwargs)
         # when continuing from restart there shouldn't be use of initial arr
     else:
         n_row = int(np.sqrt(N))
@@ -27,7 +27,7 @@ def run_honeycomb(h, N, rho_H, algorithm, **kwargs):
         r = 1
         sig = 2 * r
         # build input parameters for cells
-        a_dest = sig * np.sqrt(2 / (rho_H * (1 + h) * np.sin(np.pi / 3)))
+        a_dest = sig * np.sqrt(2 / (rhoH * (1 + h) * np.sin(np.pi / 3)))
         l_y_dest = a_dest * n_row / 2 * np.sin(np.pi / 3)
         e = a_dest
         n_col_cells = n_col
@@ -39,10 +39,10 @@ def run_honeycomb(h, N, rho_H, algorithm, **kwargs):
 
         initial_arr = Event2DCells(edge=e, n_rows=n_row_cells, n_columns=n_col_cells, l_z=(h + 1) * sig)
         initial_arr.generate_spheres_in_AF_triangular_structure(n_row, n_col, r)
-        initial_arr.scale_xy(np.sqrt(rho_H_new / rho_H))
+        initial_arr.scale_xy(np.sqrt(rho_H_new / rhoH))
         assert initial_arr.edge > sig
 
-        return run_sim(initial_arr, N, h, rho_H, sim_name, **kwargs)
+        return run_sim(initial_arr, N, h, rhoH, sim_name, **kwargs)
 
 
 def run_square(h, N, rho_H, algorithm, **kwargs):
@@ -91,11 +91,11 @@ def run_triangle(h, N, rho_H, algorithm, **kwargs):
         return run_sim(initial_arr, N, h, rho_H, algorithm, sim_name, **kwargs)
 
 
-def run_sim(initial_arr, N, h, rho_H, algorithm, sim_name, iterations=None, record_displacements=False, write=True):
+def run_sim(initial_arr, N, h, rhoH, algorithm, sim_name, iterations=None, record_displacements=False, write=True):
     if iterations is None:
         iterations = int(N * 1e4)
     rad = 1
-    a_free = (1 / rho_H - np.pi / 6) ** (1 / 3) * 2 * rad  # ((V-N*4/3*pi*r^3)/N)^(1/3)
+    a_free = (1 / rhoH - np.pi / 6) ** (1 / 3) * 2 * rad  # ((V-N*4/3*pi*r^3)/N)^(1/3)
     if algorithm == 'ECMC':
         xy_total_step = a_free * np.sqrt(N)
         z_total_step = h * (2 * rad) * np.pi / 15  # irrational for the spheres to cover most of the z options
@@ -107,7 +107,7 @@ def run_sim(initial_arr, N, h, rho_H, algorithm, sim_name, iterations=None, reco
     batch = os.path.join(output_dir, 'batch')
     if os.path.exists(output_dir) and write:
         files_interface = WriteOrLoad(output_dir, np.nan)
-        l_x, l_y, l_z, rad, rho_H, edge, n_row, n_col = files_interface.load_Input()
+        l_x, l_y, l_z, rad, rhoH, edge, n_row, n_col = files_interface.load_Input()
         boundaries = [l_x, l_y, l_z]
         files_interface.boundaries = boundaries
         last_centers, last_ind = files_interface.last_spheres()
@@ -126,10 +126,10 @@ def run_sim(initial_arr, N, h, rho_H, algorithm, sim_name, iterations=None, reco
             os.mkdir(output_dir)
             sys.stdout = open(batch, "a")
             files_interface.dump_spheres(arr.all_centers, 'Initial Conditions')
-            files_interface.save_Input(arr.all_spheres[0].rad, rho_H, arr.edge, arr.n_rows, arr.n_columns)
+            files_interface.save_Input(arr.all_spheres[0].rad, rhoH, arr.edge, arr.n_rows, arr.n_columns)
             os.chdir(output_dir)
         # print simulation description
-        print("\n\nSimulation: N=" + str(N) + ", rhoH=" + str(rho_H) + ", h=" + str(h), file=sys.stdout)
+        print("\n\nSimulation: N=" + str(N) + ", rhoH=" + str(rhoH) + ", h=" + str(h), file=sys.stdout)
         print("N_iterations=" + str(iterations) +
               ", Lx=" + str(initial_arr.l_x) + ", Ly=" + str(initial_arr.l_y), file=sys.stdout)
         last_ind = 0  # count starts from 1 so 0 means non exist yet and the first one will be i+1=1
@@ -150,12 +150,12 @@ def run_sim(initial_arr, N, h, rho_H, algorithm, sim_name, iterations=None, reco
         spheres = arr.all_spheres
         sphere = spheres[random.randint(0, len(spheres) - 1)]
         cell = arr.cell_of_sphere(sphere)
+        i_cell, j_cell = cell.ind[:2]
         if algorithm == 'ECMC':
             # Choose direction
             direction = Direction.directions()[random.randint(0, 3)]  # x,y,+z,-z
             # perform step
             step = Step(sphere, xy_total_step if direction.dim != 2 else z_total_step, direction, arr.boundaries)
-            i_cell, j_cell = cell.ind[:2]
             try:
                 if record_displacements:
                     displacements.append(
@@ -168,9 +168,10 @@ def run_sim(initial_arr, N, h, rho_H, algorithm, sim_name, iterations=None, reco
                     files_interface.dump_spheres(arr.all_centers, str(i + 1) + '_err')
                 raise err
         elif algorithm == 'MCMC':
-            direction_angle = np.random.random() * 2 * np.pi
+            theta, phi = np.random.random() * np.pi, np.random.random() * 2 * np.pi
             arr.perform_MCMC_step(i_cell, j_cell, sphere,
-                                  metropolis_step * np.array([np.cos(direction_angle), np.sin(direction_angle)]))
+                                  metropolis_step * np.array(
+                                      [np.cos(phi) * np.sin(theta), np.sin(phi) * np.sin(theta), np.cos(theta)]))
         if (i + 1) % (iterations / 100) == 0:
             print(str(100 * (i + 1) / iterations) + "%", end=", ", file=sys.stdout)
         if np.floor((time.time() - initial_time) / (hour / 2)) > realizations_saved:

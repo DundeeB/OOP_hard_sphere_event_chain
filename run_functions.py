@@ -98,7 +98,7 @@ def run_sim(initial_arr, N, h, rhoH, algorithm, sim_name, record_displacements=F
         xy_total_step = a_free * np.sqrt(N)
         z_total_step = h * (2 * rad) * np.pi / 15  # irrational for the spheres to cover most of the z options
     elif algorithm == 'MCMC':
-        metropolis_step = a_free * (np.pi / 3) / 15
+        metropolis_step = a_free * (np.pi / 3) / 8
     # Initialize View and folder, add spheres
     code_dir = os.getcwd()
     output_dir = os.path.join(prefix, sim_name)

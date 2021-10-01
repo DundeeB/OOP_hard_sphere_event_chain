@@ -21,7 +21,7 @@ def plt_arr(arr, label='initial conditions', plot_boundaries=False):
 epsilon = 1e-8
 prefix = '/storage/ph_daniel/danielab/ECMC_simulation_results3.0/'
 
-N, h, rhoH, ic, algorithm = 100, 0.8, 0.7, 'honeycomb', 'MCMC'
+N, h, rhoH, ic, algorithm = 30**2, 0.8, 0.8, 'honeycomb', 'MCMC'
 
 # run_honeycomb
 if ic == 'honeycomb':

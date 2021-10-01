@@ -55,7 +55,7 @@ def main():
         writer = csv.writer(f, lineterminator='\n')
         for sim_name in sims:
             N, _, _, _, _ = params_from_name(sim_name)
-            if N == 100:
+            if N == 30**2:
                 writer.writerow((sim_name, "psi_mean14"))
 
             # for calc_type in ["psi", "psi_mean", "Bragg_S", "Bragg_Sm", "gM", "Ising-annealing"] + [

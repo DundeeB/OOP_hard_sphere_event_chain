@@ -22,11 +22,12 @@ def params_from_name(name):
             ic = s
             if ss[i - 1] == 'AF' and s == 'triangle':
                 ic = 'honeycomb'
-    return N, h, rhoH, ic
+    algorithm = ss[-1]
+    return N, h, rhoH, ic, algorithm
 
 
 def mn_from_sim(sim_name):
-    _, h, _, _ = params_from_name(sim_name)
+    _, h, _, _, _ = params_from_name(sim_name)
     if h > 0.85:
         mn = "23"
     if 0.55 <= h <= 0.85:
@@ -53,9 +54,9 @@ def main():
     try:
         writer = csv.writer(f, lineterminator='\n')
         for sim_name in sims:
-            N, h, rhoH, ic = params_from_name(sim_name)
-            if h == 0.8 and 0.7 <= rhoH <= 0.9 and N == 90000 and ic == 'square':
-                writer.writerow((sim_name, "Ising-annealing14"))
+            N, _, _, _, _ = params_from_name(sim_name)
+            if N == 100:
+                writer.writerow((sim_name, "psi_mean"))
 
             # for calc_type in ["psi", "psi_mean", "Bragg_S", "Bragg_Sm", "gM", "Ising-annealing"] + [
             #     "LocalPsi_radius=" + str(rad) + "_" for rad in [10, 30, 50]]:

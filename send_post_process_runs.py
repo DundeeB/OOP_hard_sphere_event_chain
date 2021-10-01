@@ -56,7 +56,7 @@ def main():
         for sim_name in sims:
             N, _, _, _, _ = params_from_name(sim_name)
             if N == 100:
-                writer.writerow((sim_name, "psi_mean"))
+                writer.writerow((sim_name, "psi_mean14"))
 
             # for calc_type in ["psi", "psi_mean", "Bragg_S", "Bragg_Sm", "gM", "Ising-annealing"] + [
             #     "LocalPsi_radius=" + str(rad) + "_" for rad in [10, 30, 50]]:

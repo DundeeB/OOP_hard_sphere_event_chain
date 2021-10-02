@@ -67,15 +67,14 @@ elif algorithm == 'MCMC':
     metropolis_step = a_free * (np.pi / 3) / 8
 arr = initial_arr
 print("\n\nSimulation: N=" + str(N) + ", rhoH=" + str(rhoH) + ", h=" + str(h), file=sys.stdout)
-print("N_iterations=" + str(iterations) +
-      ", Lx=" + str(initial_arr.l_x) + ", Ly=" + str(initial_arr.l_y), file=sys.stdout)
+print("Lx=" + str(initial_arr.l_x) + ", Ly=" + str(initial_arr.l_y), file=sys.stdout)
 
 # Run loops
 day = 86400  # seconds
 hour = 3600  # seconds
 plt_arr(arr, plot_boundaries=True)
 counter = 0
-for i in range(4*10 ** 3):
+for i in range(5*10 ** 2):
     # Choose sphere
     spheres = arr.all_spheres
     i_sp = random.randint(0, len(spheres) - 1)

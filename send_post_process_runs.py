@@ -57,8 +57,7 @@ def main():
             N, h, rhoH, ic, algorithm = params_from_name(sim_name)
             # if N == 30 ** 2:
             #     writer.writerow((sim_name, "psi_mean14"))
-            # if h == 0.8 and 0.7 <= rhoH <= 0.9 and N == 300 ** 2 and ic == 'square':
-            if h == 0.8 and rhoH == 0.81 and N == 300 ** 2 and ic == 'square':
+            if h == 0.8 and 0.7 <= rhoH <= 0.9 and N == 300 ** 2 and ic == 'square':
                 writer.writerow((sim_name, "Ising-annealing14"))
             # for calc_type in ["psi", "psi_mean", "Bragg_S", "Bragg_Sm", "gM", "Ising-annealing"] + [
             #     "LocalPsi_radius=" + str(rad) + "_" for rad in [10, 30, 50]]:

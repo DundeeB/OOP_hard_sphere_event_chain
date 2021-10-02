@@ -971,7 +971,7 @@ class Ising(Graph):
         self.counts = np.array(frustration)[I]
         self.op_corr = np.array(Cv)[I]
 
-    def read_or_calc_write(self, realizations=20, **calc_order_parameter_args):
+    def read_or_calc_write(self, realizations=100, **calc_order_parameter_args):
         if OrderParameter.exists(self.anneal_path):
             anneal_mat = np.loadtxt(self.anneal_path)
             calculated_reals = int((anneal_mat.shape[1] - 1) / 2)

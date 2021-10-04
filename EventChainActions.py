@@ -194,7 +194,7 @@ class Event2DCells(ArrayOfCells):
                 if record_displacements: return displacements
                 return
 
-    def perform_MCMC_step(self, i_cell, j_cell, sphere, step_vector):
+    def perform_LMC_step(self, i_cell, j_cell, sphere, step_vector):
         # maximal_free_step = min(
         #     [self.cells[i][j].site[dim] + 2 * self.edge - 2 * sphere.rad - sphere.center[dim] for dim in range(2)])
         # if np.linalg.norm(step_vector) > maximal_free_step:

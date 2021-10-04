@@ -56,7 +56,7 @@ def params_from_name(name):
 def main():
     runs = []
     N, rhoH, h = 30**2, 0.8, 0.8
-    for algorithm in ['ECMC', 'MCMC']:
+    for algorithm in ['ECMC', 'LMC']:
         for ic in ['square', 'honeycomb']:
             runs.append(sim_name(N, h, rhoH, ic, algorithm))
     send_runs_envelope(runs)

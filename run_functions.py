@@ -97,7 +97,7 @@ def run_sim(initial_arr, N, h, rhoH, algorithm, sim_name, record_displacements=F
     if algorithm == 'ECMC':
         xy_total_step = a_free * np.sqrt(N)
         z_total_step = h * (2 * rad) * np.pi / 15  # irrational for the spheres to cover most of the z options
-    elif algorithm == 'MCMC':
+    elif algorithm == 'LMC':
         metropolis_step = a_free * (np.pi / 3) / 8
     # Initialize View and folder, add spheres
     code_dir = os.getcwd()
@@ -162,9 +162,9 @@ def run_sim(initial_arr, N, h, rhoH, algorithm, sim_name, record_displacements=F
                 if write:
                     files_interface.dump_spheres(arr.all_centers, str(i + 1) + '_err')
                 raise err
-        elif algorithm == 'MCMC':
+        elif algorithm == 'LMC':
             theta, phi = np.random.random() * np.pi, np.random.random() * 2 * np.pi
-            arr.perform_MCMC_step(i_cell, j_cell, sphere,
+            arr.perform_LMC_step(i_cell, j_cell, sphere,
                                   metropolis_step * np.array(
                                       [np.cos(phi) * np.sin(theta), np.sin(phi) * np.sin(theta), np.cos(theta)]))
         if np.floor((time.time() - initial_time) / (hour / 2)) > realizations_saved:

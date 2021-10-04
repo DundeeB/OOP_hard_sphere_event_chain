@@ -128,9 +128,9 @@ class WriteOrLoad:
             else:
                 raise ValueError("No file center found at folder: " + self.output_dir)
 
-    def last_spheres(self):
-        file_ind = self.realizations()[0]
-        sp_name = str(self.realizations()[0]) if file_ind > 0 else 'Initial Conditions'
+    def last_spheres(self, k=0):
+        file_ind = self.realizations()[k]
+        sp_name = str(file_ind) if file_ind > 0 else 'Initial Conditions'
         return np.loadtxt(os.path.join(self.output_dir, sp_name)), file_ind
 
     def load_Input(self):

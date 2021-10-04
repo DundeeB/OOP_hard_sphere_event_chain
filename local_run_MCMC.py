@@ -21,7 +21,7 @@ def plt_arr(arr, label='initial conditions', plot_boundaries=False):
 epsilon = 1e-8
 prefix = '/storage/ph_daniel/danielab/ECMC_simulation_results3.0/'
 
-N, h, rhoH, ic, algorithm = 30**2, 0.8, 0.8, 'honeycomb', 'MCMC'
+N, h, rhoH, ic, algorithm = 30**2, 0.8, 0.8, 'square', 'LMC'
 
 # run_honeycomb
 if ic == 'honeycomb':
@@ -63,7 +63,7 @@ a_free = (1 / rhoH - np.pi / 6) ** (1 / 3) * 2 * rad  # ((V-N*4/3*pi*r^3)/N)^(1/
 if algorithm == 'ECMC':
     xy_total_step = a_free * np.sqrt(N)
     z_total_step = h * (2 * rad) * np.pi / 15  # irrational for the spheres to cover most of the z options
-elif algorithm == 'MCMC':
+elif algorithm == 'LMC':
     metropolis_step = a_free * (np.pi / 3) / 8
 arr = initial_arr
 print("\n\nSimulation: N=" + str(N) + ", rhoH=" + str(rhoH) + ", h=" + str(h), file=sys.stdout)
@@ -74,7 +74,7 @@ day = 86400  # seconds
 hour = 3600  # seconds
 plt_arr(arr, plot_boundaries=True)
 counter = 0
-for i in range(5*10 ** 2):
+for i in range(10 ** 3):
     # Choose sphere
     spheres = arr.all_spheres
     i_sp = random.randint(0, len(spheres) - 1)
@@ -90,12 +90,12 @@ for i in range(5*10 ** 2):
             arr.perform_total_step(i_cell, j_cell, step)
         except Exception as err:
             raise err
-    elif algorithm == 'MCMC':
+    elif algorithm == 'LMC':
         theta, phi = np.random.random() * np.pi, np.random.random() * 2 * np.pi
         try:
             old_arr = copy.deepcopy(arr)
             old_sphere = old_arr.all_spheres[i_sp]
-            accepted_move = arr.perform_MCMC_step(i_cell, j_cell, sphere, metropolis_step * np.array(
+            accepted_move = arr.perform_LMC_step(i_cell, j_cell, sphere, metropolis_step * np.array(
                 [np.cos(phi) * np.sin(theta), np.sin(phi) * np.sin(theta), np.cos(theta)]))
         except IndexError as err:
             plt_arr(arr, label='realization ' + str(i) + ' with error')

@@ -6,7 +6,7 @@ output = /storage/ph_daniel/danielab/ECMC_simulation_results3.0/out/post_process
 error = /storage/ph_daniel/danielab/ECMC_simulation_results3.0/out/post_process_$(sim_name).err
 request_cpus = 1
 Arguments = $(sim_name) $(calc_type)
-RequestMemory = 2GB
+RequestMemory = 2GB  # 8GB are needed for LocalPsi_rad=30_14
 universe = vanilla
 on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
 max_retries  = 30

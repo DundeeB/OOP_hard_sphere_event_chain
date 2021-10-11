@@ -47,7 +47,6 @@ def create_op_dir(sim):
 
 def main():
     sims = [d for d in os.listdir(prefix) if d.startswith('N=') and os.path.isdir(os.path.join(prefix, d))]
-    # sims = ["N=40000_h=0.8_rhoH=0.81_AF_triangle_ECMC"]
     for sim in sims:
         create_op_dir(sim)
     f = open(os.path.join(code_prefix, 'post_process_list.txt'), 'wt')
@@ -55,14 +54,16 @@ def main():
         writer = csv.writer(f, lineterminator='\n')
         for sim_name in sims:
             N, h, rhoH, ic, algorithm = params_from_name(sim_name)
-            # if N == 30 ** 2:
-            #     writer.writerow((sim_name, "psi_mean14"))
-            if h == 0.8 and rhoH in [0.77, 0.775, 0.78, 0.785, 0.8, 0.81]:  # 0.7 <= rhoH <= 0.9:
-                # writer.writerow((sim_name, "psi_mean14"))
-                if ic == 'square' and N == 300 ** 2:
-                    for calc_type in ["LocalPsi_radius=30"]:  # ["psi", "Bragg_S", "Bragg_Sm", "Ising-annealing"]:
-                        # + ["LocalPsi_radius=" + str(rad) + "_" for rad in [10, 30, 50]]
-                        writer.writerow((sim_name, calc_type + "14"))
+            if h != 0.8:
+                continue
+            if N == 30 ** 2 or (N == 200 ** 2 and ic == 'honeycomb') or (N == 300 ** 2 and ic == 'square'):
+                for calc_type in ["Ising-annealing", "psi_mean"]:
+                    writer.writerow((sim_name, calc_type + "14"))
+            if 0.7 <= rhoH <= 0.9 and ic == 'square' and N == 300 ** 2:
+                for calc_type in ["psi", "Bragg_S", "Bragg_Sm"]:
+                    writer.writerow((sim_name, calc_type + "14"))
+                    if rhoH in [0.77, 0.775, 0.78, 0.785, 0.79, 0.8, 0.81]:
+                        writer.writerow((sim_name, "LocalPsi_radius=30_14"))
     finally:
         f.close()
         os.system("condor_submit post_process.sub")
@@ -70,3 +71,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# TODO: debug Local psi see ATLAS err file

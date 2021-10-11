@@ -60,7 +60,7 @@ def main():
             if h == 0.8 and 0.7 <= rhoH <= 0.9:
                 # writer.writerow((sim_name, "psi_mean14"))
                 if ic == 'square' and N == 300 ** 2:
-                    for calc_type in ["psi", "Bragg_S", "Bragg_Sm", "Ising-annealing"]:
+                    for calc_type in ["LocalPsi_radius=30"]:  # ["psi", "Bragg_S", "Bragg_Sm", "Ising-annealing"]:
                         # + ["LocalPsi_radius=" + str(rad) + "_" for rad in [10, 30, 50]]
                         writer.writerow((sim_name, calc_type + "14"))
     finally:
